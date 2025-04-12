@@ -1,16 +1,39 @@
 // --- 定数 ---
-// (変更なし)
 const PADDLE_WIDTH_RATIO = 0.2; const PADDLE_HEIGHT = 20; const PADDLE_Y_OFFSET = 50;
 const BALL_RADIUS = 10; const BALL_INITIAL_VELOCITY_Y = -300; const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150];
 const BRICK_ROWS = 5; const BRICK_COLS = 8; const BRICK_WIDTH_RATIO = 0.1; const BRICK_HEIGHT = 20;
 const BRICK_SPACING = 4; const BRICK_OFFSET_TOP = 60;
 const GAME_MODE = { NORMAL: 'normal', ALL_STARS: 'all_stars' };
 
-// --- BootScene --- (変更なし)
-class BootScene extends Phaser.Scene { /* ... */ }
+// --- BootScene ---
+class BootScene extends Phaser.Scene {
+    constructor() { super('BootScene'); }
+    preload() { console.log("BootScene: Preloading assets..."); /* ここでアセット読み込み */ }
+    create() { console.log("BootScene: Assets loaded, starting TitleScene..."); this.scene.start('TitleScene'); }
+}
 
-// --- TitleScene --- (変更なし)
-class TitleScene extends Phaser.Scene { /* ... */ }
+// --- TitleScene ---
+class TitleScene extends Phaser.Scene {
+    constructor() { super('TitleScene'); }
+    create() {
+        this.gameWidth = this.scale.width; this.gameHeight = this.scale.height;
+        this.cameras.main.setBackgroundColor('#333');
+        this.add.text(this.gameWidth / 2, this.gameHeight * 0.2, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(this.gameWidth / 2, this.gameHeight * 0.3, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
+        const buttonStyle = { fontSize: '32px', fill: '#fff', backgroundColor: '#555', padding: { x: 20, y: 10 } };
+        const buttonHoverStyle = { fill: '#ff0' };
+        const normalButton = this.add.text(this.gameWidth / 2, this.gameHeight * 0.5, '通常モード', buttonStyle)
+            .setOrigin(0.5).setInteractive({ useHandCursor: true })
+            .on('pointerover', () => normalButton.setStyle(buttonHoverStyle))
+            .on('pointerout', () => normalButton.setStyle(buttonStyle))
+            .on('pointerdown', () => { console.log("通常モード選択"); this.scene.start('GameScene', { mode: GAME_MODE.NORMAL }); this.scene.launch('UIScene'); });
+        const allStarsButton = this.add.text(this.gameWidth / 2, this.gameHeight * 0.7, '全員集合モード', buttonStyle)
+            .setOrigin(0.5).setInteractive({ useHandCursor: true })
+            .on('pointerover', () => allStarsButton.setStyle(buttonHoverStyle))
+            .on('pointerout', () => allStarsButton.setStyle(buttonStyle))
+            .on('pointerdown', () => { console.log("全員集合モード選択"); this.scene.start('GameScene', { mode: GAME_MODE.ALL_STARS }); this.scene.launch('UIScene'); });
+    }
+}
 
 // --- GameScene (ゲームプレイ画面) ---
 class GameScene extends Phaser.Scene {
@@ -35,30 +58,49 @@ class GameScene extends Phaser.Scene {
         this.isStageClearing = false; // フラグもリセット
     }
 
-    preload() { /* ... */ }
+    preload() { /* アセット読み込みが必要ならここに */ }
 
     create() {
         this.gameWidth = this.scale.width; this.gameHeight = this.scale.height;
         console.log(`GameScene: Create Start - Stage ${this.currentStage}, Mode ${this.currentMode}`);
-        this.time.delayedCall(50, () => { /* UI初期値通知 */ });
+        this.time.delayedCall(50, () => {
+             // UIシーンが起動しているか確認してからイベント送信
+             if (this.scene.isActive('UIScene')) {
+                 this.events.emit('updateLives', this.lives);
+                 this.events.emit('updateScore', this.score);
+                 this.events.emit('updateStage', this.currentStage);
+             } else {
+                 console.warn("UIScene not active when trying to send initial UI data.");
+             }
+         });
         this.physics.world.setBoundsCollision(true, true, true, false);
         const paddleWidth = this.gameWidth * PADDLE_WIDTH_RATIO;
         this.paddle = this.physics.add.image(this.gameWidth / 2, this.gameHeight - PADDLE_Y_OFFSET, null)
             .setDisplaySize(paddleWidth, PADDLE_HEIGHT).setTint(0xffffff).setImmovable(true).setCollideWorldBounds(true);
         this.createBall();
-        this.createBricks(); // この中で setBallBrickCollider が呼ばれるように変更が必要かも → createBricksの後で呼ぶ
-        this.gameOverText = this.add.text(/* ... */).setVisible(false);
+        this.createBricks();
+        this.gameOverText = this.add.text(this.gameWidth / 2, this.gameHeight / 2, 'Game Over\nタップで戻る', { fontSize: '48px', fill: '#f00', align: 'center' })
+            .setOrigin(0.5).setVisible(false).setDepth(1);
 
         // コライダー設定
         this.ballPaddleCollider = this.physics.add.collider(this.ball, this.paddle, this.hitPaddle, null, this);
         this.setBallBrickCollider(); // ブロック用コライダー
 
         // 入力処理
-        this.input.on('pointermove', /* ... */ );
+        this.input.on('pointermove', (pointer) => {
+            if (this.lives > 0 && this.paddle) {
+                const paddleHalfWidth = this.paddle.displayWidth / 2;
+                const targetX = Phaser.Math.Clamp(pointer.x, paddleHalfWidth, this.gameWidth - paddleHalfWidth);
+                this.paddle.x = targetX;
+                if (!this.isBallLaunched && this.ball) {
+                    this.ball.x = this.paddle.x;
+                }
+            }
+         });
         this.input.on('pointerdown', () => {
              if (this.lives > 0 && !this.isStageClearing) { // ステージクリア中は発射しない
                  if (!this.isBallLaunched) { this.launchBall(); }
-             } else if (this.gameOverText.visible) { // ゲームオーバー表示後なら
+             } else if (this.gameOverText && this.gameOverText.visible) { // ゲームオーバー表示後なら (gameOverTextの存在もチェック)
                  this.returnToTitle();
              }
         });
@@ -66,59 +108,46 @@ class GameScene extends Phaser.Scene {
         console.log("GameScene: Create End");
     }
 
-    // ★★★ update メソッドを修正 ★★★
-    update(time, delta) { // time と delta を受け取る
-        if (this.lives <= 0 || this.isStageClearing) return; // ライフゼロ or ステージクリア中は処理停止
+    update(time, delta) {
+        if (this.lives <= 0 || this.isStageClearing) return;
 
         // ボール落下チェック
         if (this.ball && this.ball.y > this.gameHeight + this.ball.displayHeight) {
-             if (this.lives > 0 && this.ball.active) { // ライフがあり、ボールがアクティブなら
+             if (this.lives > 0 && this.ball.active) {
                  console.log("Ball out of bounds - calling loseLife");
                  this.loseLife();
              }
         }
 
-        // ★ 衝突したブロックの処理をここで行う ★
+        // 衝突したブロックの処理
         this.processBrickHits();
-
     }
 
-    // ★★★ 衝突したブロックを処理する関数 ★★★
     processBrickHits() {
-        if (this.bricksHitThisFrame.length === 0) {
-            return; // 処理対象がなければ抜ける
-        }
+        if (this.bricksHitThisFrame.length === 0) { return; }
 
         console.log(`Processing ${this.bricksHitThisFrame.length} brick hits...`);
-        let needsStageClearCheck = false; // ステージクリアチェックが必要か
+        let needsStageClearCheck = false;
 
-        // 配列内の各ブロックを処理
         this.bricksHitThisFrame.forEach(brick => {
-            if (brick.active) { // まだアクティブなブロックのみ処理
+            if (brick.active) {
                 const brickData = brick.getData();
                 let hits = brickData.hits;
 
-                if (hits > 0) { // 破壊不可でない場合
+                if (hits > 0) {
                     hits--;
                     brick.setData('hits', hits);
                     console.log(`Brick processed, hits remaining: ${hits}`);
-
                     if (hits <= 0) {
-                        // ★ setActive/setVisible を使う (disableBodyは使わない)
                         brick.setActive(false);
                         brick.setVisible(false);
                         console.log("Brick deactivated.");
-
-                        // スコア加算とUI更新
                         this.score += 10;
                         this.events.emit('updateScore', this.score);
                         console.log(`Score updated: ${this.score}`);
-                        needsStageClearCheck = true; // ブロックが破壊されたのでチェック要
-
+                        needsStageClearCheck = true;
                         // TODO: パワーアップアイテムドロップ処理
-
                     } else {
-                        // 耐久ブロックの見た目変更
                         brick.setTint(0xffaaaa);
                         console.log("Brick damaged.");
                     }
@@ -126,40 +155,40 @@ class GameScene extends Phaser.Scene {
             }
         });
 
-        // 処理が終わったので配列をクリア
         this.bricksHitThisFrame = [];
         console.log("Brick hit processing finished.");
 
-        // ステージクリアチェックが必要な場合
         if (needsStageClearCheck) {
              console.log("Checking for stage clear...");
-             if (this.bricks.countActive(true) === 0) {
+             // countActiveが0になったらステージクリア (bricksが存在するか確認)
+             if (this.bricks && this.bricks.countActive(true) === 0) {
                  console.log("All bricks cleared!");
                  this.stageClear();
-             } else {
+             } else if (this.bricks) {
                  console.log(`Bricks remaining: ${this.bricks.countActive(true)}`);
              }
         }
     }
 
-
     setBallBrickCollider() {
         if (this.ballBrickCollider) { this.ballBrickCollider.destroy(); this.ballBrickCollider = null; }
-        if (!this.ball || !this.bricks) { return; }
+        if (!this.ball || !this.bricks) { console.error("Missing ball or bricks for collider."); return; }
         this.ballBrickCollider = this.physics.add.collider(
             this.ball,
             this.bricks,
-            this.hitBrick, // ★ コールバック自体は hitBrick のまま
+            this.hitBrick,
             null,
             this
         );
         console.log("New Ball-Brick collider set.");
     }
 
-
     createBall() {
         if (this.ball) { this.ball.destroy(); }
-        this.ball = this.physics.add.image(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS, null)
+        // パドルが存在しない場合はデフォルト位置に
+        const initialX = this.paddle ? this.paddle.x : this.gameWidth / 2;
+        const initialY = this.paddle ? this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS : this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT / 2 - BALL_RADIUS;
+        this.ball = this.physics.add.image(initialX, initialY, null)
             .setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(0x00ff00).setCircle(BALL_RADIUS)
             .setCollideWorldBounds(true).setBounce(1);
         this.ball.body.onWorldBounds = true; this.ball.setVelocity(0, 0);
@@ -186,30 +215,31 @@ class GameScene extends Phaser.Scene {
         const offsetX = (this.gameWidth - totalBricksWidth) / 2; const rows = this.currentMode === GAME_MODE.ALL_STARS ? BRICK_ROWS + 2 : BRICK_ROWS;
         for (let i = 0; i < rows; i++) { for (let j = 0; j < BRICK_COLS; j++) { const brickX = offsetX + j * (brickWidth + BRICK_SPACING) + brickWidth / 2; const brickY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; const brickType = 'normal'; let tint = Phaser.Display.Color.RandomRGB().color; let hits = 1; this.bricks.create(brickX, brickY, null).setDisplaySize(brickWidth, BRICK_HEIGHT).setTint(tint).setData({ type: brickType, hits: hits }).refreshBody(); } }
         console.log(`Created ${this.bricks.getLength()} bricks`);
-        // ★ createBricks の中でコライダー再設定はしない
     }
 
-    hitPaddle(ball, paddle) { /* ...前回と同じ... */ }
+    hitPaddle(ball, paddle) {
+        if (!ball || !paddle || !ball.body || !ball.active) return;
+        console.log("Hit paddle");
+        let diff = ball.x - paddle.x; const maxDiff = paddle.displayWidth / 2; const influence = 0.75;
+        const baseVelX = ball.body.velocity.x * (1.0 - influence); const paddleVelX = 250 * (diff / maxDiff) * influence;
+        let newVelX = baseVelX + paddleVelX; const minVelXAbs = 50; const maxVelXAbs = 400;
+        if (Math.abs(newVelX) < minVelXAbs) { newVelX = minVelXAbs * Math.sign(newVelX || 1); }
+        newVelX = Phaser.Math.Clamp(newVelX, -maxVelXAbs, maxVelXAbs);
+        let newVelY = ball.body.velocity.y;
+        if (newVelY > -100 && newVelY <= 0) { newVelY = -100; } else if (newVelY >= 0) { newVelY = -100; }
+        ball.setVelocity(newVelX, newVelY);
+    }
 
-    // ★★★ hitBrick 関数を大幅に簡略化 ★★★
     hitBrick(ball, brick) {
-         if (!ball || !brick || !ball.active || !brick.active) {
-             return; // 無効なオブジェクトは無視
-         }
-
-         // ★ 衝突したブロックを配列に追加するだけ ★
-         // 同じフレームで複数回ヒットする場合があるので、重複チェック
+         if (!ball || !brick || !ball.active || !brick.active) { return; }
          if (!this.bricksHitThisFrame.includes(brick)) {
              this.bricksHitThisFrame.push(brick);
-             console.log("Hit brick - Added to processing list."); // ★ ログ変更
-         } else {
-             // console.log("Hit brick - Already in list for this frame."); // デバッグ用
+             console.log("Hit brick - Added to processing list.");
          }
-         // ★ ここで他の処理 (disableBody, setActive, スコア加算など) は一切行わない
     }
 
     loseLife() {
-        if (this.lives <= 0 || this.isStageClearing) return; // ライフゼロ or ステージクリア中は処理しない
+        if (this.lives <= 0 || this.isStageClearing) return;
         console.log(`Lose life - Lives before: ${this.lives}`);
         this.lives--; this.events.emit('updateLives', this.lives);
         console.log(`Lives after: ${this.lives}`);
@@ -220,46 +250,55 @@ class GameScene extends Phaser.Scene {
 
     resetPaddleAndBall() {
          console.log("Resetting paddle and ball - Start");
-         if (!this.physics.world.running) { this.physics.resume(); }
+         // 物理演算が止まっている可能性があるので再開
+         if (!this.physics.world.running) {
+             console.log("Resuming physics for reset.");
+             this.physics.resume();
+         }
          if (this.paddle) { this.paddle.x = this.gameWidth / 2; this.paddle.y = this.gameHeight - PADDLE_Y_OFFSET; this.paddle.setVelocity(0, 0); }
          this.createBall();
-         // ★ ボールとブロックのコライダーは setBallBrickCollider で管理されているので、ここでは不要
          this.isBallLaunched = false;
          console.log("Resetting paddle and ball - End");
     }
 
     gameOver() {
         console.log("Game Over - Start");
-        if(this.gameOverText.visible) return;
-        this.gameOverText.setVisible(true);
+        // すでに表示されている場合は何もしない
+        if(this.gameOverText && this.gameOverText.visible) {
+            console.warn("gameOver called but already visible.");
+            return;
+        }
+        // gameOverTextが生成されていなければエラー回避
+        if(this.gameOverText) {
+            this.gameOverText.setVisible(true);
+        } else {
+            console.error("gameOverText not found!");
+        }
         this.physics.pause();
         console.log("Game Over - End");
     }
 
     stageClear() {
-        if (this.isStageClearing) return; // 既に処理中なら抜ける
+        if (this.isStageClearing) return;
         console.log(`Stage Clear - Start (Stage ${this.currentStage})`);
-        this.isStageClearing = true; // 処理中フラグを立てる
+        this.isStageClearing = true;
         this.physics.pause();
-
         if(this.ball) { this.ball.setVelocity(0,0).setVisible(false).setActive(false); if(this.ball.body) this.ball.body.enable = false; }
-
         console.log("Scheduling next stage transition...");
         this.time.delayedCall(1000, () => {
             console.log("Executing next stage transition...");
             this.currentStage++;
             const maxStages = this.currentMode === GAME_MODE.ALL_STARS ? 10 : 12;
-
             if (this.currentStage > maxStages) {
                  console.log("All stages complete!");
-                 this.gameComplete(); // この中で returnToTitle が呼ばれる
+                 this.gameComplete();
             } else {
                 console.log(`Starting next stage: ${this.currentStage}`);
                 this.events.emit('updateStage', this.currentStage);
-                this.createBricks(); // ブロック再生成
-                this.setBallBrickCollider(); // ★ 新しいブロックにコライダー設定
-                this.resetPaddleAndBall(); // パドルとボールリセット
-                this.isStageClearing = false; // ★ フラグ解除
+                this.createBricks();
+                this.setBallBrickCollider(); // ★重要: 新しいBricksに対してColliderを設定
+                this.resetPaddleAndBall();
+                this.isStageClearing = false; // ★フラグ解除はここ
                 this.physics.resume();
                 console.log("Physics resumed for next stage.");
             }
@@ -276,21 +315,69 @@ class GameScene extends Phaser.Scene {
 
     returnToTitle() {
         console.log("Returning to TitleScene - Start");
-        if (!this.physics.world.running) { this.physics.resume(); }
-        this.scene.stop('UIScene');
-        this.scene.start('TitleScene');
+        // シーンがアクティブか確認してから停止・開始
+        if (this.scene.isActive()) {
+            // 物理演算が止まっている場合は再開 (安全のため)
+            if (!this.physics.world.running) {
+                this.physics.resume();
+            }
+            if (this.scene.isActive('UIScene')) { this.scene.stop('UIScene'); }
+            this.scene.start('TitleScene');
+        } else {
+            console.warn("GameScene is not active, cannot return to title.");
+        }
         console.log("Returning to TitleScene - End");
     }
 
-    shutdown() { /* ...前回と同じ... */ }
+    shutdown() {
+        console.log("GameScene shutdown: Cleaning up...");
+        if(this.input) this.input.removeAllListeners();
+        if(this.time) this.time.removeAllEvents();
+        this.ballPaddleCollider = null; this.ballBrickCollider = null;
+        this.events.removeAllListeners();
+        console.log("GameScene cleanup finished.");
+    }
 }
 
-// --- UIScene --- (変更なし)
-class UIScene extends Phaser.Scene { /* ... */ }
+// --- UIScene ---
+class UIScene extends Phaser.Scene {
+    constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; }
+    create() {
+        console.log("UIScene: Creating UI elements..."); this.gameWidth = this.scale.width;
+        this.livesText = this.add.text(16, 16, 'ライフ: -', { fontSize: '24px', fill: '#fff' });
+        this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: -', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5, 0);
+        this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: 0', { fontSize: '24px', fill: '#fff' }).setOrigin(1, 0);
+        try {
+            // GameSceneが起動済みか確認してからリスナー登録
+            if (this.scene.isSleeping('GameScene') || this.scene.isActive('GameScene')) {
+                 const gameScene = this.scene.get('GameScene');
+                 this.registerGameEventListeners(gameScene);
+            } else {
+                 // GameSceneのstartイベントを待つ
+                 this.scene.get('GameScene').events.once('start', this.registerGameEventListeners, this);
+            }
+        } catch (e) { console.error("UIScene: Error setting up GameScene listeners on create.", e); }
+        this.events.on('shutdown', () => {
+            console.log("UIScene: Shutting down..."); try { if (this.scene.manager.getScene('GameScene')) { const gameScene = this.scene.get('GameScene'); if (gameScene && gameScene.events) { gameScene.events.off('updateLives', this.updateLivesDisplay, this); gameScene.events.off('updateScore', this.updateScoreDisplay, this); gameScene.events.off('updateStage', this.updateStageDisplay, this); gameScene.events.off('start', this.registerGameEventListeners, this); console.log("UIScene: Listeners removed."); } } else { console.log("UIScene: GameScene not found on shutdown."); } } catch (e) { console.error("UIScene: Error removing listeners on shutdown.", e); }
+        });
+    }
+    registerGameEventListeners(gameScene) {
+        console.log("UIScene: Registering event listeners for GameScene.");
+        // 念のため既存リスナー削除
+        gameScene.events.off('updateLives', this.updateLivesDisplay, this); gameScene.events.off('updateScore', this.updateScoreDisplay, this); gameScene.events.off('updateStage', this.updateStageDisplay, this);
+        // リスナー登録
+        gameScene.events.on('updateLives', this.updateLivesDisplay, this); gameScene.events.on('updateScore', this.updateScoreDisplay, this); gameScene.events.on('updateStage', this.updateStageDisplay, this);
+        // 初期値表示
+        this.updateLivesDisplay(gameScene.lives); this.updateScoreDisplay(gameScene.score); this.updateStageDisplay(gameScene.currentStage);
+    }
+    updateLivesDisplay(lives) { if (this.livesText) { this.livesText.setText(`ライフ: ${lives}`); } }
+    updateScoreDisplay(score) { if (this.scoreText) { this.scoreText.setText(`スコア: ${score}`); } }
+    updateStageDisplay(stage) { if (this.stageText) { this.stageText.setText(`ステージ: ${stage}`); } }
+}
+
 
 // --- Phaserゲーム設定 ---
 const config = {
-    // ★ type は AUTO に戻す
     type: Phaser.AUTO,
     scale: { mode: Phaser.Scale.FIT, parent: 'phaser-example', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
     physics: { default: 'arcade', arcade: { debug: true } },
