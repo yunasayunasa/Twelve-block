@@ -285,12 +285,11 @@ class GameScene extends Phaser.Scene {
 
     // ★★★ hitBrick 関数を修正 ★★★
     hitBrick(ball, brick) {
-         // ボール・ブロックが無効な場合は抜ける
          if (!ball || !brick || !ball.active || !brick.active) {
              return;
          }
 
-         console.log("Hit brick - Start");
+         console.log("Hit brick - Start"); // ここは通過するはず
          const brickData = brick.getData();
          let hits = brickData.hits;
 
@@ -302,24 +301,31 @@ class GameScene extends Phaser.Scene {
              console.log(`Brick hits remaining: ${hits}`);
 
              if (hits <= 0) {
-                 console.log("Brick destroyed");
-                 // ★ disableBody を使用 (前回と同じ)
-                 brick.disableBody(true, true);
+                 console.log("Brick destroyed - Attempting to deactivate...");
 
-                 // スコア加算とUI更新
+                 // ★★★ disableBody の代わりに setActive/setVisible を使用 ★★★
+                 try {
+                     brick.setActive(false);
+                     brick.setVisible(false);
+                     console.log("Brick deactivated and hidden."); // ★ このログが出るか確認
+                 } catch (e) {
+                     console.error("Error during brick deactivation:", e); // エラーが出たら表示
+                     // フリーズ回避のため、エラーが出ても処理を続ける試み（非推奨だがデバッグ目的）
+                 }
+
+
+                 // スコア加算とUI更新 (非アクティブ化の後)
                  this.score += 10;
                  this.events.emit('updateScore', this.score);
                  console.log(`Score updated: ${this.score}`);
 
                  // TODO: パワーアップアイテムドロップ処理
 
-                 // ★ ステージクリアチェックを同期実行に戻す
+                 // ステージクリアチェック (同期)
                  console.log("Executing direct stage clear check...");
+                 // ★注意: countActive は active なものを数えるので、setActive(false)でOK
                  if (this.bricks.countActive(true) === 0) {
                      console.log("All bricks cleared!");
-                     // ★ 重要: stageClearを直接呼ぶとコールバック内でシーン遷移等が発生し問題が起きやすい
-                     // 代わりに、updateループでチェックするフラグを立てるなどの方法が安全だが、
-                     // まずは直接呼び出しでフリーズが解消するか確認
                      this.stageClear();
                  } else {
                       console.log(`Bricks remaining: ${this.bricks.countActive(true)}`);
@@ -335,7 +341,7 @@ class GameScene extends Phaser.Scene {
              // 破壊不可ブロックの場合
              console.log("Hit indestructible brick.");
          }
-         console.log("Hit brick - End"); // ここまでログが出れば、関数自体は抜けているはず
+         console.log("Hit brick - End"); // ★ ここまでログが出るか確認
     }
 
     loseLife() {
@@ -511,10 +517,23 @@ class UIScene extends Phaser.Scene {
 
 // --- Phaserゲーム設定 ---
 const config = {
-    type: Phaser.AUTO, // AUTOだとiOSではWebGLになることが多い
-    // type: Phaser.CANVAS, // 問題切り分けのためにCanvasを強制してみるのも手
+    // ★★★ レンダラーをCanvasに強制 ★★★
+    type: Phaser.CANVAS,
     scale: { mode: Phaser.Scale.FIT, parent: 'phaser-example', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
-    physics: { default: 'arcade', arcade: { debug: true } },
+    physics: { default: 'arcade', arcade: {
+        debug: true, // デバッグ表示継続
+        // iOS/iPadOSでのパフォーマンス/安定性のため、FPSを調整してみる (オプション)
+        // fps: 60, // または 30
+        // fixedStep: true, // 物理演算のステップを固定 (オプション)
+        // timeScale: 1 // 物理演算の速度 (オプション)
+      }
+    },
+    // Canvas使用時のパフォーマンス設定 (オプション)
+    render: {
+        antialias: false, // アンチエイリアス無効化
+        pixelArt: true, // ピクセルアートモード (ドット絵なら有効)
+        // roundPixels: true // ピクセル座標を整数にする (場合によっては有効)
+    },
     scene: [BootScene, TitleScene, GameScene, UIScene]
 };
 
