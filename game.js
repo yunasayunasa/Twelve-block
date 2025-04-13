@@ -76,7 +76,7 @@ class GameScene extends Phaser.Scene {
     handleBallBrickOverlap(b,br){if(!b||!br||!b.active||!br.active||this.isStageClearing)return;const ik=b.getData('isPenetrating');const isa=b.getData('isSindara')&&b.getData('isAttracting');const ism=b.getData('isSindara')&&b.getData('isMerging');const ibk=b.getData('isBikara');const bks=b.getData('bikaraState');if(ibk){console.log(`>>> Ovr:Bikara S:${bks}`);if(bks==='yin'){console.log(">>> Ovr:Yin");this.markBrickByBikara(br);return;}else if(bks==='yang'){console.log(">>> Ovr:Yang");this.handleBikaraYangDestroy(b,br);return;}else{console.warn(`>>> Ovr:Bikara unexp:${bks}`);return;}}if(ik||isa||ism){br.disableBody(true,true);this.score+=10;this.events.emit('updateScore',this.score);this.increaseVajraGauge();if(Phaser.Math.FloatBetween(0,1)<POWERUP_DROP_RATE)this.dropPowerUp(br.x,br.y);if(!this.isStageClearing&&this.bricks.countActive(true)===0){console.log("Last brick penetrated!");this.stageClear();}return;}}
     handleBikaraYangDestroy(b,hb){console.log(">>> Yang Destroy ENTER");if(!b||!b.active||!b.getData('isBikara')||b.getData('bikaraState')!=='yang'){console.warn(">>> Yang Destroy aborted");return;}console.log(">>> Yang Destroy processing...");let dc=0;const mtd=[];if(hb.active){console.log(">>> Adding hit:",hb.x,hb.y);mtd.push(hb);hb.setData('isMarkedByBikara',false);}console.log(">>> Searching marked...");this.bricks.getChildren().forEach(br=>{if(br.active&&br.getData('isMarkedByBikara')&&!mtd.includes(br)){console.log(">>> Adding marked:",br.x,br.y);mtd.push(br);br.setData('isMarkedByBikara',false);}});console.log(`>>> Total destroy:${mtd.length}`);mtd.forEach(br=>{console.log(">>> Destroying:",br.x,br.y);br.disableBody(true,true);this.score+=10;dc++;this.increaseVajraGauge();if(Phaser.Math.FloatBetween(0,1)<POWERUP_DROP_RATE)this.dropPowerUp(br.x,br.y);});if(dc>0){this.events.emit('updateScore',this.score);console.log(`>>> Bikara destroyed ${dc}.`);}let cyc=b.getData('bikaraYangCount')||0;cyc++;b.setData('bikaraYangCount',cyc);console.log(`>>> Yang count:${cyc}`);if(!this.isStageClearing&&this.bricks.countActive(true)===0){console.log(">>> Bikara cleared stage!");this.stageClear();}else if(cyc>=BIKARA_YANG_COUNT_MAX){console.log(">>> Bikara max count.");this.deactivateBikara([b]);this.updateBallTint(b);}console.log(">>> Yang Destroy END");}
     dropPowerUp(x,y){const at=[POWERUP_TYPES.KUBIRA,POWERUP_TYPES.SHATORA,POWERUP_TYPES.HAILA,POWERUP_TYPES.ANCHIRA,POWERUP_TYPES.SINDARA,POWERUP_TYPES.BIKARA,POWERUP_TYPES.INDARA,POWERUP_TYPES.ANILA,POWERUP_TYPES.BAISRAVA,POWERUP_TYPES.VAJRA,POWERUP_TYPES.MAKIRA,POWERUP_TYPES.MAKORA];const t=Phaser.Utils.Array.GetRandom(at);const c=POWERUP_COLORS[t]||0xffffff;const pu=this.powerUps.create(x,y,null).setDisplaySize(POWERUP_SIZE,POWERUP_SIZE).setTint(c).setData('type',t);if(pu.body){pu.setVelocity(0,POWERUP_SPEED_Y);pu.body.setCollideWorldBounds(false);pu.body.setAllowGravity(false);}else{console.error("Failed PU body!");pu.destroy();}}
-    collectPowerUp(p,pu){if(!pu||!pu.active||this.isStageClearing)return;const t=pu.getData('type');if(!t){console.warn("No type!");pu.destroy();return;}pu.destroy();if(t===POWERUP_TYPES.BAISRAVA){console.log("Col:BAISRAVA");this.activateBaisrava();return;}if(t===POWERUP_TYPES.VAJRA){console.log("Col:VAJRA");this.activateVajra();return;}if(t===POWERUP_TYPES.MAKIRA){console.log("Col:MAKIRA");this.activateMakira();return;}if(t===POWERUP_TYPES.MAKORA){console.log("Col:MAKORA (NI)");return;}if(t===POWERUP_TYPES.ANCHIRA||t===POWERUP_TYPES.SINDARA){if(this.balls.countActive(true)>1){console.log("Keep furthest.");this.keepFurthestBall();}}this.activatePower(t);}
+    collectPowerUp(p,pu){if(!pu||!pu.active||this.isStageClearing)return;const t=pu.getData('type');if(!t){console.warn("No type!");pu.destroy();return;}pu.destroy();if(t===POWERUP_TYPES.BAISRAVA){console.log("Col:BAISRAVA");this.activateBaisrava();return;}if(t===POWERUP_TYPES.VAJRA){console.log("Col:VAJRA");this.activateVajra();return;}if(t===POWERUP_TYPES.MAKIRA){console.log("Col:MAKIRA");this.activateMakira();return;}if(t===POWERUP_TYPES.MAKORA){console.log("Col:MAKORA(NI)");return;}if(t===POWERUP_TYPES.ANCHIRA||t===POWERUP_TYPES.SINDARA){if(this.balls.countActive(true)>1){console.log("Keep furthest.");this.keepFurthestBall();}}this.activatePower(t);}
     keepFurthestBall(){const ab=this.balls.getMatching('active',true);if(ab.length<=1)return;let fb=null;let md=-1;const pp=new Phaser.Math.Vector2(this.paddle.x,this.paddle.y);ab.forEach(b=>{const d=Phaser.Math.Distance.Squared(pp.x,pp.y,b.x,b.y);if(d>md){md=d;fb=b;}});ab.forEach(b=>{if(b!==fb){console.log("Removing closer.");b.destroy();}});console.log("Kept furthest.");}
     activatePower(type){console.log(`Activating:${type}`);const tb=this.balls.getMatching('active',true);if(tb.length===0)return; if(POWERUP_DURATION[type]){if(this.powerUpTimers[type])this.powerUpTimers[type].remove();} switch(type){case POWERUP_TYPES.KUBIRA:this.activateKubira(tb);break;case POWERUP_TYPES.SHATORA:this.activateShatora(tb);break;case POWERUP_TYPES.HAILA:this.activateHaira(tb);break;case POWERUP_TYPES.ANCHIRA:this.activateAnchira(tb[0]);break;case POWERUP_TYPES.SINDARA:this.activateSindara(tb[0]);break;case POWERUP_TYPES.BIKARA:this.activateBikara(tb);break;case POWERUP_TYPES.INDARA:this.activateIndara(tb);break;case POWERUP_TYPES.ANILA:this.activateAnila(tb);break;default:console.warn(`Unknown type:${type}`);return;} tb.forEach(b=>{if(b.active){b.getData('activePowers').add(type);b.setData('lastActivatedPower',type);this.updateBallTint(b);}}); const d=POWERUP_DURATION[type];if(d){this.powerUpTimers[type]=this.time.delayedCall(d,()=>{console.log(`Expired:${type}`);this.deactivatePowerByType(type);this.powerUpTimers[type]=null;},[],this);}}
     deactivatePowerByType(type){console.log(`Deactivating:${type}`);const tb=this.balls.getMatching('active',true);if(tb.length===0)return; if(type===POWERUP_TYPES.MAKIRA){this.deactivateMakira();return;} switch(type){case POWERUP_TYPES.KUBIRA:this.deactivateKubira(tb);break;case POWERUP_TYPES.SHATORA:this.deactivateShatora(tb);break;case POWERUP_TYPES.HAILA:this.deactivateHaira(tb);break;default:console.warn(`Cannot deactivate:${type}`);return;} tb.forEach(b=>{if(b.active){b.getData('activePowers').delete(type);this.updateBallTint(b);}});}
@@ -113,10 +113,10 @@ class GameScene extends Phaser.Scene {
     increaseVajraGauge(){if(this.isVajraSystemActive&&!this.isStageClearing&&!this.isGameOver){this.vajraGauge+=VAJRA_GAUGE_INCREMENT;this.vajraGauge=Math.min(this.vajraGauge,VAJRA_GAUGE_MAX);console.log(`Vajra:${this.vajraGauge}/${VAJRA_GAUGE_MAX}`);this.events.emit('updateVajraGauge',this.vajraGauge);if(this.vajraGauge>=VAJRA_GAUGE_MAX){console.log("Vajra MAX!");this.triggerVajraDestroy();this.vajraGauge=0;this.events.emit('updateVajraGauge',this.vajraGauge);}}}
     triggerVajraDestroy(){if(this.isStageClearing||this.isGameOver)return;const ab=this.bricks.getMatching('active',true);if(ab.length===0){console.log("Vajra:No bricks.");return;}const cd=Math.min(ab.length,VAJRA_DESTROY_COUNT);console.log(`Vajra destroy ${cd}`);const sb=Phaser.Utils.Array.Shuffle(ab);let dc=0;for(let i=0;i<cd;i++){const br=sb[i];if(br&&br.active){console.log("Vajra destroying:",br.x,br.y);br.disableBody(true,true);this.score+=10;dc++;}}if(dc>0){console.log(`Vajra destroyed ${dc}.`);this.events.emit('updateScore',this.score);}if(!this.isStageClearing&&this.bricks.countActive(true)===0){console.log("Vajra cleared stage!");this.stageClear();}}
 
-    // ★★★ マキラ関連 (時間制限、併用可能) ★★★
+    // ★★★ マキラ関連 (時間制限、併用可能、ログ強化) ★★★
     activateMakira() {
         console.log(">>> Activating Makira!");
-        // clearActivePowers() は削除（併用可能にするため）
+        // 以前の clearActivePowers は削除
         if (!this.isMakiraActive) {
             this.isMakiraActive = true;
             if (this.familiars) this.familiars.clear(true, true); this.createFamiliars();
@@ -125,7 +125,6 @@ class GameScene extends Phaser.Scene {
             this.makiraAttackTimer = this.time.addEvent({ delay: MAKIRA_ATTACK_INTERVAL, callback: this.fireMakiraBeam, callbackScope: this, loop: true });
             console.log(">>> Makira Familiars summoned.");
         } else { console.log(">>> Makira already active, restarting timer."); }
-        // 時間制限タイマー設定
         const duration = POWERUP_DURATION[POWERUP_TYPES.MAKIRA];
         if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove();
         this.powerUpTimers[POWERUP_TYPES.MAKIRA] = this.time.delayedCall(duration, () => { console.log(`>>> Makira expired.`); this.deactivateMakira(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; }, [], this);
@@ -142,15 +141,23 @@ class GameScene extends Phaser.Scene {
     }
     createFamiliars() { if(!this.paddle)return;const px=this.paddle.x;const py=this.paddle.y-PADDLE_HEIGHT/2-MAKIRA_FAMILIAR_SIZE;const fL=this.familiars.create(px-MAKIRA_FAMILIAR_OFFSET,py,null).setDisplaySize(MAKIRA_FAMILIAR_SIZE*2,MAKIRA_FAMILIAR_SIZE*2).setTint(MAKIRA_FAMILIAR_COLOR);if(fL.body){fL.body.setAllowGravity(false).setImmovable(true);}const fR=this.familiars.create(px+MAKIRA_FAMILIAR_OFFSET,py,null).setDisplaySize(MAKIRA_FAMILIAR_SIZE*2,MAKIRA_FAMILIAR_SIZE*2).setTint(MAKIRA_FAMILIAR_COLOR);if(fR.body){fR.body.setAllowGravity(false).setImmovable(true);}console.log("Familiars created.");}
     fireMakiraBeam() {
-        if (!this.isMakiraActive || !this.familiars || this.isStageClearing || this.isGameOver) return;
+        console.log(">>> fireMakiraBeam CALLED"); // ★追加
+        if (!this.isMakiraActive || !this.familiars || this.isStageClearing || this.isGameOver) { console.log(">>> fireMakiraBeam aborted"); return; } // ★追加
+        console.log(">>> Firing Makira beams attempt..."); // ★追加
         this.familiars.getChildren().forEach(f => {
             if (f.active) {
+                 console.log(">>> Creating beam for familiar at:", f.x, f.y); // ★追加
                 const beam = this.makiraBeams.create(f.x, f.y - MAKIRA_FAMILIAR_SIZE, null)
                     .setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT).setTint(MAKIRA_BEAM_COLOR);
-                if (beam.body) { beam.body.setVelocity(0, -MAKIRA_BEAM_SPEED); beam.body.setAllowGravity(false); }
-                else { console.error("Beam body fail!"); beam.destroy(); }
-            }
+                 console.log(">>> Beam object created:", beam ? beam.active : 'null'); // ★追加
+                if (beam && beam.body) {
+                    console.log(">>> Setting beam velocity..."); // ★追加
+                    beam.body.setVelocity(0, -MAKIRA_BEAM_SPEED); beam.body.setAllowGravity(false);
+                    console.log(">>> Beam velocity set."); // ★追加
+                } else { console.error("Beam body fail!"); if (beam) beam.destroy(); }
+            } else { console.log(">>> Familiar inactive."); } // ★追加
         });
+         console.log(">>> fireMakiraBeam finished loop."); // ★追加
     }
     hitBrickWithMakiraBeam(beam, brick) {
         console.log(">>> hitBrickWithMakiraBeam ENTER"); // ★追加
