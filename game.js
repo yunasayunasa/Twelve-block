@@ -440,7 +440,39 @@ class GameScene extends Phaser.Scene {
     deactivateBikara(balls) { console.log("Deactivating Bikara"); balls.forEach(ball => { if (ball.getData('isBikara')) { ball.setData({ isBikara: false, bikaraState: null, bikaraYangCount: 0 }); ball.getData('activePowers').delete(POWERUP_TYPES.BIKARA); } }); this.bricks.getChildren().forEach(brick => { if (brick.getData('isMarkedByBikara')) { brick.setData('isMarkedByBikara', false); brick.setTint(brick.getData('originalTint') || 0xffffff); } }); console.log("Bikara deactivated."); }
     switchBikaraState(ball) { if (!ball || !ball.active || !ball.getData('isBikara')) return; const currentState = ball.getData('bikaraState'); const newState = (currentState === 'yin') ? 'yang' : 'yin'; ball.setData('bikaraState', newState); this.updateBallTint(ball); console.log(`Bikara state switched to: ${newState}`); }
     markBrickByBikara(brick) { if (!brick || !brick.active || brick.getData('isMarkedByBikara')) return; brick.setData('isMarkedByBikara', true); brick.setTint(BRICK_MARKED_COLOR); }
-    handleBikaraYangDestroy(ball, hitBrick) { if (!ball || !ball.active || !ball.getData('isBikara') || ball.getData('bikaraState') !== 'yang') return; console.log("Bikara (Yang) triggered."); let destroyedCount = 0; const markedBricksToDestroy = []; if (hitBrick.active) { markedBricksToDestroy.push(hitBrick); hitBrick.setData('isMarkedByBikara', false); } this.bricks.getChildren().forEach(brick => { if (brick.active && brick.getData('isMarkedByBikara') && !markedBricksToDestroy.includes(brick)) { markedBricksToDestroy.push(brick); brick.setData('isMarkedByBikara', false); } }); markedBricksToDestroy.forEach(brick => { brick.disableBody(true, true); this.score += 10; destroyedCount++; if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) this.dropPowerUp(brick.x, brick.y); }); if (destroyedCount > 0) { this.events.emit('updateScore', this.score); console.log(`Bikara destroyed ${destroyedCount} bricks.`); } let currentYangCount = ball.getData('bikaraYangCount') || 0; currentYangCount++; ball.setData('bikaraYangCount', currentYangCount); console.log(`Bikara Yang count: ${currentYangCount}`); if (!this.isStageClearing && this.bricks.countActive(true) === 0) { console.log("Bikara destroyed last brick!"); this.stageClear(); } else if (currentYangCount >= BIKARA_YANG_COUNT_MAX) { console.log("Bikara max Yang count."); this.deactivateBikara([ball]); this.updateBallTint(ball); } }
+    handleBikaraYangDestroy(ball, hitBrick) {
+        if (!ball || !ball.active || !ball.getData('isBikara') || ball.getData('bikaraState') !== 'yang') return;
+
+        console.log(">>> handleBikaraYangDestroy CALLED <<<"); // ★追加: 関数が呼ばれたか
+        let destroyedCount = 0;
+        const markedBricksToDestroy = [];
+
+        if (hitBrick.active) {
+             console.log(">>> Adding hitBrick to destroy list:", hitBrick.x, hitBrick.y); // ★追加
+            markedBricksToDestroy.push(hitBrick);
+            hitBrick.setData('isMarkedByBikara', false);
+        }
+
+        console.log(">>> Searching for other marked bricks..."); // ★追加
+        this.bricks.getChildren().forEach(brick => {
+            if (brick.active && brick.getData('isMarkedByBikara') && !markedBricksToDestroy.includes(brick)) {
+                console.log(">>> Adding marked brick to destroy list:", brick.x, brick.y); // ★追加
+                markedBricksToDestroy.push(brick);
+                brick.setData('isMarkedByBikara', false);
+            }
+        });
+
+        console.log(`>>> Total bricks to destroy: ${markedBricksToDestroy.length}`); // ★追加
+
+        markedBricksToDestroy.forEach(brick => {
+            console.log(">>> Destroying brick at:", brick.x, brick.y); // ★追加
+            brick.disableBody(true, true);
+            this.score += 10;
+            destroyedCount++;
+            if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) {
+                this.dropPowerUp(brick.x, brick.y);
+            }
+        }); if (destroyedCount > 0) { this.events.emit('updateScore', this.score); console.log(`Bikara destroyed ${destroyedCount} bricks.`); } let currentYangCount = ball.getData('bikaraYangCount') || 0; currentYangCount++; ball.setData('bikaraYangCount', currentYangCount); console.log(`Bikara Yang count: ${currentYangCount}`); if (!this.isStageClearing && this.bricks.countActive(true) === 0) { console.log("Bikara destroyed last brick!"); this.stageClear(); } else if (currentYangCount >= BIKARA_YANG_COUNT_MAX) { console.log("Bikara max Yang count."); this.deactivateBikara([ball]); this.updateBallTint(ball); } }
     activateIndara(balls) { console.log("Activating Indara"); balls.forEach(ball => ball.setData({ isIndaraActive: true, indaraHomingCount: INDARA_MAX_HOMING_COUNT })); console.log(`Indara activated.`); }
     deactivateIndaraForBall(ball) { if (!ball || !ball.active || !ball.getData('isIndaraActive')) return; ball.setData({ isIndaraActive: false, indaraHomingCount: 0 }); ball.getData('activePowers').delete(POWERUP_TYPES.INDARA); console.log("Deactivated Indara."); }
     handleWorldBounds(body, up, down, left, right) { const ball = body.gameObject; if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls.contains(ball) || !ball.active) return; if (ball.getData('isIndaraActive') && ball.getData('indaraHomingCount') > 0 && (up || left || right)) { const currentHomingCount = ball.getData('indaraHomingCount'); console.log(`Indara wall hit. Count: ${currentHomingCount}`); const activeBricks = this.bricks.getMatching('active', true); if (activeBricks.length > 0) { let closestBrick = null; let minDistanceSq = Infinity; const ballCenter = ball.body.center; activeBricks.forEach(brick => { const distanceSq = Phaser.Math.Distance.Squared(ballCenter.x, ballCenter.y, brick.body.center.x, brick.body.center.y); if (distanceSq < minDistanceSq) { minDistanceSq = distanceSq; closestBrick = brick; } }); if (closestBrick) { console.log("Indara homing."); const currentSpeed = ball.body.velocity.length(); const angle = Phaser.Math.Angle.BetweenPoints(ballCenter, closestBrick.body.center); this.physics.velocityFromAngle(angle, currentSpeed, ball.body.velocity); const newHomingCount = currentHomingCount - 1; ball.setData('indaraHomingCount', newHomingCount); console.log(`Indara count remaining: ${newHomingCount}`); if (newHomingCount <= 0) { console.log("Indara deactivated."); this.deactivateIndaraForBall(ball); this.updateBallTint(ball); } } } else { console.log("Indara no bricks."); } } }
