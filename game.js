@@ -81,14 +81,13 @@ class GameScene extends Phaser.Scene {
         this.time.delayedCall(50,()=>{ if(this.scene.isActive('UIScene')){ this.events.emit('updateLives',this.lives); this.events.emit('updateScore',this.score); this.events.emit('updateStage',this.currentStage); if(this.isVajraSystemActive) { this.events.emit('activateVajraUI',this.vajraGauge,VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
         this.physics.world.setBoundsCollision(true,true,true,false); this.physics.world.on('worldbounds',this.handleWorldBounds,this);
 
-        // ★ パドル生成とサイズ設定
-        const initialPaddleWidth = this.scale.width * PADDLE_WIDTH_RATIO; // ★ scale.width を使う
-        this.paddle=this.physics.add.image(this.scale.width/2, this.scale.height-PADDLE_Y_OFFSET, 'whitePixel') // ★ whitePixel を使う
+        // ★ パドル生成 (Origin はデフォルトの 0.5, 0.5 のまま)
+        this.paddle = this.physics.add.image(this.scale.width/2, this.scale.height-PADDLE_Y_OFFSET, 'whitePixel')
             .setTint(0xffffff)
             .setImmovable(true)
-            .setData('originalWidthRatio', PADDLE_WIDTH_RATIO); // ★ 元の幅比率を保存
+            .setData('originalWidthRatio', PADDLE_WIDTH_RATIO);
 
-        this.updatePaddleSize(); // ★ サイズ設定関数を呼び出し
+        this.updatePaddleSize(); // ★ 初期サイズ設定
 
         this.balls=this.physics.add.group({bounceX:1,bounceY:1,collideWorldBounds:true}); this.createAndAddBall(this.paddle.x,this.paddle.y-PADDLE_HEIGHT/2-BALL_RADIUS);
         this.setupStage();
@@ -99,48 +98,34 @@ class GameScene extends Phaser.Scene {
         this.input.on('pointermove',(p)=>{ if(!this.isGameOver&&this.lives>0&&this.paddle&&!this.isStageClearing){ const tX = p.x; const hW = this.paddle.displayWidth / 2; const cX = Phaser.Math.Clamp(tX, hW, this.scale.width - hW); this.paddle.x = cX; if (!this.isBallLaunched) { this.balls.getChildren().forEach(b => { if(b.active) b.x = cX; }); } } });
         this.input.on('pointerdown',()=>{ if(this.isGameOver&&this.gameOverText?.visible){ this.returnToTitle(); } else if(this.lives>0&&!this.isBallLaunched&&!this.isStageClearing){ this.launchBall(); } });
 
-        // ★ リサイズイベントのリスナーを設定
         this.scale.on('resize', this.handleResize, this);
-
         this.events.on('shutdown',this.shutdown,this);
     }
 
-    // ★ パドルの表示サイズと物理ボディサイズを更新する関数
+    // ★ パドルサイズ更新関数を refreshBody() を使うように変更
     updatePaddleSize() {
         if (!this.paddle) return;
         const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio');
         this.paddle.setDisplaySize(newWidth, PADDLE_HEIGHT);
-        if (this.paddle.body) {
-            this.paddle.body.setSize(newWidth, PADDLE_HEIGHT);
-            // オフセットも更新 (中心に合わせるため)
-             this.paddle.body.setOffset(0, 0); // 画像の中心が基準なのでオフセットは通常0
-        }
-         // パドルの位置を再クランプ (リサイズで画面外にはみ出す場合があるため)
-         const halfWidth = newWidth / 2;
-         this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth);
 
+        // ★ setDisplaySize の後に refreshBody を呼ぶ
+        this.paddle.refreshBody();
+
+        // パドルの位置を再クランプ
+        const halfWidth = this.paddle.displayWidth / 2; // ★ displayWidth を使う
+        this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth);
+        console.log(`Paddle resized: DisplayWidth=${this.paddle.displayWidth.toFixed(2)}, BodyWidth=${this.paddle.body?.width.toFixed(2)}`); // サイズ確認ログ
     }
 
-    // ★ 画面リサイズ時に呼び出される関数
-    handleResize(gameSize, baseSize, displaySize, resolution) {
+    handleResize(gameSize, baseSize, displaySize, resolution) { /* 省略 (変更なし) */
         console.log("Resize event detected!");
-        // ★ ゲームの幅・高さを更新 (他の要素の計算で使う場合)
         this.gameWidth = gameSize.width;
         this.gameHeight = gameSize.height;
-
-        // ★ パドルサイズを更新
         this.updatePaddleSize();
-
-        // ★ ボールやブロックなど、他の要素もリサイズに合わせて調整が必要な場合はここに追加
-        // 例: ブロックの位置を再計算して配置しなおすなど (今回は省略)
-
-        // ★ UI要素の位置も再調整が必要な場合がある（UIScene側で対応が望ましい）
-        // GameSceneからUISceneにリサイズイベントを通知する
         if (this.scene.isActive('UIScene')) {
-            this.events.emit('gameResize'); // ★ UIScene に通知
+            this.events.emit('gameResize');
         }
-    }
-
+     }
     setupStage() { /* 省略 (変更なし) */
         console.log(`Setting up stage ${this.currentStage}`);
         if (this.currentMode === GAME_MODE.NORMAL) {
@@ -210,12 +195,12 @@ class GameScene extends Phaser.Scene {
         this.setColliders();
      }
     handleBrickHit(brick, damage = 1) { /* 省略 (変更なし) */ if (!brick || !brick.active || !brick.getData) return false; let currentHits = brick.getData('currentHits'); const maxHits = brick.getData('maxHits'); const originalTint = brick.getData('originalTint'); const isDurable = brick.getData('isDurable'); currentHits -= damage; brick.setData('currentHits', currentHits); if (currentHits <= 0) { this.handleBrickDestruction(brick); return true; } else if (isDurable) { const darknessFactor = (maxHits - currentHits) * DURABLE_BRICK_HIT_DARKEN; brick.setTint(Phaser.Display.Color.ValueToColor(DURABLE_BRICK_COLOR).darken(darknessFactor).color); return false; } else { return false; } }
-    handleBrickDestruction(brick) { /* 省略 (変更なし、ログ削除済み) */ if (!brick || !brick.active) return false; const brickX = brick.x; const brickY = brick.y; brick.disableBody(true, true); this.score += 10; this.events.emit('updateScore',this.score); this.increaseVajraGauge(); if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) { this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA); return true; } if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) { this.dropPowerUp(brickX, brickY); } return false; }
+    handleBrickDestruction(brick) { /* 省略 (変更なし) */ if (!brick || !brick.active) return false; const brickX = brick.x; const brickY = brick.y; brick.disableBody(true, true); this.score += 10; this.events.emit('updateScore',this.score); this.increaseVajraGauge(); if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) { this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA); return true; } if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) { this.dropPowerUp(brickX, brickY); } return false; }
     hitBrick(brick, ball){ /* 省略 (変更なし) */ if(!brick||!ball||!brick.active||!ball.active||this.isStageClearing)return; const destroyed = this.handleBrickHit(brick, 1); if(destroyed && !this.isStageClearing && this.bricks.countActive(true) === 0){ this.stageClear(); } }
     handleBallBrickOverlap(ball, brick){ /* 省略 (変更なし) */ if(!ball||!brick||!ball.active||!brick.active||this.isStageClearing)return; const isBikara = ball.getData('isBikara'); const bikaraState = ball.getData('bikaraState'); if(isBikara){ if(bikaraState==='yin'){ this.markBrickByBikara(brick); return; } else if(bikaraState==='yang'){ this.handleBikaraYangDestroy(ball, brick); return; } } else { const destroyed = this.handleBrickHit(brick, brick.getData('maxHits')); if(destroyed && !this.isStageClearing && this.bricks.countActive(true) === 0){ this.stageClear(); } } }
     handleBikaraYangDestroy(ball, hitBrick){ /* 省略 (変更なし) */ if(!ball||!ball.active||!ball.getData('isBikara')||ball.getData('bikaraState')!=='yang') return; let dC=0; const mTD=[]; if(hitBrick.active){ mTD.push(hitBrick); hitBrick.setData('isMarkedByBikara',false); } this.bricks.getChildren().forEach(br=>{ if(br.active && br.getData('isMarkedByBikara') && !mTD.includes(br)){ mTD.push(br); br.setData('isMarkedByBikara',false); } }); mTD.forEach(br=>{ if(br.active){ this.handleBrickHit(br, br.getData('maxHits')); dC++; } }); let cYC=ball.getData('bikaraYangCount')||0; cYC++; ball.setData('bikaraYangCount',cYC); if(!this.isStageClearing&&this.bricks.countActive(true)===0){ this.stageClear(); } else if(cYC>=BIKARA_YANG_COUNT_MAX){ this.deactivateBikara([ball]); this.updateBallTint(ball); } }
-    dropSpecificPowerUp(x, y, type) { /* 省略 (変更なし、ログ削除済み) */ if (!type || !POWERUP_COLORS[type]) return; const color = POWERUP_COLORS[type]; let powerUp = null; try { powerUp = this.powerUps.create(x, y, 'whitePixel'); if (powerUp) { powerUp.setDisplaySize(POWERUP_SIZE, POWERUP_SIZE).setTint(color).setData('type', type); if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); } else { console.error(`No physics body for powerup type: ${type}!`); powerUp.destroy(); powerUp = null; } } else { console.error(`Failed to create powerup object for type: ${type}!`); } } catch (error) { console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error); if (powerUp && powerUp.active) { powerUp.destroy(); } } }
-    dropPowerUp(x,y){ /* 省略 (変更なし、ログ削除済み) */ let aT = []; if (this.currentMode === GAME_MODE.NORMAL) { aT = this.stageDropPool; } else { aT = ALLSTARS_MODE_POWERUP_POOL; } if (aT.length === 0) return; const type = Phaser.Utils.Array.GetRandom(aT); this.dropSpecificPowerUp(x, y, type); }
+    dropSpecificPowerUp(x, y, type) { /* 省略 (変更なし) */ if (!type || !POWERUP_COLORS[type]) return; const color = POWERUP_COLORS[type]; let powerUp = null; try { powerUp = this.powerUps.create(x, y, 'whitePixel'); if (powerUp) { powerUp.setDisplaySize(POWERUP_SIZE, POWERUP_SIZE).setTint(color).setData('type', type); if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); } else { console.error(`No physics body for powerup type: ${type}!`); powerUp.destroy(); powerUp = null; } } else { console.error(`Failed to create powerup object for type: ${type}!`); } } catch (error) { console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error); if (powerUp && powerUp.active) { powerUp.destroy(); } } }
+    dropPowerUp(x,y){ /* 省略 (変更なし) */ let aT = []; if (this.currentMode === GAME_MODE.NORMAL) { aT = this.stageDropPool; } else { aT = ALLSTARS_MODE_POWERUP_POOL; } if (aT.length === 0) return; const type = Phaser.Utils.Array.GetRandom(aT); this.dropSpecificPowerUp(x, y, type); }
     hitPaddle(paddle,ball){ /* 省略 (変更なし) */ if(!paddle||!ball||!ball.active||!ball.body)return; let diff=ball.x-paddle.x; const mD=paddle.displayWidth/2; let inf=diff/mD; inf=Phaser.Math.Clamp(inf,-1,1); const maxVx=NORMAL_BALL_SPEED*0.8; let nVx=maxVx*inf; const minVy=NORMAL_BALL_SPEED*0.5; let cVy=ball.body.velocity.y; let nVy=-Math.abs(cVy); if(Math.abs(nVy)<minVy) nVy=-minVy; let sM=1.0; if(ball.getData('isFast')) sM=BALL_SPEED_MODIFIERS[POWERUP_TYPES.SHATORA]; else if(ball.getData('isSlow')) sM=BALL_SPEED_MODIFIERS[POWERUP_TYPES.HAILA]; const tS=NORMAL_BALL_SPEED*sM; const nV=new Phaser.Math.Vector2(nVx,nVy).normalize().scale(tS); ball.setVelocity(nV.x,nV.y); if(ball.getData('isBikara')) this.switchBikaraState(ball); if(ball.getData('isIndaraActive')){ this.deactivateIndaraForBall(ball); this.updateBallTint(ball); } }
     collectPowerUp(paddle,powerUp){ /* 省略 (変更なし) */ if(!powerUp||!powerUp.active||this.isStageClearing)return; const type = powerUp.getData('type'); if(!type){ powerUp.destroy(); return; } powerUp.destroy(); if(type===POWERUP_TYPES.BAISRAVA){ this.activateBaisrava(); return; } if(type===POWERUP_TYPES.VAJRA){ this.activateVajra(); return; } if(type===POWERUP_TYPES.MAKIRA){ this.activateMakira(); return; } if(type===POWERUP_TYPES.MAKORA){ this.activateMakora(); return; } if(type===POWERUP_TYPES.ANCHIRA||type===POWERUP_TYPES.SINDARA){ if(this.balls.countActive(true)>1){ this.keepFurthestBall(); } } this.activatePower(type); }
     activateMakora() { /* 省略 (変更なし) */ const cPT = Phaser.Utils.Array.GetRandom(MAKORA_COPYABLE_POWERS); console.log(`Makora copy: ${cPT}`); switch(cPT) { case POWERUP_TYPES.KUBIRA: case POWERUP_TYPES.SHATORA: case POWERUP_TYPES.HAILA: case POWERUP_TYPES.BIKARA: case POWERUP_TYPES.INDARA: case POWERUP_TYPES.ANILA: this.activatePower(cPT); break; case POWERUP_TYPES.ANCHIRA: case POWERUP_TYPES.SINDARA: if(this.balls.countActive(true)>1){ this.keepFurthestBall(); } this.activatePower(cPT); break; case POWERUP_TYPES.VAJRA: this.activateVajra(); break; case POWERUP_TYPES.MAKIRA: this.activateMakira(); break; } }
@@ -235,73 +220,36 @@ class GameScene extends Phaser.Scene {
     fireMakiraBeam() { /* 省略 (変更なし) */ if (!this.isMakiraActive || !this.familiars || this.familiars.countActive(true) === 0 || this.isStageClearing || this.isGameOver) return; this.familiars.getChildren().forEach(f => { if (f.active) { const beam = this.makiraBeams.create(f.x, f.y - MAKIRA_FAMILIAR_SIZE, null).setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT).setTint(MAKIRA_BEAM_COLOR); if (beam && beam.body) { beam.setVelocity(0, -MAKIRA_BEAM_SPEED); beam.body.setAllowGravity(false); } else { if (beam) beam.destroy(); } } }); }
     hitBrickWithMakiraBeam(beam, brick) { /* 省略 (変更なし) */ if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver) return; try { beam.destroy(); const destroyed = this.handleBrickHit(brick, 1); if(destroyed && !this.isStageClearing && this.bricks.countActive(true) === 0){ this.time.delayedCall(10, this.stageClear, [], this); } } catch(error) { if (beam && beam.active) { beam.setActive(false).setVisible(false); if(beam.body) beam.body.enable = false; } } }
     loseLife() { /* 省略 (変更なし) */ if(this.isStageClearing||this.isGameOver||this.lives<=0)return; this.deactivateMakira(); this.deactivateVajra(); this.lives--; this.events.emit('updateLives',this.lives); this.isBallLaunched=false; Object.keys(this.powerUpTimers).forEach(k=>{ if(this.powerUpTimers[k]){ this.powerUpTimers[k].remove(); this.powerUpTimers[k]=null; } }); if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove(); this.sindaraMergeTimer=null; if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer=null; const aB = this.balls.getMatching('active', true); if(aB.length > 0) { this.deactivateAnchira(aB); this.deactivateSindara(aB); this.deactivateBikara(aB); aB.forEach(b => { this.deactivateIndaraForBall(b); this.deactivateAnilaForBall(b); b.setData({isPenetrating: false, isFast: false, isSlow: false}); b.setData('activePowers', new Set()); b.setData('lastActivatedPower', null); this.resetBallSpeed(b); this.updateBallTint(b); }); } if(this.lives>0){ this.time.delayedCall(500,this.resetForNewLife,[],this); } else { this.time.delayedCall(500,this.gameOver,[],this); } }
-    resetForNewLife() {
-        if(this.isGameOver||this.isStageClearing) return;
-        if(this.balls){ this.balls.clear(true,true); }
-        if(this.paddle){
-            this.paddle.x=this.scale.width/2; // ★ scale を使う
-            this.paddle.y=this.scale.height-PADDLE_Y_OFFSET; // ★ scale を使う
-            this.updatePaddleSize(); // ★ パドルサイズ再設定
-        }
-        let nB = null;
-        if(this.paddle){ nB=this.createAndAddBall(this.paddle.x,this.paddle.y-PADDLE_HEIGHT/2-BALL_RADIUS); }
-        else { nB=this.createAndAddBall(this.scale.width/2,this.scale.height-PADDLE_Y_OFFSET-PADDLE_HEIGHT/2-BALL_RADIUS); }
-        this.isBallLaunched=false; this.setColliders();
-    }
+    resetForNewLife() { /* 省略 (変更なし) */ if(this.isGameOver||this.isStageClearing) return; if(this.balls){ this.balls.clear(true,true); } if(this.paddle){ this.paddle.x=this.scale.width/2; this.paddle.y=this.scale.height-PADDLE_Y_OFFSET; this.updatePaddleSize(); } let nB = null; if(this.paddle){ nB=this.createAndAddBall(this.paddle.x,this.paddle.y-PADDLE_HEIGHT/2-BALL_RADIUS); } else { nB=this.createAndAddBall(this.scale.width/2,this.scale.height-PADDLE_Y_OFFSET-PADDLE_HEIGHT/2-BALL_RADIUS); } this.isBallLaunched=false; this.setColliders(); }
     gameOver() { /* 省略 (変更なし) */ if(this.isGameOver) return; this.isGameOver=true; this.deactivateMakira(); this.deactivateVajra(); if(this.gameOverText)this.gameOverText.setVisible(true); this.physics.pause(); if(this.balls){ this.balls.getChildren().forEach(b=>{ if(b.active){ b.setVelocity(0,0); if(b.body)b.body.enable=false; } }); } Object.values(this.powerUpTimers).forEach(t=>{if(t)t.remove();}); this.powerUpTimers={}; if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove();this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove();this.sindaraMergeTimer=null; if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer=null; if(this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer=null; }
     stageClear() { /* 省略 (変更なし) */ if(this.isStageClearing||this.isGameOver) return; this.isStageClearing=true; this.deactivateMakira(); this.deactivateVajra(); try{ this.physics.pause(); Object.keys(this.powerUpTimers).forEach(k=>{ if(this.powerUpTimers[k]){ this.powerUpTimers[k].remove(); this.powerUpTimers[k]=null; } }); if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove(); this.sindaraMergeTimer=null; if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer=null; const aB = this.balls.getMatching('active', true); if(aB.length > 0) { this.deactivateAnchira(aB); this.deactivateSindara(aB); this.deactivateBikara(aB); aB.forEach(b => { this.deactivateIndaraForBall(b); this.deactivateAnilaForBall(b); b.setData({isPenetrating: false, isFast: false, isSlow: false}); b.setData('activePowers', new Set()); b.setData('lastActivatedPower', null); }); } if(this.balls){ this.balls.getChildren().forEach(b=>{ if(b.active){ b.setVelocity(0,0).setVisible(false).setActive(false); if(b.body)b.body.enable=false; } }); } if(this.bricks){ this.bricks.getChildren().forEach(br=>{ if(br.getData('isMarkedByBikara'))br.setData('isMarkedByBikara',false); }); } if(this.powerUps){ this.powerUps.clear(true,true); } this.currentStage++; const mS=this.currentMode===GAME_MODE.ALL_STARS?10:12; if(this.currentStage>mS){ this.gameComplete(); } else { this.events.emit('updateStage',this.currentStage); this.time.delayedCall(1000,()=>{ if(!this.scene||!this.scene.isActive()||this.isGameOver) return; try{ this.setupStage(); this.isStageClearing=false; this.resetForNewLife(); this.physics.resume(); }catch(e){ this.isStageClearing=false; this.gameOver(); } },[],this); } }catch(e){ this.isStageClearing=false; this.gameOver(); } }
     gameComplete() { /* 省略 (変更なし) */ alert(`Clear! Score: ${this.score}`); this.returnToTitle(); }
     returnToTitle() { /* 省略 (変更なし) */ if(this.physics.world&&!this.physics.world.running) this.physics.resume(); if(this.scene.isActive('UIScene')){ this.scene.stop('UIScene'); } this.time.delayedCall(10,()=>{ if(this.scene&&this.scene.isActive()){ this.scene.start('TitleScene'); } }); }
-    shutdown() {
-        // ★ リサイズリスナーの解除を追加
-        if(this.scale) this.scale.off('resize', this.handleResize, this);
-        /* 残りの処理は省略 (変更なし) */
-        this.isGameOver=false; this.isStageClearing=false; this.deactivateMakira(); this.deactivateVajra(); Object.values(this.powerUpTimers).forEach(t=>{if(t)t.remove(false);}); this.powerUpTimers={}; if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer=null; if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer=null; if(this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer=null; if(this.time) this.time.removeAllEvents(); if(this.input) this.input.removeAllListeners(); if(this.physics.world) this.physics.world.off('worldbounds',this.handleWorldBounds,this); this.events.removeAllListeners(); if(this.balls)this.balls.destroy(true);this.balls=null; if(this.bricks)this.bricks.destroy(true);this.bricks=null; if(this.powerUps)this.powerUps.destroy(true);this.powerUps=null; if(this.paddle)this.paddle.destroy();this.paddle=null; if(this.familiars)this.familiars.destroy(true);this.familiars=null; if(this.makiraBeams)this.makiraBeams.destroy(true);this.makiraBeams=null; this.ballPaddleCollider=null; this.ballBrickCollider=null; this.ballBrickOverlap=null; this.ballBallCollider=null; this.makiraBeamBrickOverlap = null;
-    }
+    shutdown() { /* 省略 (変更なし) */ if(this.scale) this.scale.off('resize', this.handleResize, this); this.isGameOver=false; this.isStageClearing=false; this.deactivateMakira(); this.deactivateVajra(); Object.values(this.powerUpTimers).forEach(t=>{if(t)t.remove(false);}); this.powerUpTimers={}; if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer=null; if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer=null; if(this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer=null; if(this.time) this.time.removeAllEvents(); if(this.input) this.input.removeAllListeners(); if(this.physics.world) this.physics.world.off('worldbounds',this.handleWorldBounds,this); this.events.removeAllListeners(); if(this.balls)this.balls.destroy(true);this.balls=null; if(this.bricks)this.bricks.destroy(true);this.bricks=null; if(this.powerUps)this.powerUps.destroy(true);this.powerUps=null; if(this.paddle)this.paddle.destroy();this.paddle=null; if(this.familiars)this.familiars.destroy(true);this.familiars=null; if(this.makiraBeams)this.makiraBeams.destroy(true);this.makiraBeams=null; this.ballPaddleCollider=null; this.ballBrickCollider=null; this.ballBrickOverlap=null; this.ballBallCollider=null; this.makiraBeamBrickOverlap = null; }
 }
 
 
 // --- UIScene ---
 class UIScene extends Phaser.Scene {
     constructor() { super({ key: 'UIScene', active: false }); this.livesText=null; this.scoreText=null; this.stageText=null; this.vajraGaugeText = null; this.dropPoolIconsGroup = null; this.gameSceneListenerAttached = false; }
-    create() {
-        this.gameWidth=this.scale.width; this.gameHeight = this.scale.height; const tS={fontSize:'24px',fill:'#fff'}; this.livesText=this.add.text(16,16,'ライフ:',tS); this.stageText=this.add.text(this.gameWidth/2,16,'ステージ:',tS).setOrigin(0.5,0); this.scoreText=this.add.text(this.gameWidth-16,16,'スコア:',tS).setOrigin(1,0);
-        this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff' }).setOrigin(0, 1).setVisible(false);
+    create() { /* 省略 (変更なし) */
+        this.gameWidth=this.scale.width; this.gameHeight = this.scale.height;
+        const textStyle={fontSize:'24px',fill:'#fff'};
+        this.livesText=this.add.text(16,16,'ライフ:',textStyle);
+        this.stageText=this.add.text(this.gameWidth/2,16,'ステージ:',textStyle).setOrigin(0.5,0);
+        this.scoreText=this.add.text(this.gameWidth-16,16,'スコア:',textStyle).setOrigin(1,0);
+        this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff' })
+                                     .setOrigin(0, 1)
+                                     .setVisible(false);
         this.dropPoolIconsGroup = this.add.group();
-        this.updateDropPoolDisplay([]); // 初期表示
+        this.updateDropPoolDisplay([]);
 
-        // ★ GameSceneからのリサイズ通知を受け取るリスナー
         this.gameScene = this.scene.get('GameScene');
-        if (this.gameScene) {
-            this.gameScene.events.on('gameResize', this.onGameResize, this);
-        }
-
+        if (this.gameScene) { this.gameScene.events.on('gameResize', this.onGameResize, this); }
         try{ const gS=this.scene.get('GameScene'); if(gS && gS.scene.settings.status === Phaser.Scenes.RUNNING){ this.registerGameEventListeners(gS); } else { this.scene.get('GameScene').events.once('create', this.registerGameEventListeners, this); } }catch(e){}
-        this.events.on('shutdown',()=>{
-            this.unregisterGameEventListeners();
-             // ★ GameSceneからのリサイズリスナーも解除
-            if (this.gameScene && this.gameScene.events) {
-                this.gameScene.events.off('gameResize', this.onGameResize, this);
-            }
-        });
-    }
-
-    // ★ GameSceneリサイズ時にUI要素の位置を再計算
-    onGameResize() {
-        this.gameWidth = this.scale.width;
-        this.gameHeight = this.scale.height;
-
-        // スコア、ライフ、ステージ番号などの位置調整（必要に応じて）
-        this.livesText?.setPosition(16, 16);
-        this.stageText?.setPosition(this.gameWidth / 2, 16);
-        this.scoreText?.setPosition(this.gameWidth - 16, 16);
-
-        // 画面下部のUIの位置調整
-        this.vajraGaugeText?.setPosition(16, this.gameHeight - UI_BOTTOM_OFFSET);
-        this.updateDropPoolPosition(); // ドロッププール位置も更新
-    }
-
-
+        this.events.on('shutdown',()=>{ this.unregisterGameEventListeners(); if (this.gameScene && this.gameScene.events) { this.gameScene.events.off('gameResize', this.onGameResize, this); } });
+     }
+    onGameResize() { /* 省略 (変更なし) */ this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; this.livesText?.setPosition(16, 16); this.stageText?.setPosition(this.gameWidth / 2, 16); this.scoreText?.setPosition(this.gameWidth - 16, 16); this.vajraGaugeText?.setPosition(16, this.gameHeight - UI_BOTTOM_OFFSET); this.updateDropPoolPosition(); }
     registerGameEventListeners(gS) { /* 省略 (変更なし) */ if(!gS||!gS.events || this.gameSceneListenerAttached) return; this.unregisterGameEventListeners(gS); gS.events.on('updateLives',this.updateLivesDisplay,this); gS.events.on('updateScore',this.updateScoreDisplay,this); gS.events.on('updateStage',this.updateStageDisplay,this); gS.events.on('activateVajraUI',this.activateVajraUIDisplay,this); gS.events.on('updateVajraGauge',this.updateVajraGaugeDisplay,this); gS.events.on('deactivateVajraUI', this.deactivateVajraUIDisplay, this); gS.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this); this.gameSceneListenerAttached = true; try{ this.updateLivesDisplay(gS.lives); this.updateScoreDisplay(gS.score); this.updateStageDisplay(gS.currentStage); if(gS.isVajraSystemActive) this.activateVajraUIDisplay(gS.vajraGauge, VAJRA_GAUGE_MAX); else this.deactivateVajraUIDisplay(); this.updateDropPoolDisplay(gS.stageDropPool); }catch(e){} }
     unregisterGameEventListeners(gS = null) { /* 省略 (変更なし) */ const gs = gS || (this.scene.manager ? this.scene.manager.getScene('GameScene') : null); if (gs && gs.events) { gs.events.off('updateLives',this.updateLivesDisplay,this); gs.events.off('updateScore',this.updateScoreDisplay,this); gs.events.off('updateStage',this.updateStageDisplay,this); gs.events.off('activateVajraUI',this.activateVajraUIDisplay,this); gs.events.off('updateVajraGauge',this.updateVajraGaugeDisplay,this); gs.events.off('deactivateVajraUI', this.deactivateVajraUIDisplay, this); gs.events.off('create', this.registerGameEventListeners, this); gs.events.off('updateDropPoolUI', this.updateDropPoolDisplay, this); } this.gameSceneListenerAttached = false; }
     updateLivesDisplay(l){/*省略*/} updateScoreDisplay(s){/*省略*/} updateStageDisplay(st){/*省略*/}
