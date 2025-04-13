@@ -67,10 +67,10 @@ const MAKIRA_FAMILIAR_SIZE = 10;
 const MAKIRA_FAMILIAR_COLOR = 0x00ced1;
 
 // --- BootScene ---
-class BootScene extends Phaser.Scene { constructor(){super('BootScene');} preload(){console.log("B:Load");} create(){console.log("B:Create");this.scene.start('TitleScene');} }
+class BootScene extends Phaser.Scene { constructor(){super('BootScene');} preload(){} create(){this.scene.start('TitleScene');} }
 
 // --- TitleScene ---
-class TitleScene extends Phaser.Scene { constructor(){super('TitleScene');} create(){const w=this.scale.width,h=this.scale.height;this.cameras.main.setBackgroundColor('#222');this.add.text(w/2,h*0.2,'十二神将',{fontSize:'40px',fill:'#fff',fontStyle:'bold'}).setOrigin(0.5);this.add.text(w/2,h*0.3,'(仮)',{fontSize:'20px',fill:'#fff'}).setOrigin(0.5);const bs={fontSize:'32px',fill:'#fff',backgroundColor:'#555',padding:{x:20,y:10}};const bhs={fill:'#ff0'};const nb=this.add.text(w/2,h*0.5,'通常',bs).setOrigin(0.5).setInteractive({useHandCursor:true}).on('pointerover',()=>{nb.setStyle(bhs)}).on('pointerout',()=>{nb.setStyle(bs)}).on('pointerdown',()=>{console.log("通常");this.scene.start('GameScene',{mode:GAME_MODE.NORMAL});this.scene.launch('UIScene');});const asb=this.add.text(w/2,h*0.7,'全員',bs).setOrigin(0.5).setInteractive({useHandCursor:true}).on('pointerover',()=>{asb.setStyle(bhs)}).on('pointerout',()=>{asb.setStyle(bs)}).on('pointerdown',()=>{console.log("全員");this.scene.start('GameScene',{mode:GAME_MODE.ALL_STARS});this.scene.launch('UIScene');});} }
+class TitleScene extends Phaser.Scene { constructor(){super('TitleScene');} create(){const w=this.scale.width,h=this.scale.height;this.cameras.main.setBackgroundColor('#222');this.add.text(w/2,h*0.2,'十二神将',{fontSize:'40px',fill:'#fff',fontStyle:'bold'}).setOrigin(0.5);this.add.text(w/2,h*0.3,'(仮)',{fontSize:'20px',fill:'#fff'}).setOrigin(0.5);const bs={fontSize:'32px',fill:'#fff',backgroundColor:'#555',padding:{x:20,y:10}};const bhs={fill:'#ff0'};const nb=this.add.text(w/2,h*0.5,'通常',bs).setOrigin(0.5).setInteractive({useHandCursor:true}).on('pointerover',()=>{nb.setStyle(bhs)}).on('pointerout',()=>{nb.setStyle(bs)}).on('pointerdown',()=>{this.scene.start('GameScene',{mode:GAME_MODE.NORMAL});this.scene.launch('UIScene');});const asb=this.add.text(w/2,h*0.7,'全員',bs).setOrigin(0.5).setInteractive({useHandCursor:true}).on('pointerover',()=>{asb.setStyle(bhs)}).on('pointerout',()=>{asb.setStyle(bs)}).on('pointerdown',()=>{this.scene.start('GameScene',{mode:GAME_MODE.ALL_STARS});this.scene.launch('UIScene');});} }
 
 // --- GameScene ---
 class GameScene extends Phaser.Scene {
@@ -94,37 +94,35 @@ class GameScene extends Phaser.Scene {
         this.isStageClearing=false; this.isGameOver=false;
         this.isVajraSystemActive=false; this.vajraGauge=0;
         this.isMakiraActive=false; if(this.makiraAttackTimer)this.makiraAttackTimer.remove(); this.makiraAttackTimer=null;
-        console.log(`GS:Init ${this.currentMode} L:${this.lives}`);
     }
 
     preload(){}
 
     create(){
-        console.log("GS:Create Start");
         this.gameWidth=this.scale.width; this.gameHeight=this.scale.height; this.cameras.main.setBackgroundColor('#222');
-        this.time.delayedCall(50,()=>{ if(this.scene.isActive('UIScene')){ this.events.emit('updateLives',this.lives); this.events.emit('updateScore',this.score); this.events.emit('updateStage',this.currentStage); if(this.isVajraSystemActive) { this.events.emit('activateVajraUI',this.vajraGauge,VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } } else { console.warn("UI not active at init time"); } });
+        this.time.delayedCall(50,()=>{ if(this.scene.isActive('UIScene')){ this.events.emit('updateLives',this.lives); this.events.emit('updateScore',this.score); this.events.emit('updateStage',this.currentStage); if(this.isVajraSystemActive) { this.events.emit('activateVajraUI',this.vajraGauge,VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } } });
         this.physics.world.setBoundsCollision(true,true,true,false); this.physics.world.on('worldbounds',this.handleWorldBounds,this);
-        const initialPaddleWidth=this.gameWidth*PADDLE_WIDTH_RATIO; this.paddle=this.physics.add.image(this.gameWidth/2,this.gameHeight-PADDLE_Y_OFFSET,null).setDisplaySize(initialPaddleWidth,PADDLE_HEIGHT).setTint(0xffffff).setImmovable(true).setData('originalWidth',initialPaddleWidth);
+        const iPW=this.gameWidth*PADDLE_WIDTH_RATIO; this.paddle=this.physics.add.image(this.gameWidth/2,this.gameHeight-PADDLE_Y_OFFSET,null).setDisplaySize(iPW,PADDLE_HEIGHT).setTint(0xffffff).setImmovable(true).setData('originalWidth',iPW);
         this.balls=this.physics.add.group({bounceX:1,bounceY:1,collideWorldBounds:true}); this.createAndAddBall(this.paddle.x,this.paddle.y-PADDLE_HEIGHT/2-BALL_RADIUS);
         this.createBricks();
         this.gameOverText=this.add.text(this.gameWidth/2,this.gameHeight/2,'G Over\nTap',{fontSize:'48px',fill:'#f00',align:'center'}).setOrigin(0.5).setVisible(false).setDepth(1);
         this.powerUps=this.physics.add.group(); this.familiars=this.physics.add.group(); this.makiraBeams=this.physics.add.group();
         this.setColliders();
         this.physics.add.overlap(this.paddle,this.powerUps,this.collectPowerUp,null,this);
-        this.input.on('pointermove',(p)=>{ if(!this.isGameOver&&this.lives>0&&this.paddle&&!this.isStageClearing){ const targetX = p.x; const halfWidth = this.paddle.displayWidth / 2; const clampedTargetX = Phaser.Math.Clamp(targetX, halfWidth, this.gameWidth - halfWidth); this.paddle.x = clampedTargetX; if (!this.isBallLaunched) { this.balls.getChildren().forEach(b => { if(b.active) b.x = clampedTargetX; }); } } });
+        this.input.on('pointermove',(p)=>{ if(!this.isGameOver&&this.lives>0&&this.paddle&&!this.isStageClearing){ const tX = p.x; const hW = this.paddle.displayWidth / 2; const cX = Phaser.Math.Clamp(tX, hW, this.gameWidth - hW); this.paddle.x = cX; if (!this.isBallLaunched) { this.balls.getChildren().forEach(b => { if(b.active) b.x = cX; }); } } });
         this.input.on('pointerdown',()=>{ if(this.isGameOver&&this.gameOverText?.visible){ this.returnToTitle(); } else if(this.lives>0&&!this.isBallLaunched&&!this.isStageClearing){ this.launchBall(); } });
-        this.events.on('shutdown',this.shutdown,this); console.log("GS:Create End");
+        this.events.on('shutdown',this.shutdown,this);
     }
 
     update(){
         if(this.isGameOver||this.isStageClearing||this.lives<=0){ return; }
-        let activeBallCount=0; let sindaraBalls=[];
-        this.balls.getChildren().forEach(b=>{ if(b.active){ activeBallCount++; if(this.isBallLaunched&&!this.isStageClearing&&b.y>this.gameHeight+b.displayHeight){ if(b.getData('isAnilaActive')) { this.triggerAnilaBounce(b); } else { b.setActive(false).setVisible(false); if(b.body) b.body.enable=false; } } if(b.getData('isSindara')){ sindaraBalls.push(b); if(b.getData('isAttracting')) { this.updateSindaraAttraction(b); } } if(b.body&&this.isBallLaunched){ const minSpeed=NORMAL_BALL_SPEED*0.1; const maxSpeed=NORMAL_BALL_SPEED*5; const speed=b.body.velocity.length(); if(speed<minSpeed&&speed>0) { b.body.velocity.normalize().scale(minSpeed); } else if(speed>maxSpeed) { b.body.velocity.normalize().scale(maxSpeed); } } } });
-        if(sindaraBalls.length===1 && this.balls.getTotalUsed() > 1){ const remainingBall=sindaraBalls[0]; if(remainingBall.getData('isSindara')){ this.deactivateSindara([remainingBall]); this.updateBallTint(remainingBall); } }
-        if(activeBallCount===0&&this.isBallLaunched&&!this.isStageClearing&&this.lives>0){ this.loseLife(); return; }
+        let aBC=0; let sB=[];
+        this.balls.getChildren().forEach(b=>{ if(b.active){ aBC++; if(this.isBallLaunched&&!this.isStageClearing&&b.y>this.gameHeight+b.displayHeight){ if(b.getData('isAnilaActive')) { this.triggerAnilaBounce(b); } else { b.setActive(false).setVisible(false); if(b.body) b.body.enable=false; } } if(b.getData('isSindara')){ sB.push(b); if(b.getData('isAttracting')) { this.updateSindaraAttraction(b); } } if(b.body&&this.isBallLaunched){ const minS=NORMAL_BALL_SPEED*0.1; const maxS=NORMAL_BALL_SPEED*5; const sp=b.body.velocity.length(); if(sp<minS&&sp>0) { b.body.velocity.normalize().scale(minS); } else if(sp>maxS) { b.body.velocity.normalize().scale(maxS); } } } });
+        if(sB.length===1 && this.balls.getTotalUsed() > 1){ const rB=sB[0]; if(rB.getData('isSindara')){ this.deactivateSindara([rB]); this.updateBallTint(rB); } }
+        if(aBC===0&&this.isBallLaunched&&!this.isStageClearing&&this.lives>0){ this.loseLife(); return; }
         this.powerUps.children.each(pu=>{ if(pu.active&&pu.y>this.gameHeight+POWERUP_SIZE) { pu.destroy(); } });
-        if(this.balls.countActive(true)===1){ const lastBall=this.balls.getFirstAlive(); if(lastBall&&lastBall.getData('isAnchira')){ this.deactivateAnchira([lastBall]); this.updateBallTint(lastBall); } }
-        if(this.isMakiraActive&&this.paddle&&this.familiars){ const paddleX=this.paddle.x; const familiarY=this.paddle.y-PADDLE_HEIGHT/2-MAKIRA_FAMILIAR_SIZE; const children = this.familiars.getChildren(); if(children.length>=1 && children[0].active) children[0].setPosition(paddleX-MAKIRA_FAMILIAR_OFFSET, familiarY); if(children.length>=2 && children[1].active) children[1].setPosition(paddleX+MAKIRA_FAMILIAR_OFFSET, familiarY); }
+        if(this.balls.countActive(true)===1){ const lB=this.balls.getFirstAlive(); if(lB&&lB.getData('isAnchira')){ this.deactivateAnchira([lB]); this.updateBallTint(lB); } }
+        if(this.isMakiraActive&&this.paddle&&this.familiars){ const pX=this.paddle.x; const fY=this.paddle.y-PADDLE_HEIGHT/2-MAKIRA_FAMILIAR_SIZE; const c = this.familiars.getChildren(); if(c.length>=1 && c[0].active) c[0].setPosition(pX-MAKIRA_FAMILIAR_OFFSET, fY); if(c.length>=2 && c[1].active) c[1].setPosition(pX+MAKIRA_FAMILIAR_OFFSET, fY); }
         if(this.makiraBeams){ this.makiraBeams.children.each(bm=>{ if(bm.active&&bm.y<-MAKIRA_BEAM_HEIGHT) { bm.destroy(); } }); }
     }
 
@@ -159,42 +157,23 @@ class GameScene extends Phaser.Scene {
     }
 
     handleBrickDestruction(brick) {
-        // ★ デバッグログ追加: 破壊前のブロック数を記録
         const activeBricksBefore = this.bricks.countActive(true);
-        console.log(`[DEBUG] handleBrickDestruction called. Active bricks BEFORE: ${activeBricksBefore}`);
-
-        if (!brick || !brick.active) {
-             console.log("[DEBUG] handleBrickDestruction: Brick invalid or inactive.");
-             return false; // ドロップ処理へ進まない
-        }
+        // console.log(`[DEBUG] handleBrickDestruction called. Active bricks BEFORE: ${activeBricksBefore}`); // DEBUGログ削除
+        if (!brick || !brick.active) return false;
         const brickX = brick.x; const brickY = brick.y;
-
         brick.disableBody(true, true);
         this.score += 10; this.events.emit('updateScore',this.score); this.increaseVajraGauge();
-
-        // ★ デバッグログ追加: 破壊後のブロック数を記録
         const activeBricksAfter = this.bricks.countActive(true);
-        console.log(`[DEBUG] handleBrickDestruction: Brick disabled. Active bricks AFTER: ${activeBricksAfter}`);
-
-
-        if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) {
-            console.log(">>> Dropping Baisrava (Special Chance)!");
-            this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA);
-            return true;
-        }
-        if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) {
-            this.dropPowerUp(brickX, brickY);
-        }
-        return false;
+        // console.log(`[DEBUG] handleBrickDestruction: Brick disabled. Active bricks AFTER: ${activeBricksAfter}`); // DEBUGログ削除
+        if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) { this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA); return true; }
+        if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) { this.dropPowerUp(brickX, brickY); } return false;
     }
 
     hitBrick(brick,ball){ if(!brick||!ball||!brick.active||!ball.active||this.isStageClearing)return; this.handleBrickDestruction(brick); if(!this.isStageClearing&&this.bricks.countActive(true)===0){ this.stageClear(); } }
     handleBallBrickOverlap(ball,brick){ if(!ball||!brick||!ball.active||!brick.active||this.isStageClearing)return; const iP=ball.getData('isPenetrating'); const iSA=ball.getData('isSindara') && ball.getData('isAttracting'); const iSM=ball.getData('isSindara') && ball.getData('isMerging'); const iB=ball.getData('isBikara'); const bS=ball.getData('bikaraState'); if(iB){ if(bS==='yin'){ this.markBrickByBikara(brick); return; } else if(bS==='yang'){ this.handleBikaraYangDestroy(ball,brick); return; } else return; } if(iP || iSA || iSM){ this.handleBrickDestruction(brick); if(!this.isStageClearing&&this.bricks.countActive(true)===0){ this.stageClear(); } return; } }
     handleBikaraYangDestroy(ball,hitBrick){ if(!ball||!ball.active||!ball.getData('isBikara')||ball.getData('bikaraState')!=='yang') return; let dC=0; const mTD=[]; if(hitBrick.active){ mTD.push(hitBrick); hitBrick.setData('isMarkedByBikara',false); } this.bricks.getChildren().forEach(br=>{ if(br.active && br.getData('isMarkedByBikara') && !mTD.includes(br)){ mTD.push(br); br.setData('isMarkedByBikara',false); } }); mTD.forEach(br=>{ this.handleBrickDestruction(br); dC++; }); let cYC=ball.getData('bikaraYangCount')||0; cYC++; ball.setData('bikaraYangCount',cYC); if(!this.isStageClearing&&this.bricks.countActive(true)===0){ this.stageClear(); } else if(cYC>=BIKARA_YANG_COUNT_MAX){ this.deactivateBikara([ball]); this.updateBallTint(ball); } }
 
-    dropSpecificPowerUp(x, y, type) {
-        if (!type || !POWERUP_COLORS[type]) return; const color = POWERUP_COLORS[type]; const pU = this.powerUps.create(x, y, null).setDisplaySize(POWERUP_SIZE, POWERUP_SIZE).setTint(color).setData('type', type); if(pU.body){ pU.setVelocity(0, POWERUP_SPEED_Y); pU.body.setCollideWorldBounds(false); pU.body.setAllowGravity(false); } else { pU.destroy(); }
-    }
+    dropSpecificPowerUp(x, y, type) { if (!type || !POWERUP_COLORS[type]) return; const color = POWERUP_COLORS[type]; const pU = this.powerUps.create(x, y, null).setDisplaySize(POWERUP_SIZE, POWERUP_SIZE).setTint(color).setData('type', type); if(pU.body){ pU.setVelocity(0, POWERUP_SPEED_Y); pU.body.setCollideWorldBounds(false); pU.body.setAllowGravity(false); } else { pU.destroy(); } }
     dropPowerUp(x,y){ const aT = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ]; const type = Phaser.Utils.Array.GetRandom(aT); this.dropSpecificPowerUp(x, y, type); }
 
     collectPowerUp(paddle,powerUp){ if(!powerUp||!powerUp.active||this.isStageClearing)return; const type = powerUp.getData('type'); if(!type){ powerUp.destroy(); return; } powerUp.destroy();
@@ -208,70 +187,90 @@ class GameScene extends Phaser.Scene {
     deactivatePowerByType(type){ const tB = this.balls.getMatching('active',true); if(tB.length===0 || type===POWERUP_TYPES.MAKIRA || type===POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKORA) return; switch(type){ case POWERUP_TYPES.KUBIRA: this.deactivateKubira(tB); break; case POWERUP_TYPES.SHATORA: this.deactivateShatora(tB); break; case POWERUP_TYPES.HAILA: this.deactivateHaira(tB); break; } tB.forEach(b=>{ if(b.active){ b.getData('activePowers').delete(type); this.updateBallTint(b); } }); }
     updateBallTint(ball){ if(!ball||!ball.active)return; const aP = ball.getData('activePowers'); let tC = DEFAULT_BALL_COLOR; if(aP && aP.size > 0){ const lP = ball.getData('lastActivatedPower'); if(lP && aP.has(lP)){ if(lP === POWERUP_TYPES.BIKARA) { tC = BIKARA_COLORS[ball.getData('bikaraState')] || BIKARA_COLORS.yin; } else if(lP === POWERUP_TYPES.SINDARA) { if(ball.getData('isMerging')) tC = SINDARA_MERGE_COLOR; else if(ball.getData('isAttracting')) tC = SINDARA_ATTRACT_COLOR; else tC = POWERUP_COLORS[lP]; } else { tC = POWERUP_COLORS[lP] || DEFAULT_BALL_COLOR; } } else { const rP = Array.from(aP); if(rP.length > 0) { const nLP = rP[rP.length-1]; if(nLP === POWERUP_TYPES.BIKARA) { tC = BIKARA_COLORS[ball.getData('bikaraState')] || BIKARA_COLORS.yin; } else if(nLP === POWERUP_TYPES.SINDARA) { if(ball.getData('isMerging')) tC = SINDARA_MERGE_COLOR; else if(ball.getData('isAttracting')) tC = SINDARA_ATTRACT_COLOR; else tC = POWERUP_COLORS[nLP]; } else { tC = POWERUP_COLORS[nLP] || DEFAULT_BALL_COLOR; } ball.setData('lastActivatedPower', nLP); } } } ball.setTint(tC); }
     activateKubira(balls){ balls.forEach(b=>b.setData('isPenetrating',true)); } deactivateKubira(balls){ balls.forEach(b=>{ if(!b.getData('isSindara')||(!b.getData('isAttracting')&&!b.getData('isMerging'))) { b.setData('isPenetrating',false); } }); } applySpeedModifier(ball,type){ if(!ball||!ball.active||!ball.body)return; const m = BALL_SPEED_MODIFIERS[type]; if(!m)return; const cV = ball.body.velocity; const dir = cV.length()>0 ? cV.clone().normalize() : new Phaser.Math.Vector2(0,-1); const nS = NORMAL_BALL_SPEED * m; ball.setVelocity(dir.x * nS, dir.y * nS); } resetBallSpeed(ball){ if(!ball||!ball.active||!ball.body)return; if(ball.getData('isFast')) { this.applySpeedModifier(ball, POWERUP_TYPES.SHATORA); } else if(ball.getData('isSlow')) { this.applySpeedModifier(ball, POWERUP_TYPES.HAILA); } else { const cV = ball.body.velocity; const dir = cV.length()>0 ? cV.clone().normalize() : new Phaser.Math.Vector2(0,-1); ball.setVelocity(dir.x * NORMAL_BALL_SPEED, dir.y * NORMAL_BALL_SPEED); } } activateShatora(balls){ balls.forEach(b=>{ b.setData({isFast:true,isSlow:false}); this.applySpeedModifier(b,POWERUP_TYPES.SHATORA); }); } deactivateShatora(balls){ balls.forEach(b=>{ if(b.getData('isFast')){ b.setData('isFast',false); this.resetBallSpeed(b); } }); } activateHaira(balls){ balls.forEach(b=>{ b.setData({isSlow:true,isFast:false}); this.applySpeedModifier(b,POWERUP_TYPES.HAILA); }); } deactivateHaira(balls){ balls.forEach(b=>{ if(b.getData('isSlow')){ b.setData('isSlow',false); this.resetBallSpeed(b); } }); } activateAnchira(sB){ if(!sB||!sB.active) return; sB.setData('isAnchira',true); const x=sB.x, y=sB.y; const nS=3; const bD = sB.data.getAll(); for(let i=0;i<nS;i++){ const oX=Phaser.Math.Between(-5,5); const oY=Phaser.Math.Between(-5,5); const vx=Phaser.Math.Between(-150,150); const vy=-Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED*0.5, NORMAL_BALL_SPEED*0.8)); const nB = this.createAndAddBall(x+oX, y+oY, vx, vy, bD); if(nB) nB.setData('isAnchira', true); } } deactivateAnchira(balls){ balls.forEach(b=>{ if(b.getData('isAnchira')){ b.setData('isAnchira',false); b.getData('activePowers').delete(POWERUP_TYPES.ANCHIRA); } }); } activateSindara(sB){ if(!sB||!sB.active) { sB?.getData('activePowers').delete(POWERUP_TYPES.SINDARA); this.updateBallTint(sB); return; } const x=sB.x, y=sB.y; const bD = sB.data.getAll(); const vx=Phaser.Math.Between(-150,150); const vy=-Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED*0.5, NORMAL_BALL_SPEED*0.8)); const pB = this.createAndAddBall(x+Phaser.Math.Between(-5,5), y+Phaser.Math.Between(-5,5), vx, vy, bD); if(pB){ sB.setData({ isSindara:true, sindaraPartner:pB, isAttracting:false, isMerging:false }); pB.setData({ isSindara:true, sindaraPartner:sB, isAttracting:false, isMerging:false }); if(this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer=this.time.delayedCall( SINDARA_ATTRACTION_DELAY, ()=>{ this.startSindaraAttraction(sB,pB); }, [], this ); } else { sB.getData('activePowers').delete(POWERUP_TYPES.SINDARA); this.updateBallTint(sB); } } startSindaraAttraction(b1,b2){ this.sindaraAttractionTimer=null; if(!b1||!b2||!b1.active||!b2.active||!b1.getData('isSindara')||!b2.getData('isSindara')){ const aSB=this.balls.getMatching('isSindara',true); if(aSB.length>0){ this.deactivateSindara(aSB); aSB.forEach(b=>this.updateBallTint(b)); } return; } b1.setData({isAttracting:true, isPenetrating:true}); b2.setData({isAttracting:true, isPenetrating:true}); this.updateBallTint(b1); this.updateBallTint(b2); } updateSindaraAttraction(ball){ const p = ball.getData('sindaraPartner'); if(p && p.active && ball.active && ball.getData('isAttracting') && p.getData('isAttracting') && !ball.getData('isMerging') && !p.getData('isMerging')) { this.physics.moveToObject(ball, p, SINDARA_ATTRACTION_FORCE); } } handleBallCollision(b1,b2){ if(b1.active && b2.active && b1.getData('sindaraPartner') === b2){ this.mergeSindaraBalls(b1,b2); } } mergeSindaraBalls(bTK,bTR){ const mX = (bTK.x + bTR.x)/2; const mY = (bTK.y + bTR.y)/2; bTK.setPosition(mX, mY); bTR.destroy(); bTK.setData({ isMerging:true, isAttracting:false, isPenetrating:true, sindaraPartner:null }); this.updateBallTint(bTK); if(this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraMergeTimer=this.time.delayedCall( SINDARA_MERGE_DURATION, ()=>{ this.finishSindaraMerge(bTK); }, [], this ); if(this.sindaraAttractionTimer){ this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer=null; } } finishSindaraMerge(mB){ this.sindaraMergeTimer=null; if(!mB||!mB.active) return; mB.setData({ isMerging:false }); this.updateBallTint(mB); if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = this.time.delayedCall( SINDARA_POST_MERGE_PENETRATION_DURATION, () => { this.deactivateSindaraPenetration(mB); }, [], this ); } deactivateSindaraPenetration(ball) { this.sindaraPenetrationTimer = null; if (!ball || !ball.active) return; if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { ball.setData('isPenetrating', false); } if (ball.getData('isSindara')) { ball.setData('isSindara', false); ball.getData('activePowers').delete(POWERUP_TYPES.SINDARA); this.resetBallSpeed(ball); this.updateBallTint(ball); } } deactivateSindara(balls){ if(this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer=null; if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer=null; balls.forEach(b=>{ if(b.active && b.getData('isSindara')){ b.setData({ isSindara:false, sindaraPartner:null, isAttracting:false, isMerging:false }); if(!b.getData('activePowers').has(POWERUP_TYPES.KUBIRA)){ b.setData('isPenetrating',false); } b.getData('activePowers').delete(POWERUP_TYPES.SINDARA); } }); } activateBikara(balls){ balls.forEach(b=>{ b.setData({ isBikara:true, bikaraState:'yin', bikaraYangCount:0 }); this.updateBallTint(b); }); } deactivateBikara(balls){ balls.forEach(b=>{ if(b.getData('isBikara')){ b.setData({ isBikara:false, bikaraState:null, bikaraYangCount:0 }); b.getData('activePowers').delete(POWERUP_TYPES.BIKARA); } }); this.bricks.getChildren().forEach(br=>{ if(br.getData('isMarkedByBikara')){ br.setData('isMarkedByBikara',false); br.setTint(br.getData('originalTint')||0xffffff); } }); } switchBikaraState(ball){ if(!ball||!ball.active||!ball.getData('isBikara')) return; const cS = ball.getData('bikaraState'); const nS = (cS==='yin')?'yang':'yin'; ball.setData('bikaraState',nS); this.updateBallTint(ball); } markBrickByBikara(brick){ if(!brick||!brick.active||brick.getData('isMarkedByBikara')) return; brick.setData('isMarkedByBikara',true); brick.setTint(BRICK_MARKED_COLOR); } activateIndara(balls){ balls.forEach(b=>b.setData({ isIndaraActive:true, indaraHomingCount:INDARA_MAX_HOMING_COUNT })); } deactivateIndaraForBall(ball){ if(!ball||!ball.active||!ball.getData('isIndaraActive')) return; ball.setData({ isIndaraActive:false, indaraHomingCount:0 }); ball.getData('activePowers').delete(POWERUP_TYPES.INDARA); }
-    handleWorldBounds(body,up,down,left,right){ const ball=body.gameObject; if(!ball||!(ball instanceof Phaser.Physics.Arcade.Image)||!this.balls.contains(ball)||!ball.active) return; if(ball.getData('isIndaraActive') && ball.getData('indaraHomingCount')>0 && (up||left||right)) { const cHC=ball.getData('indaraHomingCount'); const aB = this.bricks.getMatching('active',true); if(aB.length > 0){ let cB = null; let mDSq = Infinity; const bC = ball.body.center; aB.forEach(br=>{ const dSq = Phaser.Math.Distance.Squared( bC.x, bC.y, br.body.center.x, br.body.center.y ); if(dSq < mDSq){ mDSq = dSq; cB = br; } }); if(cB){ console.log("Indara Homing! Ignoring physics, redirecting."); const cS = ball.body.velocity.length(); const angle = Phaser.Math.Angle.BetweenPoints(bC, cB.body.center); this.physics.velocityFromAngle(angle, cS, ball.body.velocity); const nHC = cHC - 1; ball.setData('indaraHomingCount',nHC); if(nHC <= 0){ this.deactivateIndaraForBall(ball); this.updateBallTint(ball); } } } } } activateAnila(balls){ balls.forEach(b=>{ if(!b.getData('isAnilaActive')){ b.setData('isAnilaActive',true); } }); } deactivateAnilaForBall(ball){ if(!ball||!ball.active||!ball.getData('isAnilaActive'))return; ball.setData('isAnilaActive',false); ball.getData('activePowers').delete(POWERUP_TYPES.ANILA); } triggerAnilaBounce(ball){ if(!ball||!ball.active||!ball.getData('isAnilaActive')) return; const cVy = ball.body.velocity.y; const bVy = -Math.abs(cVy > -10 ? BALL_INITIAL_VELOCITY_Y * 0.7 : cVy * 0.8); ball.setVelocityY(bVy); ball.y = this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT; this.deactivateAnilaForBall(ball); this.updateBallTint(ball); } activateBaisrava(){ if(this.isStageClearing||this.isGameOver) return; const aB = this.bricks.getMatching('active',true); let dC = 0; aB.forEach(b=>{ this.handleBrickDestruction(b); dC++; }); if(dC>0){ console.log(`Baisrava destroyed ${dC}.`); } this.stageClear(); } activateVajra(){ if(!this.isVajraSystemActive){ this.isVajraSystemActive=true; this.vajraGauge=0; this.events.emit('activateVajraUI',this.vajraGauge,VAJRA_GAUGE_MAX); } }
+    handleWorldBounds(body,up,down,left,right){ const ball=body.gameObject; if(!ball||!(ball instanceof Phaser.Physics.Arcade.Image)||!this.balls.contains(ball)||!ball.active) return; if(ball.getData('isIndaraActive') && ball.getData('indaraHomingCount')>0 && (up||left||right)) { const cHC=ball.getData('indaraHomingCount'); const aB = this.bricks.getMatching('active',true); if(aB.length > 0){ let cB = null; let mDSq = Infinity; const bC = ball.body.center; aB.forEach(br=>{ const dSq = Phaser.Math.Distance.Squared( bC.x, bC.y, br.body.center.x, br.body.center.y ); if(dSq < mDSq){ mDSq = dSq; cB = br; } }); if(cB){ const cS = ball.body.velocity.length(); const angle = Phaser.Math.Angle.BetweenPoints(bC, cB.body.center); this.physics.velocityFromAngle(angle, cS, ball.body.velocity); const nHC = cHC - 1; ball.setData('indaraHomingCount',nHC); if(nHC <= 0){ this.deactivateIndaraForBall(ball); this.updateBallTint(ball); } } } } } activateAnila(balls){ balls.forEach(b=>{ if(!b.getData('isAnilaActive')){ b.setData('isAnilaActive',true); } }); } deactivateAnilaForBall(ball){ if(!ball||!ball.active||!ball.getData('isAnilaActive'))return; ball.setData('isAnilaActive',false); ball.getData('activePowers').delete(POWERUP_TYPES.ANILA); } triggerAnilaBounce(ball){ if(!ball||!ball.active||!ball.getData('isAnilaActive')) return; const cVy = ball.body.velocity.y; const bVy = -Math.abs(cVy > -10 ? BALL_INITIAL_VELOCITY_Y * 0.7 : cVy * 0.8); ball.setVelocityY(bVy); ball.y = this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT; this.deactivateAnilaForBall(ball); this.updateBallTint(ball); } activateBaisrava(){ if(this.isStageClearing||this.isGameOver) return; const aB = this.bricks.getMatching('active',true); let dC = 0; aB.forEach(b=>{ this.handleBrickDestruction(b); dC++; }); if(dC>0){ console.log(`Baisrava destroyed ${dC}.`); } this.stageClear(); }
+    activateVajra(){ if(!this.isVajraSystemActive){ this.isVajraSystemActive=true; this.vajraGauge=0; this.events.emit('activateVajraUI',this.vajraGauge,VAJRA_GAUGE_MAX); } }
+
     increaseVajraGauge(){
+        // isVajraSystemActive が false ならゲージは増えない
         if(this.isVajraSystemActive && !this.isStageClearing && !this.isGameOver){
             this.vajraGauge+=VAJRA_GAUGE_INCREMENT;
             this.vajraGauge=Math.min(this.vajraGauge,VAJRA_GAUGE_MAX);
             this.events.emit('updateVajraGauge',this.vajraGauge);
             if(this.vajraGauge>=VAJRA_GAUGE_MAX){
-                // ★★★ ゲージMAX時のログ追加 ★★★
-                console.log("[DEBUG] Vajra Gauge MAX! Calling triggerVajraDestroy...");
+                // console.log("[DEBUG] Vajra Gauge MAX! Calling triggerVajraDestroy..."); // DEBUGログ削除
                 this.triggerVajraDestroy();
-                // ★★★ triggerVajraDestroy 直後のログ追加 ★★★
-                console.log("[DEBUG] triggerVajraDestroy finished. Calling deactivateVajra...");
-                this.deactivateVajra(); // 奥義発動後にシステムOFF
+                // ★ ここにあった deactivateVajra() の呼び出しを削除 ★
             }
         }
     }
+
     triggerVajraDestroy(){
         if(this.isStageClearing||this.isGameOver) return;
-        // ★ デバッグログ追加: 関数開始時
-        console.log("[DEBUG] === triggerVajraDestroy START ===");
+
+        // ★★★ 修正点: 奥義処理開始時に一時的にシステムを無効化 ★★★
+        if (!this.isVajraSystemActive) {
+             // console.log("[DEBUG] triggerVajraDestroy called but Vajra system already inactive. Exiting."); // DEBUGログ削除
+            return; // すでに無効なら何もしない
+        }
+        // console.log("[DEBUG] === triggerVajraDestroy START ==="); // DEBUGログ削除
+        // console.log("[DEBUG] Setting isVajraSystemActive = false temporarily to prevent recursion."); // DEBUGログ削除
+        this.isVajraSystemActive = false; // ★ 再帰呼び出し防止！
+
         const activeBricks = this.bricks.getMatching('active',true);
-        // ★ デバッグログ追加: 取得したブロック数
-        console.log(`[DEBUG] triggerVajraDestroy: Initial active bricks: ${activeBricks.length}`);
-        if(activeBricks.length===0){ console.log("[DEBUG] triggerVajraDestroy: No active bricks, exiting."); return; }
+        // console.log(`[DEBUG] triggerVajraDestroy: Initial active bricks: ${activeBricks.length}`); // DEBUGログ削除
+        if(activeBricks.length===0){
+            // console.log("[DEBUG] triggerVajraDestroy: No active bricks, calling deactivateVajra and exiting."); // DEBUGログ削除
+            this.deactivateVajra(); // ブロックなくてもシステムはOFFにする
+            // console.log("[DEBUG] === triggerVajraDestroy END (No Bricks) ==="); // DEBUGログ削除
+            return;
+        }
 
         const countToDestroy = Math.min(activeBricks.length,VAJRA_DESTROY_COUNT);
-        console.log(`[DEBUG] Vajra effect: Planning to destroy ${countToDestroy} random bricks.`);
+        // console.log(`[DEBUG] Vajra effect: Planning to destroy ${countToDestroy} random bricks.`); // DEBUGログ削除
         const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks);
         let destroyedCount=0;
 
-        console.log("[DEBUG] triggerVajraDestroy: Starting destruction loop...");
+        // console.log("[DEBUG] triggerVajraDestroy: Starting destruction loop..."); // DEBUGログ削除
         for(let i=0; i<countToDestroy; i++){
             const brick = shuffledBricks[i];
-            // ★ デバッグログ追加: ループ内の情報
-            console.log(`[DEBUG] triggerVajraDestroy: Loop ${i+1}/${countToDestroy}. Attempting to destroy brick at (${brick?.x?.toFixed(0)}, ${brick?.y?.toFixed(0)}). Active: ${brick?.active}`);
+            // console.log(`[DEBUG] triggerVajraDestroy: Loop ${i+1}/${countToDestroy}. Attempting brick at (${brick?.x?.toFixed(0)}, ${brick?.y?.toFixed(0)}). Active: ${brick?.active}`); // DEBUGログ削除
             if(brick&&brick.active){
-                this.handleBrickDestruction(brick); // 破壊とドロップ判定 (内部にログあり)
+                this.handleBrickDestruction(brick); // 破壊処理 (increaseVajraGaugeが呼ばれるが、isVajraSystemActive=falseなのでゲージは増えない)
                 destroyedCount++;
             } else {
-                console.log(`[DEBUG] triggerVajraDestroy: Loop ${i+1}/${countToDestroy}. Brick already inactive or invalid.`);
+                // console.log(`[DEBUG] triggerVajraDestroy: Loop ${i+1}/${countToDestroy}. Brick already inactive.`); // DEBUGログ削除
             }
-             // ★ デバッグログ追加: ループ各回の後のブロック数
-             console.log(`[DEBUG] triggerVajraDestroy: Loop ${i+1}/${countToDestroy}. Active bricks after handleBrickDestruction: ${this.bricks.countActive(true)}`);
+             // console.log(`[DEBUG] triggerVajraDestroy: Loop ${i+1}/${countToDestroy}. Active bricks after: ${this.bricks.countActive(true)}`); // DEBUGログ削除
         }
-        console.log("[DEBUG] triggerVajraDestroy: Destruction loop finished.");
+        // console.log("[DEBUG] triggerVajraDestroy: Destruction loop finished."); // DEBUGログ削除
 
-        if(destroyedCount>0){ console.log(`[DEBUG] Vajra effect actually destroyed ${destroyedCount} bricks.`); }
+        if(destroyedCount>0){ /* console.log(`[DEBUG] Vajra effect actually destroyed ${destroyedCount} bricks.`); */ } // DEBUGログ削除
 
-        // ★ デバッグログ追加: ステージクリア判定前のブロック数
         const finalActiveCount = this.bricks.countActive(true);
-        console.log(`[DEBUG] triggerVajraDestroy: Active bricks before stage clear check: ${finalActiveCount}`);
+        // console.log(`[DEBUG] triggerVajraDestroy: Active bricks before stage clear check: ${finalActiveCount}`); // DEBUGログ削除
         if(!this.isStageClearing && finalActiveCount === 0){
-            console.log("[DEBUG] triggerVajraDestroy: Vajra effect cleared the stage! Calling stageClear...");
-            this.stageClear();
+            // console.log("[DEBUG] triggerVajraDestroy: Vajra effect cleared stage! Calling stageClear..."); // DEBUGログ削除
+            this.stageClear(); // ステージクリアなら stageClear 内で deactivateVajra も呼ばれるはず
+        } else {
+             // ★★★ 修正点: ステージクリアしなかった場合、ここでシステムをOFFにする ★★★
+             // console.log("[DEBUG] triggerVajraDestroy finished. Stage not cleared. Calling deactivateVajra..."); // DEBUGログ削除
+             this.deactivateVajra();
         }
-        // ★ デバッグログ追加: 関数終了時
-        console.log("[DEBUG] === triggerVajraDestroy END ===");
+        // console.log("[DEBUG] === triggerVajraDestroy END ==="); // DEBUGログ削除
     }
-    deactivateVajra() { if (this.isVajraSystemActive) { this.isVajraSystemActive = false; this.vajraGauge = 0; this.events.emit('deactivateVajraUI'); } }
+
+    deactivateVajra() {
+        // isVajraSystemActive が false であっても、ゲージリセットとUI非表示は行う
+        this.isVajraSystemActive = false; // 確実に false にする
+        this.vajraGauge = 0;
+        this.events.emit('deactivateVajraUI');
+    }
+
     activateMakira() { if (!this.isMakiraActive) { this.isMakiraActive = true; if (this.familiars) this.familiars.clear(true, true); else this.familiars = this.physics.add.group(); this.createFamiliars(); if (this.makiraBeams) this.makiraBeams.clear(true, true); else this.makiraBeams = this.physics.add.group(); if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = this.time.addEvent({ delay: MAKIRA_ATTACK_INTERVAL, callback: this.fireMakiraBeam, callbackScope: this, loop: true }); } const duration = POWERUP_DURATION[POWERUP_TYPES.MAKIRA]; if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = this.time.delayedCall( duration, () => { this.deactivateMakira(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; }, [], this ); this.setColliders(); }
     deactivateMakira() { if (this.isMakiraActive) { this.isMakiraActive = false; if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; } if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) { this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; } if (this.familiars) { this.familiars.clear(true, true); } if (this.makiraBeams) { this.makiraBeams.clear(true, true); } } }
     createFamiliars() { if(!this.paddle) return; const pX=this.paddle.x; const fY=this.paddle.y-PADDLE_HEIGHT/2-MAKIRA_FAMILIAR_SIZE; const fL=this.familiars.create(pX-MAKIRA_FAMILIAR_OFFSET, fY, null).setDisplaySize(MAKIRA_FAMILIAR_SIZE*2, MAKIRA_FAMILIAR_SIZE*2).setTint(MAKIRA_FAMILIAR_COLOR); if(fL.body){ fL.body.setAllowGravity(false).setImmovable(true); } const fR=this.familiars.create(pX+MAKIRA_FAMILIAR_OFFSET, fY, null).setDisplaySize(MAKIRA_FAMILIAR_SIZE*2, MAKIRA_FAMILIAR_SIZE*2).setTint(MAKIRA_FAMILIAR_COLOR); if(fR.body){ fR.body.setAllowGravity(false).setImmovable(true); } }
     fireMakiraBeam() { if (!this.isMakiraActive || !this.familiars || this.familiars.countActive(true) === 0 || this.isStageClearing || this.isGameOver) return; this.familiars.getChildren().forEach(f => { if (f.active) { const beam = this.makiraBeams.create(f.x, f.y - MAKIRA_FAMILIAR_SIZE, null).setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT).setTint(MAKIRA_BEAM_COLOR); if (beam && beam.body) { beam.setVelocity(0, -MAKIRA_BEAM_SPEED); beam.body.setAllowGravity(false); } else { if (beam) beam.destroy(); } } }); }
-    hitBrickWithMakiraBeam(beam, brick) { if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver) return; try { beam.destroy(); this.handleBrickDestruction(brick); if (!this.isStageClearing && this.bricks.countActive(true) === 0) { this.time.delayedCall(10, this.stageClear, [], this); } } catch(error) { console.error("E MakiraHit", error); if (beam && beam.active) { beam.setActive(false).setVisible(false); if(beam.body) beam.body.enable = false; } } }
+    hitBrickWithMakiraBeam(beam, brick) { if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver) return; try { beam.destroy(); this.handleBrickDestruction(brick); if (!this.isStageClearing && this.bricks.countActive(true) === 0) { this.time.delayedCall(10, this.stageClear, [], this); } } catch(error) { if (beam && beam.active) { beam.setActive(false).setVisible(false); if(beam.body) beam.body.enable = false; } } }
 
     loseLife() { if(this.isStageClearing||this.isGameOver||this.lives<=0)return; this.deactivateMakira(); this.deactivateVajra(); this.lives--; this.events.emit('updateLives',this.lives); this.isBallLaunched=false; Object.keys(this.powerUpTimers).forEach(k=>{ if(this.powerUpTimers[k]){ this.powerUpTimers[k].remove(); this.powerUpTimers[k]=null; } }); if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove(); this.sindaraMergeTimer=null; if(this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer=null; const aB = this.balls.getMatching('active', true); if(aB.length > 0) { this.deactivateAnchira(aB); this.deactivateSindara(aB); this.deactivateBikara(aB); aB.forEach(b => { this.deactivateIndaraForBall(b); this.deactivateAnilaForBall(b); b.setData({isPenetrating: false, isFast: false, isSlow: false}); b.setData('activePowers', new Set()); b.setData('lastActivatedPower', null); this.resetBallSpeed(b); this.updateBallTint(b); }); } if(this.lives>0){ this.time.delayedCall(500,this.resetForNewLife,[],this); } else { this.time.delayedCall(500,this.gameOver,[],this); } }
     resetForNewLife() { if(this.isGameOver||this.isStageClearing) return; if(this.balls){ this.balls.clear(true,true); } if(this.paddle){ this.paddle.x=this.gameWidth/2; this.paddle.y=this.gameHeight-PADDLE_Y_OFFSET; const oW = this.paddle.getData('originalWidth'); if(oW) { this.paddle.setDisplaySize(oW, PADDLE_HEIGHT); if(this.paddle.body) this.paddle.body.setSize(oW, PADDLE_HEIGHT); } } let nB = null; if(this.paddle){ nB=this.createAndAddBall(this.paddle.x,this.paddle.y-PADDLE_HEIGHT/2-BALL_RADIUS); } else { nB=this.createAndAddBall(this.gameWidth/2,this.gameHeight-PADDLE_Y_OFFSET-PADDLE_HEIGHT/2-BALL_RADIUS); } this.isBallLaunched=false; this.setColliders(); }
