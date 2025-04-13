@@ -357,7 +357,22 @@ class GameScene extends Phaser.Scene {
         const isKubira = ball.getData('isPenetrating'); const isSindaraAttracting = ball.getData('isSindara') && ball.getData('isAttracting');
         const isSindaraMerging = ball.getData('isSindara') && ball.getData('isMerging'); const isBikara = ball.getData('isBikara');
         const bikaraState = ball.getData('bikaraState');
-        if (isBikara) { if (bikaraState === 'yin') { this.markBrickByBikara(brick); return; } else if (bikaraState === 'yang') { this.handleBikaraYangDestroy(ball, brick); return; } }
+        if (isBikara) {
+            console.log(`>>> handleBallBrickOverlap with Bikara. State: ${bikaraState}`); // 状態を出力
+            if (bikaraState === 'yin') {
+                console.log(">>> Bikara Yin: Marking brick.");
+                this.markBrickByBikara(brick);
+                return;
+            } else if (bikaraState === 'yang') {
+                console.log(">>> Bikara Yang: Calling handleBikaraYangDestroy.");
+                this.handleBikaraYangDestroy(ball, brick); // これが呼ばれるはず
+                return;
+            } else {
+                 console.warn(`>>> Bikara active but state is unexpected: ${bikaraState}`); // 予期せぬ状態
+                 // 念のため、陽と同じ扱いにするか？ or 何もしないか？ -> 何もしないでおく
+                 return;
+            }
+        }
         if (isKubira || isSindaraAttracting || isSindaraMerging) { brick.disableBody(true, true); this.score += 10; this.events.emit('updateScore', this.score); if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) { this.dropPowerUp(brick.x, brick.y); } if (!this.isStageClearing && this.bricks.countActive(true) === 0) { console.log("Last brick destroyed!"); this.stageClear(); } return; }
     }
 
@@ -441,7 +456,11 @@ class GameScene extends Phaser.Scene {
     switchBikaraState(ball) { if (!ball || !ball.active || !ball.getData('isBikara')) return; const currentState = ball.getData('bikaraState'); const newState = (currentState === 'yin') ? 'yang' : 'yin'; ball.setData('bikaraState', newState); this.updateBallTint(ball); console.log(`Bikara state switched to: ${newState}`); }
     markBrickByBikara(brick) { if (!brick || !brick.active || brick.getData('isMarkedByBikara')) return; brick.setData('isMarkedByBikara', true); brick.setTint(BRICK_MARKED_COLOR); }
     handleBikaraYangDestroy(ball, hitBrick) {
-        if (!ball || !ball.active || !ball.getData('isBikara') || ball.getData('bikaraState') !== 'yang') return;
+        console.log(">>> handleBikaraYangDestroy ENTERED"); // ★追加: 関数実行確認
+        if (!ball || !ball.active || !ball.getData('isBikara') || ball.getData('bikaraState') !== 'yang') {
+             console.warn(">>> handleBikaraYangDestroy aborted (invalid state)"); // ★追加: ガード節確認
+             return;
+        }
 
         console.log(">>> handleBikaraYangDestroy CALLED <<<"); // ★追加: 関数が呼ばれたか
         let destroyedCount = 0;
