@@ -23,18 +23,17 @@ const POWERUP_SPEED_Y = 100;
 const POWERUP_TYPES = {
     KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara',
     BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra',
-    MAKIRA: 'makira', MAKORA: 'makora' // マコラ
+    MAKIRA: 'makira', MAKORA: 'makora'
 };
 const POWERUP_COLORS = {
     [POWERUP_TYPES.KUBIRA]: 0x800080, [POWERUP_TYPES.SHATORA]: 0xffa500, [POWERUP_TYPES.HAILA]: 0xadd8e6,
     [POWERUP_TYPES.ANCHIRA]: 0xffc0cb, [POWERUP_TYPES.SINDARA]: 0xd2b48c, [POWERUP_TYPES.BIKARA]: 0xffffff,
     [POWERUP_TYPES.INDARA]: 0x4682b4, [POWERUP_TYPES.ANILA]: 0xffefd5, [POWERUP_TYPES.BAISRAVA]: 0xffd700,
-    [POWERUP_TYPES.VAJRA]: 0xffff00, [POWERUP_TYPES.MAKIRA]: 0x008080,
-    [POWERUP_TYPES.MAKORA]: 0xfa8072, // マコラ色
+    [POWERUP_TYPES.VAJRA]: 0xffff00, [POWERUP_TYPES.MAKIRA]: 0x008080, [POWERUP_TYPES.MAKORA]: 0xfa8072,
 };
 const BIKARA_COLORS = { yin: 0x444444, yang: 0xfffafa };
 const POWERUP_DURATION = { [POWERUP_TYPES.KUBIRA]: 10000, [POWERUP_TYPES.SHATORA]: 3000, [POWERUP_TYPES.HAILA]: 10000, [POWERUP_TYPES.MAKIRA]: 10000,
-    [POWERUP_TYPES.MAKORA]: 15000 // ★ マコラ効果時間 (15秒)
+    [POWERUP_TYPES.MAKORA]: 15000 // マコラ効果時間
 };
 const BIKARA_YANG_COUNT_MAX = 2;
 const INDARA_MAX_HOMING_COUNT = 3;
@@ -69,72 +68,22 @@ class TitleScene extends Phaser.Scene { constructor() { super('TitleScene'); } c
 // --- GameScene ---
 class GameScene extends Phaser.Scene {
     constructor() { super('GameScene'); this.paddle=null; this.balls=null; this.bricks=null; this.powerUps=null; this.lives=0; this.gameOverText=null; this.isBallLaunched=false; this.gameWidth=0; this.gameHeight=0; this.currentMode=null; this.currentStage=1; this.score=0; this.ballPaddleCollider=null; this.ballBrickCollider=null; this.ballBrickOverlap=null; this.ballBallCollider=null; this.powerUpTimers={}; this.sindaraAttractionTimer=null; this.sindaraMergeTimer=null; this.isStageClearing=false; this.isGameOver=false; this.isVajraSystemActive=false; this.vajraGauge=0; this.isMakiraActive=false; this.familiars=null; this.makiraBeams=null; this.makiraAttackTimer=null;
-        // ★ マコラ用プロパティ追加 ★
-        this.isMakoraActive = false;     // マコラ（パドル分裂）が有効か
-        this.paddle2 = null;             // 2枚目のパドル
-        this.ballPaddle2Collider = null; // 2枚目パドル用のコライダー
+        this.isMakoraActive = false; this.paddle2 = null; this.ballPaddle2Collider = null; // マコラ用
     }
     init(data) { this.currentMode = data.mode || GAME_MODE.NORMAL; this.lives = (this.currentMode === GAME_MODE.ALL_STARS) ? 1 : 3; this.isBallLaunched = false; this.currentStage = 1; this.score = 0; Object.values(this.powerUpTimers).forEach(t => { if(t) t.remove(); }); this.powerUpTimers = {}; if(this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer=null; this.isStageClearing=false; this.isGameOver=false; this.isVajraSystemActive=false; this.vajraGauge=0; this.isMakiraActive=false; if(this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer=null;
-        this.isMakoraActive = false; // ★ マコラリセット
-        // paddle2 は create で生成、deactivate で破棄
+        this.isMakoraActive = false; // マコラリセット
         console.log(`GS:Init ${this.currentMode} L:${this.lives}`);
     }
     preload() {}
     create() { console.log("GS:Create Start"); this.gameWidth=this.scale.width; this.gameHeight=this.scale.height; this.cameras.main.setBackgroundColor('#222'); this.time.delayedCall(50,()=>{if(this.scene.isActive('UIScene')){this.events.emit('updateLives',this.lives);this.events.emit('updateScore',this.score);this.events.emit('updateStage',this.currentStage);}else console.warn("UI not active");}); this.physics.world.setBoundsCollision(true,true,true,false); this.physics.world.on('worldbounds',this.handleWorldBounds,this);
-        const initialPaddleWidth = this.gameWidth * PADDLE_WIDTH_RATIO; // ★ 初期パドル幅を記憶
-        this.paddle=this.physics.add.image(this.gameWidth/2,this.gameHeight-PADDLE_Y_OFFSET,null).setDisplaySize(initialPaddleWidth,PADDLE_HEIGHT).setTint(0xffffff).setImmovable(true).setData('originalWidth', initialPaddleWidth); // ★ 元の幅をデータに保存
+        const initialPaddleWidth = this.gameWidth * PADDLE_WIDTH_RATIO; this.paddle=this.physics.add.image(this.gameWidth/2,this.gameHeight-PADDLE_Y_OFFSET,null).setDisplaySize(initialPaddleWidth,PADDLE_HEIGHT).setTint(0xffffff).setImmovable(true).setData('originalWidth', initialPaddleWidth);
         this.balls=this.physics.add.group({bounceX:1,bounceY:1,collideWorldBounds:true}); this.createAndAddBall(this.paddle.x,this.paddle.y-PADDLE_HEIGHT/2-BALL_RADIUS); this.createBricks(); this.gameOverText=this.add.text(this.gameWidth/2,this.gameHeight/2,'Game Over\nタップで戻る',{fontSize:'48px',fill:'#f00',align:'center'}).setOrigin(0.5).setVisible(false).setDepth(1); this.powerUps=this.physics.add.group(); this.familiars=this.physics.add.group(); this.makiraBeams=this.physics.add.group(); this.makoraBullets=this.physics.add.group(); this.setColliders(); this.physics.add.overlap(this.paddle,this.powerUps,this.collectPowerUp,null,this);
-        this.input.on('pointermove',(p)=>{
-            if(!this.isGameOver&&this.lives>0&&this.paddle&&!this.isStageClearing){
-                 const targetX = p.x;
-                 if (this.isMakoraActive && this.paddle2) { // ★ マコラ有効時のパドル移動
-                     const gap = this.gameWidth * MAKORA_PADDLE_GAP_RATIO;
-                     const halfPaddleWidth1 = this.paddle.displayWidth / 2;
-                     const halfPaddleWidth2 = this.paddle2.displayWidth / 2;
-                     const centerOffset = (halfPaddleWidth1 + gap / 2); // 中央からのオフセット
-
-                     // Clamp targetX so the midpoint between paddles stays within bounds
-                     const clampedTargetX = Phaser.Math.Clamp(targetX, centerOffset, this.gameWidth - centerOffset);
-
-                     this.paddle.x = clampedTargetX - gap / 2 - halfPaddleWidth1;
-                     this.paddle2.x = clampedTargetX + gap / 2 + halfPaddleWidth2;
-
-                     if (!this.isBallLaunched) { // ボールは中央に追従
-                         this.balls.getChildren().forEach(b => { if (b.active) b.x = clampedTargetX; });
-                     }
-                 } else { // 通常時のパドル移動
-                    const halfPaddleWidth = this.paddle.displayWidth/2;
-                    const clampedTargetX = Phaser.Math.Clamp(targetX, halfPaddleWidth, this.gameWidth - halfPaddleWidth);
-                    this.paddle.x = clampedTargetX;
-                    if (!this.isBallLaunched) { this.balls.getChildren().forEach(b => { if(b.active) b.x = clampedTargetX; }); }
-                 }
-            }
-        });
-        this.input.on('pointerdown',()=>{if(this.isGameOver&&this.gameOverText?.visible){this.returnToTitle();}/* マコラ有効時は弾発射しない(今回の仕様変更) */ else if(this.lives>0&&!this.isBallLaunched&&!this.isStageClearing){this.launchBall();}});
+        this.input.on('pointermove',(p)=>{ if(!this.isGameOver&&this.lives>0&&this.paddle&&!this.isStageClearing){ const targetX = p.x; if (this.isMakoraActive && this.paddle2?.active) { const gap = this.gameWidth * MAKORA_PADDLE_GAP_RATIO; const hw1 = this.paddle.displayWidth / 2; const hw2 = this.paddle2.displayWidth / 2; const centerOffset = hw1 + gap / 2; const clampedTargetX = Phaser.Math.Clamp(targetX, centerOffset, this.gameWidth - centerOffset); this.paddle.x = clampedTargetX - gap / 2 - hw1; this.paddle2.x = clampedTargetX + gap / 2 + hw2; if (!this.isBallLaunched) { this.balls.getChildren().forEach(b => { if (b.active) b.x = clampedTargetX; }); } } else { const hw = this.paddle.displayWidth/2; const ctx = Phaser.Math.Clamp(targetX, hw, this.gameWidth - hw); this.paddle.x = ctx; if (!this.isBallLaunched) { this.balls.getChildren().forEach(b => { if(b.active) b.x = ctx; }); } } } });
+        this.input.on('pointerdown',()=>{if(this.isGameOver&&this.gameOverText?.visible){this.returnToTitle();} else if(this.lives>0&&!this.isBallLaunched&&!this.isStageClearing){this.launchBall();}}); // マコラ有効時の弾発射は削除
         this.events.on('shutdown',this.shutdown,this); console.log("GS:Create End");
     }
-    update() { if(this.isGameOver||this.isStageClearing||this.lives<=0)return; let ac=0; let sa=[]; this.balls.getChildren().forEach(b=>{if(b.active){ac++; if(this.isBallLaunched&&!this.isStageClearing&&b.y>this.gameHeight+b.displayHeight){if(b.getData('isAnilaActive'))this.triggerAnilaBounce(b);else{b.setActive(false).setVisible(false);if(b.body)b.body.enable=false;}} if(b.getData('isSindara')){sa.push(b);if(b.getData('isAttracting'))this.updateSindaraAttraction(b);} if(b.body&&this.isBallLaunched){const min=NORMAL_BALL_SPEED*0.1,max=NORMAL_BALL_SPEED*5,sp=b.body.velocity.length();if(sp<min&&sp>0)b.body.velocity.normalize().scale(min);else if(sp>max)b.body.velocity.normalize().scale(max);}}}); if(sa.length===1&&this.balls.getTotalUsed()>1){const r=sa[0];if(r.getData('isSindara')){this.deactivateSindara([r]);this.updateBallTint(r);}} if(ac===0&&this.isBallLaunched&&!this.isStageClearing&&this.lives>0)this.loseLife(); this.powerUps.children.each(pu=>{if(pu.active&&pu.y>this.gameHeight+POWERUP_SIZE)pu.destroy();}); if(this.balls.countActive(true)===1){const lb=this.balls.getFirstAlive();if(lb&&lb.getData('isAnchira')){this.deactivateAnchira([lb]);this.updateBallTint(lb);}}
-        if(this.isMakiraActive&&this.paddle&&this.familiars){ /* マキラ追従 */ const px=this.paddle.x;const py=this.paddle.y-PADDLE_HEIGHT/2-MAKIRA_FAMILIAR_SIZE;const c=this.familiars.getChildren();if(c.length>=1&&c[0].active)c[0].setPosition(px-MAKIRA_FAMILIAR_OFFSET,py);if(c.length>=2&&c[1].active)c[1].setPosition(px+MAKIRA_FAMILIAR_OFFSET,py);}
-        if(this.makiraBeams){this.makiraBeams.children.each(bm=>{if(bm.active&&bm.y<-MAKIRA_BEAM_HEIGHT)bm.destroy();});}
-        if(this.makoraBullets){ this.makoraBullets.children.each(bu=>{if(bu.active&&bu.y<-MAKORA_BULLET_SIZE*2)bu.destroy();});}
-    }
-    setColliders() { if(this.ballPaddleCollider)this.ballPaddleCollider.destroy();if(this.ballBrickCollider)this.ballBrickCollider.destroy();if(this.ballBrickOverlap)this.ballBrickOverlap.destroy();if(this.ballBallCollider)this.ballBallCollider.destroy();
-        // ★ マコラ: paddle2用コライダーも破棄
-        if (this.ballPaddle2Collider) this.ballPaddle2Collider.destroy(); this.ballPaddle2Collider = null;
-
-        if(!this.balls||!this.paddle||!this.bricks){console.error("SetColliders: Missing objects.");return;}
-        this.ballPaddleCollider=this.physics.add.collider(this.paddle,this.balls,this.hitPaddle,null,this);
-        // ★ マコラ: paddle2 が存在すればコライダー追加 ★
-        if (this.paddle2 && this.paddle2.active) {
-            this.ballPaddle2Collider = this.physics.add.collider(this.paddle2, this.balls, this.hitPaddle, null, this);
-        }
-        this.ballBrickCollider=this.physics.add.collider(this.bricks,this.balls,this.hitBrick,(br,b)=>{const ib=b.getData('isBikara');const ip=b.getData('isPenetrating');const im=b.getData('isSindara')&&b.getData('isMerging');if(ib||ip||im)return false;return true;},this);
-        this.ballBrickOverlap=this.physics.add.overlap(this.balls,this.bricks,this.handleBallBrickOverlap,(b,br)=>b.getData('isPenetrating')||(b.getData('isSindara')&&(b.getData('isAttracting')||b.getData('isMerging')))||b.getData('isBikara'),this);
-        this.ballBallCollider=this.physics.add.collider(this.balls,this.balls,this.handleBallCollision,(b1,b2)=>b1.getData('isSindara')&&b2.getData('isSindara')&&b1.getData('isAttracting')&&b2.getData('isAttracting'),this);
-        if(this.makiraBeams&&this.bricks){this.physics.add.overlap(this.makiraBeams,this.bricks,this.hitBrickWithMakiraBeam,null,this);}
-        if(this.makoraBullets && this.bricks) { this.physics.add.overlap(this.makoraBullets, this.bricks, this.hitBrickWithMakoraBullet, null, this); console.log(">>> Makora bullet overlap set."); }
-        console.log("Colliders set/reset.");
-    }
+    update() { if(this.isGameOver||this.isStageClearing||this.lives<=0)return; let ac=0; let sa=[]; this.balls.getChildren().forEach(b=>{if(b.active){ac++; if(this.isBallLaunched&&!this.isStageClearing&&b.y>this.gameHeight+b.displayHeight){if(b.getData('isAnilaActive'))this.triggerAnilaBounce(b);else{b.setActive(false).setVisible(false);if(b.body)b.body.enable=false;}} if(b.getData('isSindara')){sa.push(b);if(b.getData('isAttracting'))this.updateSindaraAttraction(b);} if(b.body&&this.isBallLaunched){const min=NORMAL_BALL_SPEED*0.1,max=NORMAL_BALL_SPEED*5,sp=b.body.velocity.length();if(sp<min&&sp>0)b.body.velocity.normalize().scale(min);else if(sp>max)b.body.velocity.normalize().scale(max);}}}); if(sa.length===1&&this.balls.getTotalUsed()>1){const r=sa[0];if(r.getData('isSindara')){this.deactivateSindara([r]);this.updateBallTint(r);}} if(ac===0&&this.isBallLaunched&&!this.isStageClearing&&this.lives>0)this.loseLife(); this.powerUps.children.each(pu=>{if(pu.active&&pu.y>this.gameHeight+POWERUP_SIZE)pu.destroy();}); if(this.balls.countActive(true)===1){const lb=this.balls.getFirstAlive();if(lb&&lb.getData('isAnchira')){this.deactivateAnchira([lb]);this.updateBallTint(lb);}} if(this.isMakiraActive&&this.paddle&&this.familiars){const px=this.paddle.x;const py=this.paddle.y-PADDLE_HEIGHT/2-MAKIRA_FAMILIAR_SIZE;const c=this.familiars.getChildren();if(c.length>=1&&c[0].active)c[0].setPosition(px-MAKIRA_FAMILIAR_OFFSET,py);if(c.length>=2&&c[1].active)c[1].setPosition(px+MAKIRA_FAMILIAR_OFFSET,py);} if(this.makiraBeams){this.makiraBeams.children.each(bm=>{if(bm.active&&bm.y<-MAKIRA_BEAM_HEIGHT)bm.destroy();});} if(this.makoraBullets){ this.makoraBullets.children.each(bu=>{if(bu.active&&bu.y<-MAKORA_BULLET_SIZE*2)bu.destroy();});}}
+    setColliders() { if(this.ballPaddleCollider)this.ballPaddleCollider.destroy();if(this.ballBrickCollider)this.ballBrickCollider.destroy();if(this.ballBrickOverlap)this.ballBrickOverlap.destroy();if(this.ballBallCollider)this.ballBallCollider.destroy(); if (this.ballPaddle2Collider) this.ballPaddle2Collider.destroy(); this.ballPaddle2Collider = null; if(!this.balls||!this.paddle||!this.bricks){console.error("SetColliders: Missing objects.");return;} this.ballPaddleCollider=this.physics.add.collider(this.paddle,this.balls,this.hitPaddle,null,this); if (this.paddle2 && this.paddle2.active) { this.ballPaddle2Collider = this.physics.add.collider(this.paddle2, this.balls, this.hitPaddle, null, this); console.log(">>> Paddle 2 collider set.");} this.ballBrickCollider=this.physics.add.collider(this.bricks,this.balls,this.hitBrick,(br,b)=>{const ib=b.getData('isBikara');const ip=b.getData('isPenetrating');const im=b.getData('isSindara')&&b.getData('isMerging');if(ib||ip||im)return false;return true;},this); this.ballBrickOverlap=this.physics.add.overlap(this.balls,this.bricks,this.handleBallBrickOverlap,(b,br)=>b.getData('isPenetrating')||(b.getData('isSindara')&&(b.getData('isAttracting')||b.getData('isMerging')))||b.getData('isBikara'),this); this.ballBallCollider=this.physics.add.collider(this.balls,this.balls,this.handleBallCollision,(b1,b2)=>b1.getData('isSindara')&&b2.getData('isSindara')&&b1.getData('isAttracting')&&b2.getData('isAttracting'),this); if(this.makiraBeams&&this.bricks){this.physics.add.overlap(this.makiraBeams,this.bricks,this.hitBrickWithMakiraBeam,null,this);} if(this.makoraBullets && this.bricks) { this.physics.add.overlap(this.makoraBullets, this.bricks, this.hitBrickWithMakoraBullet, null, this); } console.log("Colliders set/reset."); }
     createAndAddBall(x,y,vx=0,vy=0,data=null){const b=this.balls.create(x,y,null).setDisplaySize(BALL_RADIUS*2,BALL_RADIUS*2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);if(b.body){b.setVelocity(vx,vy);b.body.onWorldBounds=true;}else{console.error("CreateBall fail!");b.destroy();return null;}b.setData({activePowers:data?new Set(data.activePowers):new Set(),lastActivatedPower:data?data.lastActivatedPower:null,isPenetrating:data?data.isPenetrating:false,isFast:data?data.isFast:false,isSlow:data?data.isSlow:false,isAnchira:data?data.isAnchira:false,isSindara:data?data.isSindara:false,sindaraPartner:null,isAttracting:false,isMerging:false,isBikara:data?data.isBikara:false,bikaraState:data?data.bikaraState:null,bikaraYangCount:0,isIndaraActive:data?data.isIndaraActive:false,indaraHomingCount:data?data.indaraHomingCount:0,isAnilaActive:data?data.isAnilaActive:false});if(data){this.updateBallTint(b);if(b.getData('isFast'))this.applySpeedModifier(b,POWERUP_TYPES.SHATORA);else if(b.getData('isSlow'))this.applySpeedModifier(b,POWERUP_TYPES.HAILA);}return b;}
     launchBall(){if(!this.isBallLaunched&&this.balls){const fb=this.balls.getFirstAlive();if(fb){const vx=Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0],BALL_INITIAL_VELOCITY_X_RANGE[1]);fb.setVelocity(vx,BALL_INITIAL_VELOCITY_Y);this.isBallLaunched=true;console.log("Ball launched!");}}}
     createBricks(){if(this.bricks){this.bricks.clear(true,true);this.bricks.destroy();}this.bricks=this.physics.add.staticGroup();const bw=this.gameWidth*BRICK_WIDTH_RATIO;const tw=BRICK_COLS*bw+(BRICK_COLS-1)*BRICK_SPACING;const ox=(this.gameWidth-tw)/2;const rows=this.currentMode===GAME_MODE.ALL_STARS?BRICK_ROWS+2:BRICK_ROWS;for(let i=0;i<rows;i++){for(let j=0;j<BRICK_COLS;j++){const bx=ox+j*(bw+BRICK_SPACING)+bw/2;const by=BRICK_OFFSET_TOP+i*(BRICK_HEIGHT+BRICK_SPACING)+BRICK_HEIGHT/2;const rc=Phaser.Utils.Array.GetRandom(BRICK_COLORS);const br=this.bricks.create(bx,by,null).setDisplaySize(bw,BRICK_HEIGHT).setTint(rc);br.setData({hits:1,originalTint:rc,isMarkedByBikara:false});br.refreshBody();}}console.log(`Bricks created: ${this.bricks.getLength()}`);}
@@ -183,39 +132,140 @@ class GameScene extends Phaser.Scene {
     deactivateMakira() { if (this.isMakiraActive) { console.log(">>> Deactivating Makira."); this.isMakiraActive = false; if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; } if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) { this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; } if (this.familiars) { this.familiars.clear(true, true); } if (this.makiraBeams) { this.makiraBeams.clear(true, true); } } }
     createFamiliars() { if(!this.paddle)return;const px=this.paddle.x;const py=this.paddle.y-PADDLE_HEIGHT/2-MAKIRA_FAMILIAR_SIZE;const fL=this.familiars.create(px-MAKIRA_FAMILIAR_OFFSET,py,null).setDisplaySize(MAKIRA_FAMILIAR_SIZE*2,MAKIRA_FAMILIAR_SIZE*2).setTint(MAKIRA_FAMILIAR_COLOR);if(fL.body){fL.body.setAllowGravity(false).setImmovable(true);}const fR=this.familiars.create(px+MAKIRA_FAMILIAR_OFFSET,py,null).setDisplaySize(MAKIRA_FAMILIAR_SIZE*2,MAKIRA_FAMILIAR_SIZE*2).setTint(MAKIRA_FAMILIAR_COLOR);if(fR.body){fR.body.setAllowGravity(false).setImmovable(true);}console.log("Familiars created.");}
     fireMakiraBeam() { console.log(">>> fireMakiraBeam CALLED"); if (!this.isMakiraActive || !this.familiars || this.isStageClearing || this.isGameOver) { console.log(">>> fireMakiraBeam aborted"); return; } console.log(">>> Firing Makira beams attempt..."); this.familiars.getChildren().forEach(f => { if (f.active) { console.log(">>> Creating beam for familiar at:", f.x, f.y); const beam = this.makiraBeams.create(f.x, f.y - MAKIRA_FAMILIAR_SIZE, null).setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT).setTint(MAKIRA_BEAM_COLOR); console.log(">>> Beam object created:", beam ? beam.active : 'null'); if (beam && beam.body) { console.log(">>> Setting beam velocity..."); beam.body.setVelocity(0, -MAKIRA_BEAM_SPEED); beam.body.setAllowGravity(false); console.log(`>>> Beam body check: enable=${beam.body.enable}, w=${beam.body.width}, h=${beam.body.height}`); console.log(">>> Beam velocity set."); } else { console.error("Beam body fail!"); if (beam) beam.destroy(); } } else { console.log(">>> Familiar inactive."); } }); console.log(">>> fireMakiraBeam finished loop."); }
-    hitBrickWithMakiraBeam(beam, brick) { console.log("!!! ★★★ MAKIRA BEAM OVERLAP DETECTED ★★★ !!!"); if (beam && beam.active) { beam.setActive(false).setVisible(false); if(beam.body) beam.body.enable = false; } /* Brick destruction commented out */ }
-    activateMakora() { console.log(">>> Activating Makora!"); this.clearActivePowersAndMakira(); if (!this.isMakoraActive) { this.isMakoraActive = true; if (this.makoraBullets) this.makoraBullets.clear(true, true); const duration = POWERUP_DURATION[POWERUP_TYPES.MAKORA]; if (this.powerUpTimers[POWERUP_TYPES.MAKORA]) this.powerUpTimers[POWERUP_TYPES.MAKORA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKORA] = this.time.delayedCall(duration, () => { console.log(">>> Makora expired."); this.deactivateMakora(); this.powerUpTimers[POWERUP_TYPES.MAKORA] = null; }, [], this); console.log(`>>> Makora mode started (${duration}ms).`); } else { console.log(">>> Makora already active, restarting timer."); const duration = POWERUP_DURATION[POWERUP_TYPES.MAKORA]; if (this.powerUpTimers[POWERUP_TYPES.MAKORA]) this.powerUpTimers[POWERUP_TYPES.MAKORA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKORA] = this.time.delayedCall(duration, () => { console.log(">>> Makora expired."); this.deactivateMakora(); this.powerUpTimers[POWERUP_TYPES.MAKORA] = null; }, [], this); console.log(`>>> Makora timer restarted (${duration}ms).`); } }
-    deactivateMakora() { if (this.isMakoraActive) { console.log(">>> Deactivating Makora."); this.isMakoraActive = false; if (this.powerUpTimers[POWERUP_TYPES.MAKORA]) { this.powerUpTimers[POWERUP_TYPES.MAKORA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKORA] = null; } if (this.makoraBullets) { this.makoraBullets.clear(true, true); } } }
-    fireMakoraBullet() { if (!this.isMakoraActive || !this.paddle || this.isStageClearing || this.isGameOver) return; console.log(">>> Firing Makora bullet!"); const bullet = this.makoraBullets.create(this.paddle.x, this.paddle.y - PADDLE_HEIGHT, null).setCircle(MAKORA_BULLET_SIZE).setTint(MAKORA_BULLET_COLOR).setDisplaySize(MAKORA_BULLET_SIZE * 2, MAKORA_BULLET_SIZE * 2); if (bullet && bullet.body) { bullet.body.setVelocity(0, -MAKORA_BULLET_SPEED); bullet.body.setAllowGravity(false); bullet.body.setCollideWorldBounds(false); } else { console.error("Failed Makora bullet body!"); if (bullet) bullet.destroy(); } }
 
-    // ★★★ デバッグ用: hitBrickWithMakoraBullet ★★★
-    hitBrickWithMakoraBullet(bullet, brick) {
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        console.log("!!! ★★★ MAKORA BULLET OVERLAP DETECTED ★★★ !!!");
-        console.log(`!!! Bullet: ${bullet.x.toFixed(0)},${bullet.y.toFixed(0)} Brick: ${brick.x.toFixed(0)},${brick.y.toFixed(0)}`);
-        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        if (bullet && bullet.active) {
-             bullet.setActive(false).setVisible(false);
-             if(bullet.body) bullet.body.enable = false;
+    // ★★★ hitBrickWithMakiraBeam のコメントアウト解除 ★★★
+    hitBrickWithMakiraBeam(beam, brick) {
+        console.log(">>> hitBrickWithMakiraBeam ENTER");
+        if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver) {
+            console.log(">>> hitBrickWithMakiraBeam aborted");
+            // if (beam && beam.active) { beam.setActive(false).setVisible(false); if(beam.body) beam.body.enable = false;} // デバッグ用処理は削除
+            return;
         }
-        // Original logic commented out for debugging
-        // if (!bullet || !brick || !bullet.active || !brick.active || this.isStageClearing || this.isGameOver) return;
-        // const hitX = brick.x; const hitY = brick.y;
-        // bullet.destroy(); brick.disableBody(true, true); this.score += 10; this.events.emit('updateScore', this.score); this.increaseVajraGauge();
-        // this.triggerMakoraExplosion(hitX, hitY);
+        console.log(">>> Makira beam hit brick at:", brick.x, brick.y);
+        try {
+            console.log(">>> Destroying beam..."); beam.destroy(); console.log(">>> Beam destroyed.");
+            console.log(">>> Disabling brick body..."); brick.disableBody(true, true); console.log(">>> Brick body disabled.");
+            console.log(">>> Updating score..."); this.score += 10; this.events.emit('updateScore', this.score); console.log(">>> Score updated.");
+            console.log(">>> Increasing Vajra gauge..."); this.increaseVajraGauge(); console.log(">>> Vajra gauge increased.");
+            console.log(">>> Checking stage clear..."); if (!this.isStageClearing && this.bricks.countActive(true) === 0) { console.log(">>> Makira beam destroyed last brick!"); this.stageClear(); } console.log(">>> Stage clear check finished.");
+        } catch(error) { console.error("!!!!!!!!!! ERROR in hitBrickWithMakiraBeam !!!!!!!!!!", error); if (beam && beam.active) { beam.setActive(false).setVisible(false); if(beam.body) beam.body.enable = false; } }
+        console.log(">>> hitBrickWithMakiraBeam END");
     }
 
-    triggerMakoraExplosion(x, y) { if (this.isStageClearing || this.isGameOver) return; console.log(`>>> Triggering Makora explosion at (${x.toFixed(0)}, ${y.toFixed(0)}) r ${MAKORA_EXPLOSION_RADIUS}`); const affectedBricks = this.physics.overlapCirc(x, y, MAKORA_EXPLOSION_RADIUS, true, false); let dc = 0; affectedBricks.forEach(body => { const br = body.gameObject; if (br && this.bricks.contains(br) && br.active) { console.log(">>> Makora explosion destroying:", br.x, br.y); br.disableBody(true, true); this.score += 10; dc++; this.increaseVajraGauge(); } }); if (dc > 0) { console.log(`>>> Makora explosion destroyed ${dc}.`); this.events.emit('updateScore', this.score); } if (!this.isStageClearing && this.bricks.countActive(true) === 0) { console.log(">>> Makora explosion cleared stage!"); this.stageClear(); } }
+    // ★★★ マコラ関連の関数 (パドル分裂版) ★★★
+    activateMakora() {
+        console.log(">>> Activating Makora (Paddle Split)!");
+        // 他の能力とは併用可能にするため clearActivePowersAndMakira は呼ばない
+        if(this.isMakiraActive) this.deactivateMakira(); // マキラとは排他にする（必要なら）
+
+        if (!this.isMakoraActive) {
+            this.isMakoraActive = true;
+            // 2枚目のパドル生成
+            this.createSecondPaddle(); // ヘルパー関数呼び出し
+            // パドル幅調整
+            this.adjustPaddleWidthsForMakora(true);
+
+            // 効果時間タイマー開始
+            const duration = POWERUP_DURATION[POWERUP_TYPES.MAKORA];
+            if (this.powerUpTimers[POWERUP_TYPES.MAKORA]) this.powerUpTimers[POWERUP_TYPES.MAKORA].remove();
+            this.powerUpTimers[POWERUP_TYPES.MAKORA] = this.time.delayedCall(duration, () => {
+                 console.log(">>> Makora timer expired.");
+                 this.deactivateMakora();
+                 this.powerUpTimers[POWERUP_TYPES.MAKORA] = null;
+            }, [], this);
+             console.log(`>>> Makora paddle split started (${duration}ms).`);
+        } else {
+            console.log(">>> Makora already active, restarting timer.");
+            // 効果時間タイマーだけリスタート
+            const duration = POWERUP_DURATION[POWERUP_TYPES.MAKORA];
+            if (this.powerUpTimers[POWERUP_TYPES.MAKORA]) this.powerUpTimers[POWERUP_TYPES.MAKORA].remove();
+            this.powerUpTimers[POWERUP_TYPES.MAKORA] = this.time.delayedCall(duration, () => {
+                 console.log(">>> Makora timer expired.");
+                 this.deactivateMakora();
+                 this.powerUpTimers[POWERUP_TYPES.MAKORA] = null;
+            }, [], this);
+             console.log(`>>> Makora timer restarted (${duration}ms).`);
+        }
+        // コライダー再設定（paddle2用を追加するため）
+        this.setColliders();
+    }
+    deactivateMakora() {
+        if (this.isMakoraActive) {
+            console.log(">>> Deactivating Makora (Paddle Split).");
+            this.isMakoraActive = false;
+            // 効果時間タイマー停止
+            if (this.powerUpTimers[POWERUP_TYPES.MAKORA]) { this.powerUpTimers[POWERUP_TYPES.MAKORA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKORA] = null; }
+            // 2枚目のパドル削除
+            if (this.paddle2) {
+                if (this.ballPaddle2Collider) this.ballPaddle2Collider.destroy(); // コライダーも削除
+                this.paddle2.destroy();
+                this.paddle2 = null;
+                this.ballPaddle2Collider = null;
+                console.log(">>> Paddle 2 destroyed.");
+            }
+            // 1枚目のパドル幅を元に戻す
+            this.adjustPaddleWidthsForMakora(false);
+             // コライダー再設定（paddle2用を削除するため）
+            this.setColliders();
+        }
+    }
+    createSecondPaddle() {
+        if (!this.paddle) return;
+        // 既に存在する場合は何もしない（重複生成防止）
+        if (this.paddle2 && this.paddle2.active) {
+            console.warn(">>> Attempted to create paddle2 when it already exists.");
+            return;
+        }
+        // 1枚目と同じY座標、X座標は仮で中央に配置（adjustPaddleWidthsForMakoraで調整）
+        const newPaddleX = this.paddle.x + (this.paddle.displayWidth / 2) + (this.gameWidth * MAKORA_PADDLE_GAP_RATIO / 2) + (this.gameWidth * MAKORA_PADDLE_WIDTH_RATIO / 2); // 仮の位置
+        this.paddle2 = this.physics.add.image(newPaddleX, this.paddle.y, null)
+            .setTint(0xcccccc) // 少し色を変える
+            .setImmovable(true);
+        console.log(">>> Paddle 2 created.");
+    }
+    adjustPaddleWidthsForMakora(isSplitting) {
+        if (!this.paddle) return;
+        const originalWidth = this.paddle.getData('originalWidth');
+        const makoraPaddleWidth = this.gameWidth * MAKORA_PADDLE_WIDTH_RATIO;
+
+        if (isSplitting) {
+            // 分裂時: 両方のパドル幅を狭める
+            this.paddle.setDisplaySize(makoraPaddleWidth, PADDLE_HEIGHT);
+            if (this.paddle2 && this.paddle2.active) {
+                this.paddle2.setDisplaySize(makoraPaddleWidth, PADDLE_HEIGHT);
+            }
+            console.log(`>>> Paddles split. New width: ${makoraPaddleWidth}`);
+        } else {
+            // 解除時: 1枚目のパドル幅を元に戻す
+            if (originalWidth) {
+                this.paddle.setDisplaySize(originalWidth, PADDLE_HEIGHT);
+                console.log(`>>> Paddle 1 width reset to: ${originalWidth}`);
+            } else {
+                // 元の幅データがない場合（エラーケース）
+                this.paddle.setDisplaySize(this.gameWidth * PADDLE_WIDTH_RATIO, PADDLE_HEIGHT);
+                 console.warn(">>> Original paddle width data not found, resetting to default ratio.");
+            }
+        }
+        // ボディサイズも更新（重要）
+        if (this.paddle.body) this.paddle.body.setSize(this.paddle.displayWidth, PADDLE_HEIGHT);
+        if (this.paddle2 && this.paddle2.body) this.paddle2.body.setSize(this.paddle2.displayWidth, PADDLE_HEIGHT);
+    }
+
+    // マコラ弾関連関数は削除 (シューティングモード廃止のため)
+    // fireMakoraBullet() { /* ...削除... */ }
+    // hitBrickWithMakoraBullet() { /* ...削除... */ }
+    // triggerMakoraExplosion() { /* ...削除... */ }
+
     clearActivePowersAndMakira() { console.log(">>> Clearing powers AND Makira."); this.deactivateMakira(); Object.keys(this.powerUpTimers).forEach(t=>{if(this.powerUpTimers[t]&&t!==POWERUP_TYPES.MAKORA){this.powerUpTimers[t].remove();this.powerUpTimers[t]=null;this.deactivatePowerByType(t);}}); if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove();this.sindaraAttractionTimer=null;if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove();this.sindaraMergeTimer=null; this.balls.getChildren().forEach(b=>{if(b.active){b.setData({activePowers:new Set(),lastActivatedPower:null,isPenetrating:false,isFast:false,isSlow:false,isAnchira:false,isSindara:false,sindaraPartner:null,isAttracting:false,isMerging:false,isBikara:false,bikaraState:null,bikaraYangCount:0,isIndaraActive:false,indaraHomingCount:0,isAnilaActive:false});this.resetBallSpeed(b);this.updateBallTint(b);}}); this.deactivateBikara([]); }
 
     // --- ゲームフロー ---
     loseLife() { if(this.isStageClearing||this.isGameOver||this.lives<=0)return; console.log("Losing life."); this.deactivateMakira(); this.deactivateMakora(); this.lives--; this.events.emit('updateLives',this.lives); this.isBallLaunched=false; Object.keys(this.powerUpTimers).forEach(t=>{if(this.powerUpTimers[t]){this.powerUpTimers[t].remove();this.powerUpTimers[t]=null;if(t!==POWERUP_TYPES.MAKIRA&&t!==POWERUP_TYPES.MAKORA)this.deactivatePowerByType(t);}}); if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove(); this.sindaraMergeTimer=null; const as=this.balls.getMatching('isSindara',true); if(as.length>0)this.deactivateSindara(as); if(this.lives>0)this.time.delayedCall(500,this.resetForNewLife,[],this); else this.time.delayedCall(500,this.gameOver,[],this); }
-    resetForNewLife() { if(this.isGameOver||this.isStageClearing){console.log(`>>> reset aborted`);return;} console.log(">>> reset START"); if(this.balls){console.log(">>> Clearing balls...");this.balls.clear(true,true);} if(this.paddle){console.log(">>> Resetting paddle...");this.paddle.x=this.gameWidth/2;this.paddle.y=this.gameHeight-PADDLE_Y_OFFSET;} let nb=null; if(this.paddle){console.log(">>> Creating ball...");nb=this.createAndAddBall(this.paddle.x,this.paddle.y-PADDLE_HEIGHT/2-BALL_RADIUS);}else{console.error(">>> Paddle N/A!");nb=this.createAndAddBall(this.gameWidth/2,this.gameHeight-PADDLE_Y_OFFSET-PADDLE_HEIGHT/2-BALL_RADIUS);} if(!nb||!nb.active)console.error(">>> Ball create failed!");else console.log(">>> Ball created. Active:",nb.active); this.isBallLaunched=false; console.log(">>> Calling setColliders...");this.setColliders(); console.log(">>> reset END"); }
+    resetForNewLife() { if(this.isGameOver||this.isStageClearing){console.log(`>>> reset aborted`);return;} console.log(">>> reset START"); if(this.balls){console.log(">>> Clearing balls...");this.balls.clear(true,true);} if(this.paddle){console.log(">>> Resetting paddle...");this.paddle.x=this.gameWidth/2;this.paddle.y=this.gameHeight-PADDLE_Y_OFFSET; if(!this.isMakoraActive) this.adjustPaddleWidthsForMakora(false);} let nb=null; if(this.paddle){console.log(">>> Creating ball...");nb=this.createAndAddBall(this.paddle.x,this.paddle.y-PADDLE_HEIGHT/2-BALL_RADIUS);}else{console.error(">>> Paddle N/A!");nb=this.createAndAddBall(this.gameWidth/2,this.gameHeight-PADDLE_Y_OFFSET-PADDLE_HEIGHT/2-BALL_RADIUS);} if(!nb||!nb.active)console.error(">>> Ball create failed!");else console.log(">>> Ball created. Active:",nb.active); this.isBallLaunched=false; console.log(">>> Calling setColliders...");this.setColliders(); console.log(">>> reset END"); }
     gameOver() { if(this.isGameOver)return; this.isGameOver=true; console.log("Game Over!"); this.deactivateMakira(); this.deactivateMakora(); if(this.gameOverText)this.gameOverText.setVisible(true); this.physics.pause(); if(this.balls){this.balls.getChildren().forEach(b=>{if(b.active){b.setVelocity(0,0);if(b.body)b.body.enable=false;}}); } Object.values(this.powerUpTimers).forEach(t=>{if(t)t.remove();}); this.powerUpTimers={}; if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove();this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove();this.sindaraMergeTimer=null; }
     stageClear() { if(this.isStageClearing||this.isGameOver){console.log(`>>> stageClear skipped.`);return;} this.isStageClearing=true; console.log(`>>> Stage ${this.currentStage} Clear!`); this.deactivateMakira(); this.deactivateMakora(); try{this.physics.pause();console.log(">>> Physics paused."); Object.keys(this.powerUpTimers).forEach(t=>{if(this.powerUpTimers[t]){this.powerUpTimers[t].remove();this.powerUpTimers[t]=null;if(t!==POWERUP_TYPES.MAKIRA&&t!==POWERUP_TYPES.MAKORA)this.deactivatePowerByType(t);}}); if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove();this.sindaraAttractionTimer=null;if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove();this.sindaraMergeTimer=null;const as=this.balls.getMatching('isSindara',true);if(as.length>0)this.deactivateSindara(as);const abk=this.balls.getMatching('isBikara',true);if(abk.length>0)this.deactivateBikara(abk);const ai=this.balls.getMatching('isIndaraActive',true);ai.forEach(b=>this.deactivateIndaraForBall(b));const an=this.balls.getMatching('isAnilaActive',true);an.forEach(b=>this.deactivateAnilaForBall(b));console.log(">>> Powers deactivated.");if(this.balls){this.balls.getChildren().forEach(b=>{if(b.active){b.setVelocity(0,0).setVisible(false).setActive(false);if(b.body)b.body.enable=false;}});console.log(">>> Balls cleared.");}if(this.bricks){this.bricks.getChildren().forEach(br=>{if(br.getData('isMarkedByBikara'))br.setData('isMarkedByBikara',false);});console.log(">>> Marks cleared.");}if(this.powerUps){this.powerUps.clear(true,true);console.log(">>> Powerups cleared.");}console.log(`>>> Stage clear msg`);this.currentStage++;console.log(`>>> Stage inc:${this.currentStage}.`);const max=this.currentMode===GAME_MODE.ALL_STARS?10:12;console.log(`>>> Check max:${this.currentStage}>${max}`);if(this.currentStage>max){console.log(">>> Calling gameComplete...");this.gameComplete();}else{console.log(">>> Setting up next stage...");this.events.emit('updateStage',this.currentStage);this.time.delayedCall(500,()=>{console.log(">>> delayedCall START.");if(!this.scene||!this.scene.isActive()||this.isGameOver){console.warn(`>>> delayedCall aborted.`);return;}try{console.log(">>> createBricks...");this.createBricks();console.log(">>> Bricks created.");this.isStageClearing=false;console.log(`>>> isStageClearing=${this.isStageClearing}`);console.log(">>> resetForNewLife...");this.resetForNewLife();console.log(">>> reset done.");console.log(">>> physics.resume...");this.physics.resume();console.log(">>> Physics resumed.");}catch(e){console.error("!!! ERROR in delayedCall !!!",e);this.isStageClearing=false;console.error(">>> Set isStageClearing=false");}console.log(">>> delayedCall END.");},[],this);}}catch(e){console.error("!!! ERROR stageClear !!!",e);this.isStageClearing=false;console.error(">>> Set isStageClearing=false");}console.log(">>> stageClear END.");}
     gameComplete() { console.log("Game Complete!"); alert(`ゲームクリア！\nスコア: ${this.score}`); this.returnToTitle(); }
     returnToTitle() { console.log("Return to Title..."); if(this.physics.world&&!this.physics.world.running)this.physics.resume(); if(this.scene.isActive('UIScene')){this.scene.stop('UIScene');console.log("UIScene stopped.");} this.time.delayedCall(10,()=>{if(this.scene&&this.scene.isActive()){console.log("Starting Title...");this.scene.start('TitleScene');}else console.warn("GS inactive.");}); }
-    shutdown() { console.log("GS shutdown."); this.isGameOver=false; this.isStageClearing=false; this.deactivateMakira(); this.deactivateMakora(); Object.values(this.powerUpTimers).forEach(t=>{if(t)t.remove(false);}); this.powerUpTimers={}; if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer=null; if(this.input)this.input.removeAllListeners(); if(this.time)this.time.removeAllEvents(); if(this.physics.world)this.physics.world.off('worldbounds',this.handleWorldBounds,this); this.events.removeAllListeners(); if(this.balls)this.balls.destroy(true);this.balls=null; if(this.bricks)this.bricks.destroy(true);this.bricks=null; if(this.powerUps)this.powerUps.destroy(true);this.powerUps=null; if(this.paddle)this.paddle.destroy();this.paddle=null; this.ballPaddleCollider=null; this.ballBrickCollider=null; this.ballBrickOverlap=null; this.ballBallCollider=null; if(this.familiars)this.familiars.destroy(true);this.familiars=null; if(this.makiraBeams)this.makiraBeams.destroy(true);this.makiraBeams=null; if(this.makoraBullets)this.makoraBullets.destroy(true); this.makoraBullets=null; console.log("GS cleanup finished."); }
+    shutdown() { console.log("GS shutdown."); this.isGameOver=false; this.isStageClearing=false; this.deactivateMakira(); this.deactivateMakora(); Object.values(this.powerUpTimers).forEach(t=>{if(t)t.remove(false);}); this.powerUpTimers={}; if(this.sindaraAttractionTimer)this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer=null; if(this.sindaraMergeTimer)this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer=null; if(this.input)this.input.removeAllListeners(); if(this.time)this.time.removeAllEvents(); if(this.physics.world)this.physics.world.off('worldbounds',this.handleWorldBounds,this); this.events.removeAllListeners(); if(this.balls)this.balls.destroy(true);this.balls=null; if(this.bricks)this.bricks.destroy(true);this.bricks=null; if(this.powerUps)this.powerUps.destroy(true);this.powerUps=null; if(this.paddle)this.paddle.destroy();this.paddle=null; this.ballPaddleCollider=null; this.ballBrickCollider=null; this.ballBrickOverlap=null; this.ballBallCollider=null; if(this.familiars)this.familiars.destroy(true);this.familiars=null; if(this.makiraBeams)this.makiraBeams.destroy(true);this.makiraBeams=null; if(this.makoraBullets)this.makoraBullets.destroy(true); this.makoraBullets=null; if(this.paddle2)this.paddle2.destroy(); this.paddle2=null; this.ballPaddle2Collider=null; console.log("GS cleanup finished."); }
 }
 
 // --- UIScene ---
