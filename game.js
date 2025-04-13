@@ -182,7 +182,7 @@ class GameScene extends Phaser.Scene {
         if (isBikara) {
             console.log(`>>> handleBallBrickOverlap with Bikara. State: ${bikaraState}`);
             if (bikaraState === 'yin') { console.log(">>> Bikara Yin: Marking brick."); this.markBrickByBikara(brick); return; }
-            else if (bikaraState === 'yang') { console.log(">>> Bikara Yang: Calling handleBikaraYangDestroy."); this.handleBikaraYangDestroy(ball, brick); return; } // ゲージ増加は内部で
+            else if (bikaraState === 'yang') { console.log(">>> Bikara Yang: Calling handleBikaraYangDestroy."); this.handleBikaraYangDestroy(ball, brick); return; }
             else { console.warn(`>>> Bikara unexpected state: ${bikaraState}`); return; }
         }
 
@@ -224,9 +224,9 @@ class GameScene extends Phaser.Scene {
     collectPowerUp(paddle, powerUp) {
          if (!powerUp.active || this.isStageClearing) return; const type = powerUp.getData('type'); powerUp.destroy();
         if (type === POWERUP_TYPES.BAISRAVA) { console.log(">>> Collected BAISRAVA!"); this.activateBaisrava(); return; }
-        if (type === POWERUP_TYPES.VAJRA) { console.log(">>> Collected VAJRA!"); this.activateVajra(); return; } // Vajra取得時はactivatePowerを呼ばない
+        if (type === POWERUP_TYPES.VAJRA) { console.log(">>> Collected VAJRA!"); this.activateVajra(); return; }
          if (type === POWERUP_TYPES.ANCHIRA || type === POWERUP_TYPES.SINDARA) { if (this.balls.countActive(true) > 1) { console.log("Keeping furthest ball."); this.keepFurthestBall(); } }
-        this.activatePower(type); // Vajra以外は通常の能力付与へ
+        this.activatePower(type);
     }
 
     keepFurthestBall() {
@@ -237,7 +237,6 @@ class GameScene extends Phaser.Scene {
 
     activatePower(type) {
         console.log(`Activating Power: ${type}`); const targetBalls = this.balls.getMatching('active', true); if (targetBalls.length === 0) { console.warn("No active balls."); return; }
-        // Vajra は collectPowerUp で処理されるので、ここには来ない想定
         if (POWERUP_DURATION[type]) { if (this.powerUpTimers[type]) this.powerUpTimers[type].remove(); }
         switch (type) {
             case POWERUP_TYPES.KUBIRA: this.activateKubira(targetBalls); break; case POWERUP_TYPES.SHATORA: this.activateShatora(targetBalls); break;
@@ -264,7 +263,7 @@ class GameScene extends Phaser.Scene {
         if (ap && ap.size > 0) { const lp = ball.getData('lastActivatedPower'); if (lp && ap.has(lp)) { if (lp === POWERUP_TYPES.BIKARA) t = BIKARA_COLORS[ball.getData('bikaraState')] || BIKARA_COLORS.yin; else if (lp === POWERUP_TYPES.SINDARA) { if (ball.getData('isMerging')) t = SINDARA_MERGE_COLOR; else if (ball.getData('isAttracting')) t = SINDARA_ATTRACT_COLOR; else t = POWERUP_COLORS[lp]; } else if (POWERUP_COLORS[lp]) t = POWERUP_COLORS[lp]; } else { const rp = Array.from(ap); if (rp.length > 0) { const nlp = rp[rp.length - 1]; if (nlp === POWERUP_TYPES.BIKARA) t = BIKARA_COLORS[ball.getData('bikaraState')] || BIKARA_COLORS.yin; else if (nlp === POWERUP_TYPES.SINDARA) { if (ball.getData('isMerging')) t = SINDARA_MERGE_COLOR; else if (ball.getData('isAttracting')) t = SINDARA_ATTRACT_COLOR; else t = POWERUP_COLORS[nlp]; } else t = POWERUP_COLORS[nlp] || DEFAULT_BALL_COLOR; ball.setData('lastActivatedPower', nlp); } } } ball.setTint(t);
     }
 
-    // --- 個別能力 (省略なし) ---
+    // --- 個別能力 ---
     activateKubira(balls) { balls.forEach(b => b.setData('isPenetrating', true)); console.log("Kubira activated."); }
     deactivateKubira(balls) { balls.forEach(b => { if (!b.getData('isSindara') || (!b.getData('isAttracting') && !b.getData('isMerging'))) b.setData('isPenetrating', false); }); console.log("Kubira deactivated."); }
     applySpeedModifier(ball, type) { if (!ball || !ball.active || !ball.body) return; const m = BALL_SPEED_MODIFIERS[type]; if (!m) return; const cv = ball.body.velocity; const d = cv.length() > 0 ? cv.clone().normalize() : new Phaser.Math.Vector2(0, -1); const ns = NORMAL_BALL_SPEED * m; ball.setVelocity(d.x * ns, d.y * ns); }
@@ -294,7 +293,7 @@ class GameScene extends Phaser.Scene {
     triggerAnilaBounce(ball) { if (!ball || !ball.active || !ball.getData('isAnilaActive')) return; console.log("Anila bounce!"); const cvy = ball.body.velocity.y; const bvy = -Math.abs(cvy > -10 ? BALL_INITIAL_VELOCITY_Y * 0.7 : cvy); ball.setVelocityY(bvy); ball.y = this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT; this.deactivateAnilaForBall(ball); this.updateBallTint(ball); }
     activateBaisrava() { console.log(">>> activateBaisrava START"); if (this.isStageClearing || this.isGameOver) { console.log(">>> activateBaisrava BLOCKED"); return; } const ab = this.bricks.getMatching('active', true); let dc = 0; console.log(">>> Active bricks:", ab.length); ab.forEach(br => { br.disableBody(true, true); this.score += 10; dc++; }); if (dc > 0) { console.log(`>>> Baisrava destroyed ${dc}. Score: ${this.score}`); this.events.emit('updateScore', this.score); } else { console.log(">>> Baisrava: No bricks."); } console.log(">>> activateBaisrava END, calling stageClear..."); this.stageClear(); }
 
-    // ★★★ ヴァジラ関連の関数 ★★★
+    // ★★★ ヴァジラ関連の関数 (triggerVajraDestroy修正版) ★★★
     activateVajra() {
         if (!this.isVajraSystemActive) {
             this.isVajraSystemActive = true; this.vajraGauge = 0; console.log(">>> Vajra System Activated!");
@@ -316,7 +315,9 @@ class GameScene extends Phaser.Scene {
         const countToDestroy = Math.min(activeBricks.length, VAJRA_DESTROY_COUNT); console.log(`>>> Vajra Destroying ${countToDestroy} bricks.`);
         const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks); let destroyedCount = 0;
         for (let i = 0; i < countToDestroy; i++) {
-            const brick = shuffledBricks[i]; if (brick && brick.active) { console.log(">>> Vajra destroying:", brick.x, brick.y); brick.disableBody(true, true); this.score += 10; destroyedCount++; this.increaseVajraGauge(); /* ドロップは無し */ }
+            const brick = shuffledBricks[i]; if (brick && brick.active) { console.log(">>> Vajra destroying:", brick.x, brick.y); brick.disableBody(true, true); this.score += 10; destroyedCount++;
+                // this.increaseVajraGauge(); // ★★★ ゲージ増加処理を削除 ★★★
+            }
         }
         if (destroyedCount > 0) { console.log(`>>> Vajra destroyed ${destroyedCount}.`); this.events.emit('updateScore', this.score); }
         if (!this.isStageClearing && this.bricks.countActive(true) === 0) { console.log(">>> Vajra cleared stage!"); this.stageClear(); }
@@ -341,9 +342,8 @@ class UIScene extends Phaser.Scene {
     updateLivesDisplay(lives) { if (this.livesText) this.livesText.setText(`ライフ: ${lives}`); }
     updateScoreDisplay(score) { if (this.scoreText) this.scoreText.setText(`スコア: ${score}`); }
     updateStageDisplay(stage) { if (this.stageText) this.stageText.setText(`ステージ: ${stage}`); }
-    // ★ ヴァジラUI用ダミー関数 ★
     activateVajraUIDisplay(initialValue, maxValue) { console.log(`UIScene: Activate Vajra UI (Initial: ${initialValue}/${maxValue})`); /* TODO: ゲージ描画開始 */ }
-    updateVajraGaugeDisplay(currentValue) { console.log(`UIScene: Update Vajra Gauge (${currentValue})`); /* TODO: ゲージ描画更新 */ }
+    updateVajraGaugeDisplay(currentValue) { console.log(`UIScene: Update Vajra Gauge (${currentValue}/${VAJRA_GAUGE_MAX})`); /* TODO: ゲージ描画更新 */ }
 }
 
 // --- Phaserゲーム設定 ---
