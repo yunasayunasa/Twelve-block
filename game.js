@@ -31,8 +31,10 @@ const POWERUP_SPEED_Y = 100;
 const POWERUP_TYPES = { KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara', BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra', MAKIRA: 'makira', MAKORA: 'makora' };
 const NORMAL_MODE_POWERUP_POOL = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ];
 const ALLSTARS_MODE_POWERUP_POOL = [...NORMAL_MODE_POWERUP_POOL];
+// ★ PowerUpの色定義はアイコン画像を使うようになるため、UIでの色表示以外では使用しなくなるが、コード内で参照されている箇所があるため残しておく
 const POWERUP_COLORS = { [POWERUP_TYPES.KUBIRA]: 0x800080, [POWERUP_TYPES.SHATORA]: 0xffa500, [POWERUP_TYPES.HAILA]: 0xadd8e6, [POWERUP_TYPES.ANCHIRA]: 0xffc0cb, [POWERUP_TYPES.SINDARA]: 0xd2b48c, [POWERUP_TYPES.BIKARA]: 0xffffff, [POWERUP_TYPES.INDARA]: 0x4682b4, [POWERUP_TYPES.ANILA]: 0xffefd5, [POWERUP_TYPES.BAISRAVA]: 0xffd700, [POWERUP_TYPES.VAJRA]: 0xffff00, [POWERUP_TYPES.MAKIRA]: 0x008080, [POWERUP_TYPES.MAKORA]: 0xffffff, };
 const MAKORA_COPYABLE_POWERS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA ];
+// ★ ビカラの色の定義はUIやボールの色付けで使う可能性があるため残しておく
 const BIKARA_COLORS = { yin: 0x444444, yang: 0xfffafa };
 const POWERUP_DURATION = { [POWERUP_TYPES.KUBIRA]: 10000, [POWERUP_TYPES.SHATORA]: 3000, [POWERUP_TYPES.HAILA]: 10000, [POWERUP_TYPES.MAKIRA]: 6667 };
 const BIKARA_YANG_COUNT_MAX = 2;
@@ -87,14 +89,46 @@ const SYMBOL_PATTERNS = {
     ],
 };
 
+// ★ パワーアップタイプに対応するアイコン画像のキー定義
+const POWERUP_ICON_KEYS = {
+    [POWERUP_TYPES.KUBIRA]: 'icon_kubira',
+    [POWERUP_TYPES.SHATORA]: 'icon_shatora',
+    [POWERUP_TYPES.HAILA]: 'icon_haila',
+    [POWERUP_TYPES.ANCHIRA]: 'icon_anchira',
+    [POWERUP_TYPES.SINDARA]: 'icon_sindara',
+    [POWERUP_TYPES.BIKARA]: 'icon_bikara_yang', // ★ ビカラは陽アイコンを使用
+    [POWERUP_TYPES.INDARA]: 'icon_indara',
+    [POWERUP_TYPES.ANILA]: 'icon_anila',
+    [POWERUP_TYPES.BAISRAVA]: 'icon_baisrava',
+    [POWERUP_TYPES.VAJRA]: 'icon_vajra',
+    [POWERUP_TYPES.MAKIRA]: 'icon_makira',
+    [POWERUP_TYPES.MAKORA]: 'icon_makora',
+};
+// 全てのアイコンタイプをリスト化
+const ALL_POWERUP_TYPES_LIST = Object.values(POWERUP_TYPES);
+
+
 // --- BootScene ---
 class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
     preload() {
         this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
-        // ★ 背景画像のロード
+        // 背景画像のロード
         this.load.image('title_background', 'assets/title_background.jpg');
         this.load.image('game_background', 'assets/background1.jpg');
+
+        // ★ ボール画像のロード
+        this.load.image('ball_image', 'assets/ball.png');
+
+        // ★ 各パワーアップアイコン画像のロード
+        ALL_POWERUP_TYPES_LIST.forEach(type => {
+            const key = POWERUP_ICON_KEYS[type];
+            if (key) {
+                // ★ ビカラは特別に 'icon_bikara_yang.png' をロード
+                const fileName = (type === POWERUP_TYPES.BIKARA) ? 'icon_bikara_yang.png' : `${key}.png`;
+                 this.load.image(key, `assets/${fileName}`);
+            }
+        });
     }
     create() { this.scene.start('TitleScene'); }
 }
@@ -104,8 +138,7 @@ class TitleScene extends Phaser.Scene {
     constructor() { super('TitleScene'); }
     create() {
         const w = this.scale.width; const h = this.scale.height;
-        // ★ タイトル背景画像の表示
-        // 画面中央に配置し、画面サイズに合わせて表示サイズを調整
+        // タイトル背景画像の表示
         const bg = this.add.image(w / 2, h / 2, 'title_background');
         bg.setDisplaySize(w, h); // これで画面いっぱいに表示されます（アスペクト比は無視）
 
@@ -141,7 +174,7 @@ class GameScene extends Phaser.Scene {
         this.isVajraSystemActive = false; this.vajraGauge = 0;
         this.isMakiraActive = false; this.familiars = null; this.makiraBeams = null; this.makiraAttackTimer = null; this.makiraBeamBrickOverlap = null;
         this.stageDropPool = [];
-        // ★ 背景画像を保持するためのプロパティを追加
+        // 背景画像を保持するためのプロパティを追加
         this.backgroundImage = null;
     }
 
@@ -161,8 +194,7 @@ class GameScene extends Phaser.Scene {
     create() {
         this.gameWidth = this.scale.width; this.gameHeight = this.scale.height;
 
-        // ★ ゲーム背景画像の表示
-        // 画面中央に配置し、画面サイズに合わせて表示サイズを調整
+        // ゲーム背景画像の表示
         this.backgroundImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'game_background');
         this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight); // 画面いっぱいに表示
 
@@ -171,7 +203,11 @@ class GameScene extends Phaser.Scene {
         this.time.delayedCall(50, () => { if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
         this.physics.world.setBoundsCollision(true, true, true, false); this.physics.world.on('worldbounds', this.handleWorldBounds, this);
         this.paddle = this.physics.add.image(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET, 'whitePixel').setTint(0xffffff).setImmovable(true).setData('originalWidthRatio', PADDLE_WIDTH_RATIO); this.updatePaddleSize();
-        this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true }); this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
+        // ★ ボールを物理グループとして作成（画像キーはまだwhitePixelのまま）
+        this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
+        // ★ createAndAddBallでボール画像を適用する
+        this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
+
         this.setupStage();
         this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'GAME OVER\nTap to Restart', { fontSize: '48px', fill: '#f00', align: 'center' }).setOrigin(0.5).setVisible(false).setDepth(1);
         this.powerUps = this.physics.add.group(); this.familiars = this.physics.add.group(); this.makiraBeams = this.physics.add.group();
@@ -185,7 +221,7 @@ class GameScene extends Phaser.Scene {
 
     updatePaddleSize() { if (!this.paddle) return; const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio'); this.paddle.setDisplaySize(newWidth, PADDLE_HEIGHT); this.paddle.refreshBody(); const halfWidth = this.paddle.displayWidth / 2; this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth); }
 
-    // ★ リサイズ時の背景画像サイズ更新処理を追加
+    // リサイズ時の背景画像サイズ更新処理
     handleResize(gameSize, baseSize, displaySize, resolution) {
         this.gameWidth = gameSize.width;
         this.gameHeight = gameSize.height;
@@ -221,8 +257,10 @@ class GameScene extends Phaser.Scene {
         if (this.makiraBeams && this.bricks) { this.makiraBeamBrickOverlap = this.physics.add.overlap(this.makiraBeams, this.bricks, this.hitBrickWithMakiraBeam, null, this); }
     }
 
+    // ★ createAndAddBall 関数でボール画像を適用
     createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
-        const ball = this.balls.create(x, y, null).setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);
+        // whitePixelの代わりにball_imageキーを使用
+        const ball = this.balls.create(x, y, 'ball_image').setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);
         if (ball.body) { ball.setVelocity(vx, vy); ball.body.onWorldBounds = true; } else { console.error("Failed to create ball physics body!"); ball.destroy(); return null; }
         ball.setData({ activePowers: data ? new Set(data.activePowers) : new Set(), lastActivatedPower: data ? data.lastActivatedPower : null, isPenetrating: data ? data.isPenetrating : false, isFast: data ? data.isFast : false, isSlow: data ? data.isSlow : false, isAnchira: data ? data.isAnchira : false, isSindara: data ? data.isSindara : false, sindaraPartner: null, isAttracting: false, isMerging: false, isBikara: data ? data.isBikara : false, bikaraState: data ? data.bikaraState : null, bikaraYangCount: 0, isIndaraActive: data ? data.isIndaraActive : false, indaraHomingCount: data ? data.indaraHomingCount : 0, isAnilaActive: data ? data.isAnilaActive : false });
         if (data) { this.updateBallTint(ball); if (ball.getData('isFast')) this.applySpeedModifier(ball, POWERUP_TYPES.SHATORA); else if (ball.getData('isSlow')) this.applySpeedModifier(ball, POWERUP_TYPES.HAILA); }
@@ -231,7 +269,7 @@ class GameScene extends Phaser.Scene {
 
     launchBall() { if (!this.isBallLaunched && this.balls) { const firstBall = this.balls.getFirstAlive(); if (firstBall) { const initialVelocityX = Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0], BALL_INITIAL_VELOCITY_X_RANGE[1]); firstBall.setVelocity(initialVelocityX, BALL_INITIAL_VELOCITY_Y); this.isBallLaunched = true; } } }
 
-    // ★★★ createBricks 関数（干支文字ステージ対応版） ★★★
+    // createBricks 関数 (変更なし)
     createBricks() {
         if (this.bricks) { this.bricks.clear(true, true); this.bricks.destroy(); }
         this.bricks = this.physics.add.staticGroup();
@@ -260,7 +298,7 @@ class GameScene extends Phaser.Scene {
         if (stage > 2 && stage % 8 === 0) { specialLayoutType = 's_shape'; }
         else if (stage > 2 && stage % 4 === 0) { specialLayoutType = 'wall'; }
         else if (stage > 4 && stage % 6 === 0) { specialLayoutType = 'center_hollow'; }
-        // ★ SYMBOL_PATTERNSにキーが存在すれば symbol タイプに
+        // SYMBOL_PATTERNSにキーが存在すれば symbol タイプに
         else if (stage >= 3 && SYMBOL_PATTERNS[stageString]) {
              specialLayoutType = 'symbol';
         }
@@ -311,7 +349,6 @@ class GameScene extends Phaser.Scene {
                             const maxHits = 1;
                             const isDurable = false;
                             const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor);
-                            // ★ 修正: currentHitsの初期値を正しくmaxHitsにする
                             brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType });
                             brick.refreshBody();
                             generatedCount++;
@@ -339,7 +376,7 @@ class GameScene extends Phaser.Scene {
         this.setColliders();
     }
 
-    // 通常配置フォールバック用のヘルパーメソッド
+    // 通常配置フォールバック用のヘルパーメソッド (変更なし)
     createBricksFallbackToNormal() {
         console.log("Falling back to Normal Layout generation...");
         const stage = this.currentStage; const maxStage = MAX_STAGE; const rows = BRICK_ROWS + Math.floor(stage / 3); const cols = BRICK_COLS + Math.floor(stage / 4); const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2; const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4))); const actualCols = Math.min(cols, BRICK_COLS + 4); let durableRatio = 0; let indestructibleRatio = 0; let progress = 0; if (stage >= 3) { progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1); durableRatio = progress * 0.5; indestructibleRatio = progress * 0.15; } const bW = this.scale.width * BRICK_WIDTH_RATIO; const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING; const oX = (this.scale.width - totalBrickWidth) / 2; let density; if (stage <= 3) { density = 0.4; } else { density = 0.4 + 0.5 * progress; }
@@ -349,19 +386,53 @@ class GameScene extends Phaser.Scene {
         console.log(`Bricks generated (fallback): ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
         this.setColliders();
     }
-    // ★★★ createBricks 修正版ここまで ★★★
 
-    // --- 以下、変更なしのメソッド群 ---
-    handleBrickHit(brick, damage = 1) { if (!brick || !brick.active || !brick.getData) return false; const maxHits = brick.getData('maxHits'); if (maxHits === -1 && damage !== Infinity) { return false; } let currentHits = brick.getData('currentHits'); const isDurable = brick.getData('isDurable'); if (damage === Infinity) { currentHits = 0; } else { currentHits -= damage; } brick.setData('currentHits', currentHits); if (currentHits <= 0) { this.handleBrickDestruction(brick); return true; } else if (isDurable) { const darknessFactor = (maxHits - currentHits) * DURABLE_BRICK_HIT_DARKEN; const originalColor = Phaser.Display.Color.ValueToColor(DURABLE_BRICK_COLOR); const newColor = originalColor.darken(darknessFactor); brick.setTint(newColor.color); return false; } else { return false; } }
-    handleBrickDestruction(brick) { if (!brick || !brick.active) return false; const brickX = brick.x; const brickY = brick.y; brick.disableBody(true, true); this.score += 10; this.events.emit('updateScore', this.score); this.increaseVajraGauge(); if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) { this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA); return true; } if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) { this.dropPowerUp(brickX, brickY); } return false; }
-    hitBrick(brick, ball) { if (!brick || !ball || !brick.active || !ball.active || this.isStageClearing) return; if (brick.getData('maxHits') === -1) { return; } const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } }
-    handleBallBrickOverlap(ball, brick) { if (!ball || !brick || !ball.active || !brick.active || this.isStageClearing) return; const isBikara = ball.getData('isBikara'); const bikaraState = ball.getData('bikaraState'); const isPenetrating = ball.getData('isPenetrating') || (ball.getData('isSindara') && (ball.getData('isAttracting') || ball.getData('isMerging'))); if (brick.getData('maxHits') === -1) { let destroyed = false; if (isBikara && bikaraState === 'yang') { destroyed = this.handleBrickHit(brick, Infinity); } else if (isPenetrating) { destroyed = this.handleBrickHit(brick, Infinity); } if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } return; } if (isBikara) { if (bikaraState === 'yin') { this.markBrickByBikara(brick); return; } else if (bikaraState === 'yang') { this.handleBikaraYangDestroy(ball, brick); return; } } else if (isPenetrating) { const destroyed = this.handleBrickHit(brick, brick.getData('maxHits')); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } } else { console.warn("BallBrickOverlap called without Bikara or Penetrating state?"); const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } } }
-    handleBikaraYangDestroy(ball, hitBrick) { if (!ball || !ball.active || !ball.getData('isBikara') || ball.getData('bikaraState') !== 'yang') return; let destroyedCount = 0; const markedToDestroy = []; if (hitBrick.active) { markedToDestroy.push(hitBrick); hitBrick.setData('isMarkedByBikara', false); } this.bricks.getChildren().forEach(br => { if (br.active && br.getData('isMarkedByBikara') && !markedToDestroy.includes(br)) { markedToDestroy.push(br); br.setData('isMarkedByBikara', false); } }); markedToDestroy.forEach(br => { if (br.active) { const destroyed = this.handleBrickHit(br, Infinity); if (destroyed) destroyedCount++; } }); let currentYangCount = ball.getData('bikaraYangCount') || 0; currentYangCount++; ball.setData('bikaraYangCount', currentYangCount); if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } else if (currentYangCount >= BIKARA_YANG_COUNT_MAX) { this.deactivateBikara([ball]); this.updateBallTint(ball); } }
-    hitBrickWithMakiraBeam(beam, brick) { if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver) return; if (brick.getData('maxHits') === -1) { beam.destroy(); return; } try { beam.destroy(); } catch (error) { console.error("Error destroying Makira beam:", error); if (beam && beam.active) { beam.setActive(false).setVisible(false); if (beam.body) beam.body.enable = false; } } const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); } }
-    triggerVajraDestroy() { if (this.isStageClearing || this.isGameOver) return; if (!this.isVajraSystemActive) return; this.isVajraSystemActive = false; const activeBricks = this.bricks.getMatching('active', true); if (activeBricks.length === 0) { this.deactivateVajra(); return; } const countToDestroy = Math.min(activeBricks.length, VAJRA_DESTROY_COUNT); const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks); let destroyedCount = 0; for (let i = 0; i < countToDestroy; i++) { const brick = shuffledBricks[i]; if (brick && brick.active) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } } console.log(`Vajra destroyed ${destroyedCount} bricks.`); if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } else { this.deactivateVajra(); } }
-    activateBaisrava() { if (this.isStageClearing || this.isGameOver) return; const activeBricks = this.bricks.getMatching('active', true); let destroyedCount = 0; activeBricks.forEach(brick => { if (brick && brick.active) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } }); if (destroyedCount > 0) { console.log(`Baisrava destroyed ${destroyedCount} bricks.`); } this.stageClear(); }
-    getDestroyableBrickCount() { if (!this.bricks) return 0; return this.bricks.getMatching('active', true).filter(brick => brick.getData('maxHits') !== -1).length; }
-    dropSpecificPowerUp(x, y, type) { if (!type || !POWERUP_COLORS[type]) { console.warn(`Attempted to drop invalid powerup type: ${type}`); return; } const color = POWERUP_COLORS[type]; let powerUp = null; try { powerUp = this.powerUps.create(x, y, 'whitePixel'); if (powerUp) { powerUp.setDisplaySize(POWERUP_SIZE, POWERUP_SIZE).setTint(color).setData('type', type); if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); } else { console.error(`No physics body for powerup type: ${type}! Destroying.`); powerUp.destroy(); powerUp = null; } } else { console.error(`Failed to create powerup object for type: ${type}!`); } } catch (error) { console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error); if (powerUp && powerUp.active) { powerUp.destroy(); } } }
+
+    // ★ dropSpecificPowerUp 関数でアイコン画像を適用
+    dropSpecificPowerUp(x, y, type) {
+        const iconKey = POWERUP_ICON_KEYS[type];
+        if (!iconKey) {
+             console.warn(`Attempted to drop powerup with no icon key: ${type}`);
+             // アイコンがない場合はwhitePixelで代替表示
+             const color = POWERUP_COLORS[type] || 0x888888;
+             let powerUp = this.powerUps.create(x, y, 'whitePixel');
+             if (powerUp) {
+                 powerUp.setDisplaySize(POWERUP_SIZE, POWERUP_SIZE).setTint(color).setData('type', type);
+                  if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); } else { console.error(`No physics body for powerup type: ${type}! Destroying.`); powerUp.destroy(); }
+             } else { console.error(`Failed to create powerup object for type: ${type}!`); }
+             return;
+        }
+
+        let powerUp = null;
+        try {
+            // アイコン画像を使用してPowerUpオブジェクトを作成
+            powerUp = this.powerUps.create(x, y, iconKey);
+            if (powerUp) {
+                powerUp.setDisplaySize(POWERUP_SIZE, POWERUP_SIZE)
+                       .setData('type', type);
+                // 画像なのでtintは基本不要だが、デバッグや特殊な表現のために残すこともできる
+                // powerUp.setTint(POWERUP_COLORS[type] || 0xffffff);
+
+                if (powerUp.body) {
+                    powerUp.setVelocity(0, POWERUP_SPEED_Y);
+                    powerUp.body.setCollideWorldBounds(false);
+                    powerUp.body.setAllowGravity(false);
+                } else {
+                    console.error(`No physics body for powerup type: ${type}! Destroying.`);
+                    powerUp.destroy();
+                    powerUp = null;
+                }
+            } else {
+                console.error(`Failed to create powerup object for type: ${type}!`);
+            }
+        } catch (error) {
+            console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error);
+            if (powerUp && powerUp.active) {
+                powerUp.destroy();
+            }
+        }
+    }
+
     dropPowerUp(x, y) { let availableTypes = []; if (this.currentMode === GAME_MODE.NORMAL) { availableTypes = this.stageDropPool; } else { availableTypes = ALLSTARS_MODE_POWERUP_POOL; } if (availableTypes.length === 0) return; const type = Phaser.Utils.Array.GetRandom(availableTypes); this.dropSpecificPowerUp(x, y, type); }
     hitPaddle(paddle, ball) { if (!paddle || !ball || !ball.active || !ball.body) return; let diff = ball.x - paddle.x; const maxDiff = paddle.displayWidth / 2; let influence = diff / maxDiff; influence = Phaser.Math.Clamp(influence, -1, 1); const maxVx = NORMAL_BALL_SPEED * 0.8; let newVx = maxVx * influence; const minVy = NORMAL_BALL_SPEED * 0.5; let currentVy = ball.body.velocity.y; let newVy = -Math.abs(currentVy); if (Math.abs(newVy) < minVy) newVy = -minVy; let speedMultiplier = 1.0; if (ball.getData('isFast')) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.SHATORA]; else if (ball.getData('isSlow')) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.HAILA]; const targetSpeed = NORMAL_BALL_SPEED * speedMultiplier; const newVelocity = new Phaser.Math.Vector2(newVx, newVy).normalize().scale(targetSpeed); ball.setVelocity(newVelocity.x, newVelocity.y); if (ball.getData('isBikara')) { this.switchBikaraState(ball); } if (ball.getData('isIndaraActive')) { this.deactivateIndaraForBall(ball); this.updateBallTint(ball); } }
     collectPowerUp(paddle, powerUp) { if (!powerUp || !powerUp.active || this.isStageClearing) return; const type = powerUp.getData('type'); if (!type) { console.warn("Collected powerup with no type data!"); powerUp.destroy(); return; } powerUp.destroy(); if (type === POWERUP_TYPES.BAISRAVA) { this.activateBaisrava(); return; } if (type === POWERUP_TYPES.VAJRA) { this.activateVajra(); return; } if (type === POWERUP_TYPES.MAKIRA) { this.activateMakira(); return; } if (type === POWERUP_TYPES.MAKORA) { this.activateMakora(); return; } if (type === POWERUP_TYPES.ANCHIRA || type === POWERUP_TYPES.SINDARA) { if (this.balls.countActive(true) > 1) { this.keepFurthestBall(); } } this.activatePower(type); }
@@ -369,7 +440,59 @@ class GameScene extends Phaser.Scene {
     keepFurthestBall() { const activeBalls = this.balls.getMatching('active', true); if (activeBalls.length <= 1) return; let furthestBall = null; let maxDistSq = -1; const paddlePos = new Phaser.Math.Vector2(this.paddle.x, this.paddle.y); activeBalls.forEach(ball => { const distSq = Phaser.Math.Distance.Squared(paddlePos.x, paddlePos.y, ball.x, ball.y); if (distSq > maxDistSq) { maxDistSq = distSq; furthestBall = ball; } }); activeBalls.forEach(ball => { if (ball !== furthestBall) { ball.destroy(); } }); }
     activatePower(type) { const targetBalls = this.balls.getMatching('active', true); if (targetBalls.length === 0) return; if (POWERUP_DURATION[type]) { if (this.powerUpTimers[type]) { this.powerUpTimers[type].remove(); } } switch (type) { case POWERUP_TYPES.KUBIRA: this.activateKubira(targetBalls); break; case POWERUP_TYPES.SHATORA: this.activateShatora(targetBalls); break; case POWERUP_TYPES.HAILA: this.activateHaira(targetBalls); break; case POWERUP_TYPES.ANCHIRA: if (targetBalls.length === 1) this.activateAnchira(targetBalls[0]); break; case POWERUP_TYPES.SINDARA: if (targetBalls.length === 1) this.activateSindara(targetBalls[0]); break; case POWERUP_TYPES.BIKARA: this.activateBikara(targetBalls); break; case POWERUP_TYPES.INDARA: this.activateIndara(targetBalls); break; case POWERUP_TYPES.ANILA: this.activateAnila(targetBalls); break; } targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').add(type); ball.setData('lastActivatedPower', type); this.updateBallTint(ball); } }); const duration = POWERUP_DURATION[type]; if (duration) { this.powerUpTimers[type] = this.time.delayedCall(duration, () => { this.deactivatePowerByType(type); this.powerUpTimers[type] = null; }, [], this); } }
     deactivatePowerByType(type) { const targetBalls = this.balls.getMatching('active', true); if (targetBalls.length === 0 || type === POWERUP_TYPES.MAKIRA || type === POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKORA) return; switch (type) { case POWERUP_TYPES.KUBIRA: this.deactivateKubira(targetBalls); break; case POWERUP_TYPES.SHATORA: this.deactivateShatora(targetBalls); break; case POWERUP_TYPES.HAILA: this.deactivateHaira(targetBalls); break; } targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').delete(type); this.updateBallTint(ball); } }); }
-    updateBallTint(ball) { if (!ball || !ball.active) return; const activePowers = ball.getData('activePowers'); let targetColor = DEFAULT_BALL_COLOR; if (activePowers && activePowers.size > 0) { const lastPower = ball.getData('lastActivatedPower'); let powerToUse = lastPower; if (!lastPower || !activePowers.has(lastPower)) { const activePowersArray = Array.from(activePowers); if (activePowersArray.length > 0) { powerToUse = activePowersArray[activePowersArray.length - 1]; ball.setData('lastActivatedPower', powerToUse); } else { powerToUse = null; } } if (powerToUse) { if (powerToUse === POWERUP_TYPES.BIKARA) { targetColor = BIKARA_COLORS[ball.getData('bikaraState')] || BIKARA_COLORS.yin; } else if (powerToUse === POWERUP_TYPES.SINDARA) { if (ball.getData('isMerging')) targetColor = SINDARA_MERGE_COLOR; else if (ball.getData('isAttracting')) targetColor = SINDARA_ATTRACT_COLOR; else targetColor = POWERUP_COLORS[powerToUse]; } else { targetColor = POWERUP_COLORS[powerToUse] || DEFAULT_BALL_COLOR; } } } ball.setTint(targetColor); }
+
+    // ★ updateBallTint 関数 (まだアイコン重ね表示はせず色のみ更新)
+    updateBallTint(ball) {
+        if (!ball || !ball.active) return;
+        const activePowers = ball.getData('activePowers');
+        let targetColor = DEFAULT_BALL_COLOR; // デフォルトの色 (画像自体はball.pngだが色も変える可能性を考慮)
+
+        if (activePowers && activePowers.size > 0) {
+            const lastPower = ball.getData('lastActivatedPower');
+            let powerToUse = lastPower;
+
+            // 最後に取得したパワーが失効している場合は、アクティブな他のパワーを探す
+            if (!lastPower || !activePowers.has(lastPower)) {
+                const activePowersArray = Array.from(activePowers);
+                if (activePowersArray.length > 0) {
+                    // この時点では単純にリストの最後のパワーを使う
+                    powerToUse = activePowersArray[activePowersArray.length - 1];
+                    ball.setData('lastActivatedPower', powerToUse);
+                } else {
+                    powerToUse = null; // アクティブなパワーがない
+                }
+            }
+
+            if (powerToUse) {
+                 // ★ ここではまだアイコンの重ね表示はせず、特定のパワーアップの色変化のみ対応
+                 if (powerToUse === POWERUP_TYPES.BIKARA) {
+                    // Bikaraの色はyin/yangで変わる
+                    targetColor = BIKARA_COLORS[ball.getData('bikaraState')] || BIKARA_COLORS.yin;
+                 } else if (powerToUse === POWERUP_TYPES.SINDARA) {
+                    // Sindaraは状態によって色が変わる
+                    if (ball.getData('isMerging')) targetColor = SINDARA_MERGE_COLOR;
+                    else if (ball.getData('isAttracting')) targetColor = SINDARA_ATTRACT_COLOR;
+                    // SindaraがアクティブだがAttracting/Mergingでない場合はデフォルト色か他のパワーの色
+                    else {
+                         const otherPowers = Array.from(activePowers).filter(p => p !== POWERUP_TYPES.SINDARA);
+                         if (otherPowers.length > 0) {
+                             const otherPower = otherPowers[otherPowers.length - 1]; // ここも単純に最後のパワー
+                             targetColor = POWERUP_COLORS[otherPower] || DEFAULT_BALL_COLOR;
+                         } else {
+                             targetColor = DEFAULT_BALL_COLOR;
+                         }
+                    }
+                 } else {
+                    // それ以外のパワーアップの場合は、そのパワーアップの色にする（画像になるので効果は薄れるが、将来的なTint表現のために残す）
+                    targetColor = POWERUP_COLORS[powerToUse] || DEFAULT_BALL_COLOR;
+                 }
+            }
+        }
+        // 画像に対してsetTintを行う
+        ball.setTint(targetColor);
+
+        // ★ ステップ2でアイコン表示のロジックを追加予定
+    }
     // --- 個別パワーアップ効果 ---
     activateKubira(balls) { balls.forEach(b => b.setData('isPenetrating', true)); }
     deactivateKubira(balls) { balls.forEach(b => { if (!b.getData('isSindara') || (!b.getData('isAttracting') && !b.getData('isMerging'))) { if (!b.getData('isBikara') || b.getData('bikaraState') !== 'yang') { b.setData('isPenetrating', false); } } }); }
@@ -414,7 +537,7 @@ class GameScene extends Phaser.Scene {
     gameComplete() { alert(`ゲームクリア！ スコア: ${this.score}`); this.returnToTitle(); }
     returnToTitle() { if (this.physics.world && !this.physics.world.running) this.physics.resume(); if (this.scene.isActive('UIScene')) { this.scene.stop('UIScene'); } this.time.delayedCall(10, () => { if (this.scene && this.scene.isActive()) { this.scene.start('TitleScene'); } }); }
     shutdown() { if (this.scale) this.scale.off('resize', this.handleResize, this); if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this); this.events.removeAllListeners(); if (this.input) this.input.removeAllListeners(); this.isGameOver = false; this.isStageClearing = false; this.deactivateMakira(); this.deactivateVajra(); Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); }); this.powerUpTimers = {}; if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null; if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null; if (this.time) this.time.removeAllEvents(); if (this.balls) this.balls.destroy(true); this.balls = null; if (this.bricks) this.bricks.destroy(true); this.bricks = null; if (this.powerUps) this.powerUps.destroy(true); this.powerUps = null; if (this.paddle) this.paddle.destroy(); this.paddle = null; if (this.familiars) this.familiars.destroy(true); this.familiars = null; if (this.makiraBeams) this.makiraBeams.destroy(true); this.makiraBeams = null; if (this.gameOverText) this.gameOverText.destroy(); this.gameOverText = null; this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
-        // ★ 背景画像オブジェクトも破棄する
+        // 背景画像オブジェクトも破棄する
         if (this.backgroundImage) { this.backgroundImage.destroy(); this.backgroundImage = null; }
     }
 }
@@ -423,7 +546,13 @@ class GameScene extends Phaser.Scene {
 // --- UIScene ---
 class UIScene extends Phaser.Scene {
     constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; this.vajraGaugeText = null; this.dropPoolIconsGroup = null; this.gameSceneListenerAttached = false; this.gameScene = null; }
-    create() { this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; const textStyle = { fontSize: '24px', fill: '#fff' }; this.livesText = this.add.text(16, 16, 'ライフ: ', textStyle); this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ', textStyle).setOrigin(0.5, 0); this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: ', textStyle).setOrigin(1, 0); this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff' }).setOrigin(0, 1).setVisible(false); this.dropPoolIconsGroup = this.add.group(); this.updateDropPoolDisplay([]); this.gameScene = this.scene.get('GameScene'); if (this.gameScene) { this.gameScene.events.on('gameResize', this.onGameResize, this); } try { const gameScene = this.scene.get('GameScene'); if (gameScene && gameScene.scene.settings.status === Phaser.Scenes.RUNNING) { this.registerGameEventListeners(gameScene); } else { this.scene.get('GameScene').events.once('create', this.registerGameEventListeners, this); } } catch (e) { console.error("Error setting up UIScene listeners:", e); } this.events.on('shutdown', () => { this.unregisterGameEventListeners(); if (this.gameScene && this.gameScene.events) { this.gameScene.events.off('gameResize', this.onGameResize, this); } }); }
+    create() { this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; const textStyle = { fontSize: '24px', fill: '#fff' }; this.livesText = this.add.text(16, 16, 'ライフ: ', textStyle); this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ', textStyle).setOrigin(0.5, 0); this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: ', textStyle).setOrigin(1, 0); this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff' }).setOrigin(0, 1).setVisible(false); this.dropPoolIconsGroup = this.add.group();
+        // ★ UIでのドロッププールアイコン表示も画像を使う
+        // ただし、この段階ではまだUIへのアイコン表示自体を実装していないため、
+        // updateDropPoolDisplayはwhitePixelのままにしておくか、空にするか選択。
+        // とりあえずアイコン画像への切り替えはステップ2で行うこととし、現状維持
+        this.updateDropPoolDisplay([]);
+        this.gameScene = this.scene.get('GameScene'); if (this.gameScene) { this.gameScene.events.on('gameResize', this.onGameResize, this); } try { const gameScene = this.scene.get('GameScene'); if (gameScene && gameScene.scene.settings.status === Phaser.Scenes.RUNNING) { this.registerGameEventListeners(gameScene); } else { this.scene.get('GameScene').events.once('create', this.registerGameEventListeners, this); } } catch (e) { console.error("Error setting up UIScene listeners:", e); } this.events.on('shutdown', () => { this.unregisterGameEventListeners(); if (this.gameScene && this.gameScene.events) { this.gameScene.events.off('gameResize', this.onGameResize, this); } }); }
     onGameResize() { this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; this.livesText?.setPosition(16, 16); this.stageText?.setPosition(this.gameWidth / 2, 16); this.scoreText?.setPosition(this.gameWidth - 16, 16); this.vajraGaugeText?.setPosition(16, this.gameHeight - UI_BOTTOM_OFFSET); this.updateDropPoolPosition(); }
     registerGameEventListeners(gameScene) { if (!gameScene || !gameScene.events || this.gameSceneListenerAttached) return; this.unregisterGameEventListeners(gameScene); gameScene.events.on('updateLives', this.updateLivesDisplay, this); gameScene.events.on('updateScore', this.updateScoreDisplay, this); gameScene.events.on('updateStage', this.updateStageDisplay, this); gameScene.events.on('activateVajraUI', this.activateVajraUIDisplay, this); gameScene.events.on('updateVajraGauge', this.updateVajraGaugeDisplay, this); gameScene.events.on('deactivateVajraUI', this.deactivateVajraUIDisplay, this); gameScene.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this); this.gameSceneListenerAttached = true; try { this.updateLivesDisplay(gameScene.lives); this.updateScoreDisplay(gameScene.score); this.updateStageDisplay(gameScene.currentStage); if (gameScene.isVajraSystemActive) this.activateVajraUIDisplay(gameScene.vajraGauge, VAJRA_GAUGE_MAX); else this.deactivateVajraUIDisplay(); this.updateDropPoolDisplay(gameScene.stageDropPool); } catch (e) { console.error("Error reflecting initial state in UIScene:", e); } }
     unregisterGameEventListeners(gameScene = null) { const gs = gameScene || this.gameScene || (this.scene.manager ? this.scene.manager.getScene('GameScene') : null); if (gs && gs.events) { gs.events.off('updateLives', this.updateLivesDisplay, this); gs.events.off('updateScore', this.updateScoreDisplay, this); gs.events.off('updateStage', this.updateStageDisplay, this); gs.events.off('activateVajraUI', this.activateVajraUIDisplay, this); gs.events.off('updateVajraGauge', this.updateVajraGaugeDisplay, this); gs.events.off('deactivateVajraUI', this.deactivateVajraUIDisplay, this); gs.events.off('create', this.registerGameEventListeners, this); gs.events.off('updateDropPoolUI', this.updateDropPoolDisplay, this); } this.gameSceneListenerAttached = false; }
@@ -431,7 +560,27 @@ class UIScene extends Phaser.Scene {
     activateVajraUIDisplay(initialValue, maxValue) { if (this.vajraGaugeText) { this.vajraGaugeText.setText(`奥義: ${initialValue}/${maxValue}`).setVisible(true); this.updateDropPoolPosition(); } }
     updateVajraGaugeDisplay(currentValue) { if (this.vajraGaugeText && this.vajraGaugeText.visible) { this.vajraGaugeText.setText(`奥義: ${currentValue}/${VAJRA_GAUGE_MAX}`); this.updateDropPoolPosition(); } }
     deactivateVajraUIDisplay() { if (this.vajraGaugeText) { this.vajraGaugeText.setVisible(false); this.updateDropPoolPosition(); } }
-    updateDropPoolDisplay(dropPoolTypes) { if (!this.dropPoolIconsGroup) return; this.dropPoolIconsGroup.clear(true, true); if (!dropPoolTypes || dropPoolTypes.length === 0) { this.updateDropPoolPosition(); return; } dropPoolTypes.forEach((type, index) => { const color = POWERUP_COLORS[type] || 0x888888; const icon = this.add.image(0, 0, 'whitePixel').setDisplaySize(DROP_POOL_UI_ICON_SIZE, DROP_POOL_UI_ICON_SIZE).setTint(color).setOrigin(0, 0.5); this.dropPoolIconsGroup.add(icon); }); this.updateDropPoolPosition(); }
+
+    // ★ updateDropPoolDisplay 関数 (ステップ2で画像表示に修正予定)
+    updateDropPoolDisplay(dropPoolTypes) {
+        if (!this.dropPoolIconsGroup) return;
+        this.dropPoolIconsGroup.clear(true, true);
+        if (!dropPoolTypes || dropPoolTypes.length === 0) {
+            this.updateDropPoolPosition();
+            return;
+        }
+        dropPoolTypes.forEach((type, index) => {
+            // ★ この段階ではまだアイコン画像を使わず、whitePixel+Tintで仮表示
+            const color = POWERUP_COLORS[type] || 0x888888;
+            const icon = this.add.image(0, 0, 'whitePixel') // ★ whitePixelを使用
+                          .setDisplaySize(DROP_POOL_UI_ICON_SIZE, DROP_POOL_UI_ICON_SIZE)
+                          .setTint(color) // ★ Tintを使用
+                          .setOrigin(0, 0.5);
+            this.dropPoolIconsGroup.add(icon);
+        });
+        this.updateDropPoolPosition();
+    }
+
     updateDropPoolPosition() { if (!this.dropPoolIconsGroup || !this.vajraGaugeText) return; const startX = this.vajraGaugeText.visible ? this.vajraGaugeText.x + this.vajraGaugeText.width + 15 : 16; const startY = this.gameHeight - UI_BOTTOM_OFFSET; let currentX = startX; this.dropPoolIconsGroup.getChildren().forEach(icon => { icon.x = currentX; icon.y = startY; currentX += DROP_POOL_UI_ICON_SIZE + DROP_POOL_UI_SPACING; }); }
 }
 
@@ -439,7 +588,7 @@ class UIScene extends Phaser.Scene {
 const config = {
     type: Phaser.AUTO,
     scale: { mode: Phaser.Scale.FIT, parent: 'phaser-game-container', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
-    physics: { default: 'arcade', arcade: { debug: false, gravity: { y: 0 } } }, // デバッグ表示が必要ならdebug: trueに変更
+    physics: { default: 'arcade', arcade: { debug: false, gravity: { y: 0 } } },
     scene: [BootScene, TitleScene, GameScene, UIScene],
     input: { activePointers: 3, },
     render: { pixelArt: false, antialias: true, }
