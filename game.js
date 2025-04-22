@@ -109,26 +109,19 @@ const ALL_POWERUP_TYPES_LIST = Object.values(POWERUP_TYPES);
 
 
 // --- BootScene ---
+// BootScene の preload 関数のみを以下のように修正
 class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
     preload() {
         this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
-        // 背景画像のロード
+        // ★ 背景画像のみをロード
         this.load.image('title_background', 'assets/title_background.jpg');
         this.load.image('game_background', 'assets/background1.jpg');
 
-        // ★ ボール画像のロード
-        this.load.image('ball_image', 'assets/ball.png');
-
-        // ★ 各パワーアップアイコン画像のロード
-        ALL_POWERUP_TYPES_LIST.forEach(type => {
-            const key = POWERUP_ICON_KEYS[type];
-            if (key) {
-                // ★ ビカラは特別に 'icon_bikara_yang.png' をロード
-                const fileName = (type === POWERUP_TYPES.BIKARA) ? 'icon_bikara_yang.png' : `${key}.png`;
-                 this.load.image(key, `assets/${fileName}`);
-            }
-        });
+        // ★ ボール画像とアイコン画像のロードは一時的にコメントアウトまたは削除
+        // this.load.image('ball_image', 'assets/ball.png');
+        // ALL_POWERUP_TYPES_LIST.forEach(type => { ... });
+        // this.load.image(BIKARA_BALL_ICON_KEYS.yin, 'assets/icon_bikara_yin.png');
     }
     create() { this.scene.start('TitleScene'); }
 }
