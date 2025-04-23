@@ -3,8 +3,8 @@
 const PADDLE_WIDTH_RATIO = 0.2; // パドルは生成しないが定数は残す
 const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
-const BALL_RADIUS = 12;
-// ★ ボールの初期速度は下方向に変更
+const BALL_RADIUS = 12; // ボールは生成しないが定数は残す
+// ★ ボールの初期速度は下方向に変更 (物理演算が有効なので影響する)
 const BALL_INITIAL_VELOCITY_Y = 350; // 下方向を正とする
 
 const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150]; // 初期速度Xも未使用だが残す
@@ -110,9 +110,9 @@ class BootScene extends Phaser.Scene {
 class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
-        // ★ パドルプロパティは null に初期化
+        // パドルプロパティは null に初期化
         this.paddle = null;
-        // ★ ボールグループプロパティのみ残す
+        // ボールグループプロパティのみ残す
         this.balls = null;
         // 他のゲーム要素関連のプロパティを null に初期化
         this.bricks = null; this.powerUps = null; this.gameOverText = null;
@@ -179,17 +179,17 @@ class GameScene extends Phaser.Scene {
 
         // 物理世界の境界設定のみ残す
         this.physics.world.setBoundsCollision(true, true, true, false);
-        // ★ ワールド境界衝突リスナーを有効に戻す (ボールの跳ね返り確認のため)
+        // ワールド境界衝突リスナーを有効に戻す (ボールの跳ね返り確認のため)
         this.physics.world.on('worldbounds', this.handleWorldBounds, this);
 
 
-        // ★ パドルの生成をコメントアウトしたまま
+        // パドルの生成をコメントアウトしたまま
         // this.paddle = this.physics.add.image(...).setImmovable(true).setData(...);
         // this.updatePaddleSize(); // パドルサイズ更新も不要
 
-        // ★ ボールを物理グループとして作成
+        // ボールを物理グループとして作成
         this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
-        // ★ ボールの生成・追加
+        // ボールの生成・追加
         // 初期位置は適当に画面中央付近
         this.createAndAddBall(this.gameWidth / 2, this.gameHeight / 2);
 
@@ -217,8 +217,7 @@ class GameScene extends Phaser.Scene {
         console.log("GameScene create finished"); // ログ追加
     }
 
-    // updatePaddleSize 関数はコメントアウトしたまま
-    // updatePaddleSize() { ... }
+    updatePaddleSize() { if (!this.paddle) return; const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio'); this.paddle.setDisplaySize(newWidth, PADDLE_HEIGHT); this.paddle.refreshBody(); const halfWidth = this.paddle.displayWidth / 2; this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth); }
 
     handleResize(gameSize, baseSize, displaySize, resolution) {
         console.log("GameScene handleResize"); // ログ追加
@@ -237,7 +236,21 @@ class GameScene extends Phaser.Scene {
     // setupStage() { ... }
 
     update() {
-        // update メソッドの主要な処理は全てコメントアウトしたまま
+        // ★ update 関数内のボールに関するループ処理全体をコメントアウト
+        // this.balls.getChildren().forEach(ball => {
+        //     if (ball.active) {
+        //          if (this.isBallLaunched && !this.isStageClearing && ball.y > this.gameHeight + ball.displayHeight) { ... }
+        //          if (ball.getData('isSindara')) { ... }
+        //          if (ball.body && this.isBallLaunched) { ... }
+        //     }
+        // });
+        // if (sindaraBalls.length === 1 ...) { ... }
+        // if (activeBallCount === 0 ...) { ... }
+        // this.powerUps.children.each(...);
+        // if (this.balls.countActive(true) === 1 ...) { ... }
+        // if (this.isMakiraActive && this.paddle ...) { ... }
+        // if (this.makiraBeams) { ... }
+
         // この最小構成では、update 関数内で特別に行う処理はない
         // ボールは物理演算で自動的に動く
     }
@@ -245,14 +258,19 @@ class GameScene extends Phaser.Scene {
     // setColliders 関数はコメントアウトしたまま
     // setColliders() { ... }
 
-    // ★ createAndAddBall 関数 -> ボールをwhitePixelで生成し、初期速度を設定
+    // createAndAddBall 関数 -> ボールをwhitePixelで生成し、初期速度を設定
     createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
         // whitePixelキーを使用
         const ball = this.balls.create(x, y, 'whitePixel').setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);
         if (ball.body) {
              // ボールの初期速度を設定（下方向に適当な速度）
-             ball.setVelocity(0, NORMAL_BALL_SPEED); // ★ 下方向に速度を与える
+             ball.setVelocity(0, NORMAL_BALL_SPEED); // 下方向に速度を与える
              ball.body.onWorldBounds = true; // ワールド境界衝突イベントを有効に戻す
+
+             // ★ 生成直後のボールの位置と速度をログ出力
+             console.log(`Ball created at x=${ball.x}, y=${ball.y}`);
+             console.log(`Ball initial velocity vx=${ball.body.velocity.x}, vy=${ball.body.velocity.y}`);
+
         } else { console.error("Failed to create ball physics body!"); ball.destroy(); return null; }
         // Ballのデータ設定も最小限のまま
         // ball.setData({ activePowers: ..., lastActivatedPower: ..., isPenetrating: ..., ... });
@@ -278,7 +296,7 @@ class GameScene extends Phaser.Scene {
 
     // collectPowerUp 関数はコメントアウトしたまま
     // collectPowerUp(paddle, powerUp) { ... }
-    // activateMakora() { ... }
+    // activateMakira() { ... }
     // keepFurthestBall() { ... }
     // activatePower(type) { ... }
     // deactivatePowerByType(type) { ... }
@@ -293,22 +311,24 @@ class GameScene extends Phaser.Scene {
     // resetBallSpeed() { ... }
     // ... (他のパワーアップ関連関数) ...
 
-    // ★ handleWorldBounds 関数を有効に戻す (ワールド境界衝突イベント用)
+    // handleWorldBounds 関数を有効に戻す (ワールド境界衝突イベント用)
     handleWorldBounds(body, up, down, left, right) {
+         console.log("handleWorldBounds called"); // ★ 呼び出しログを追加
+         console.log(`  Collision: up=${up}, down=${down}, left=${left}, right=${right}`); // ★ 衝突方向ログを追加
+
          const ball = body.gameObject;
          if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls.contains(ball) || !ball.active) return;
 
-         // ★ この最小構成では Indara 関連の処理は不要なので削除またはコメントアウト
+         // Indara 関連の処理は不要なので削除またはコメントアウトしたまま
          // if (ball.getData('isIndaraActive') && ball.getData('indaraHomingCount') > 0 && (up || left || right)) { ... }
 
          // ボールが画面下部に衝突した場合の処理（本来はライフ減少だが、ここでは何もしない）
          if (down) {
-             console.log("Ball hit bottom world bounds."); // ★ ログ追加
-             // ここでボールを消したり、位置をリセットしたりする処理を入れることも可能
-             // 例： ball.setPosition(this.gameWidth / 2, this.gameHeight / 2); ball.setVelocity(0, NORMAL_BALL_SPEED);
+             console.log("Ball hit bottom world bounds."); // 下部衝突ログ
+             // この最小構成では、下に落ちてもボールは物理演算で跳ね返るはず
+             // （bounce=1 と collideWorldBounds=true のため）
+             // ここでボールが消えるのは異常。
          }
-         // Phaserのデフォルト物理演算で、ワールド境界に衝突すると速度が反転する（bounce=1のため）。
-         // この関数の中では、特別な処理は行わない。
     }
 
 
@@ -324,7 +344,7 @@ class GameScene extends Phaser.Scene {
     shutdown() {
         console.log("GameScene shutdown started"); // ログ追加
         if (this.scale) this.scale.off('resize', this.handleResize, this);
-        // ★ ワールド境界衝突リスナーをオフに戻す
+        // ワールド境界衝突リスナーをオフに戻す
         if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this);
         this.events.removeAllListeners();
         if (this.input) this.input.removeAllListeners();
@@ -341,7 +361,7 @@ class GameScene extends Phaser.Scene {
         // if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
         if (this.time) this.time.removeAllEvents();
 
-        // ★ ボールグループの破棄のみ残す
+        // ボールグループの破棄のみ残す
         if (this.balls) this.balls.destroy(true); this.balls = null;
         // 他の物理演算対象オブジェクトのグループ破棄をコメントアウトしたまま
         // if (this.bricks) this.bricks.destroy(true); this.bricks = null;
