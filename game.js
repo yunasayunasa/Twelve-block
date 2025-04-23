@@ -433,7 +433,7 @@ class UIScene extends Phaser.Scene {
 const config = {
     type: Phaser.AUTO,
     scale: { mode: Phaser.Scale.FIT, parent: 'phaser-game-container', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
-    physics: { default: 'arcade', arcade: { debug: false, gravity: { y: 0 } } },
+    physics: { default: 'arcade', arcade: { debug: true, gravity: { y: 0 } } },
     scene: [BootScene, TitleScene, GameScene, UIScene],
     input: { activePointers: 3, },
     render: { pixelArt: false, antialias: true, }
