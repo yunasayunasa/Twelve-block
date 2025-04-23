@@ -174,8 +174,18 @@ class GameScene extends Phaser.Scene {
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
 
+        // ★ 物理世界の境界を明示的に設定
+        // physics.world.setBoundsCollision の引数は物理世界の座標系で解釈される
+        this.physics.world.setBoundsCollision(true, true, true, false, 0, 0, this.gameWidth, this.gameHeight); // 左、右、上は境界衝突有効、下は無効。境界の範囲を0,0からgameWidth,gameHeightまでと明示的に指定。
+
         // 物理世界の境界サイズをログ出力
         console.log(`Physics World Bounds - x: ${this.physics.world.bounds.x}, y: ${this.physics.world.bounds.y}, width: ${this.physics.world.bounds.width}, height: ${this.physics.world.bounds.height}`);
+
+
+        // ワールド境界衝突リスナーを有効に戻す (ボールの跳ね返り確認のため)
+        // イベントが発生するのは、物理ボディが物理世界の境界に衝突したとき
+        this.physics.world.on('worldbounds', this.handleWorldBounds, this);
+
 
         // ゲーム背景画像の表示 (ロードが成功すれば表示される)
         // 背景画像の表示位置とサイズは gameWidth, gameHeight に依存
@@ -186,15 +196,6 @@ class GameScene extends Phaser.Scene {
 
         // UI シーンへのイベント発行はコメントアウト
         // this.time.delayedCall(50, () => { if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
-
-        // 物理世界の境界設定のみ残す
-        // physics.world.setBoundsCollision の引数は物理世界の座標系で解釈される
-        this.physics.world.setBoundsCollision(true, true, true, false); // 左、右、上は境界衝突有効、下は無効
-
-
-        // ワールド境界衝突リスナーを有効に戻す (ボールの跳ね返り確認のため)
-        // イベントが発生するのは、物理ボディが物理世界の境界に衝突したとき
-        this.physics.world.on('worldbounds', this.handleWorldBounds, this);
 
 
         // パドルの生成をコメントアウトしたまま
@@ -241,23 +242,22 @@ class GameScene extends Phaser.Scene {
         // リサイズ時の画面サイズもログ出力
         console.log(`Resize - new width: ${gameSize.width}, new height: ${gameSize.height}`);
 
-        // ★ リサイズ時に gameWidth と gameHeight を更新 (固定サイズの場合は不要だが、念のため残しておく)
+        // リサイズ時に gameWidth と gameHeight を更新 (固定サイズの場合は不要だが、念のため残しておく)
         // this.gameWidth = gameSize.width;
         // this.gameHeight = gameSize.height;
 
         // this.updatePaddleSize(); // パドルサイズ更新は不要なのでコメントアウトしたまま
         if (this.backgroundImage) {
-             // ★ 固定サイズなので、背景画像の位置とサイズ更新も不要かもしれないが、
-             // ★ scaleMode.FIT の挙動によっては必要になる場合があるため残しておく
+             // 固定サイズなので、背景画像の位置とサイズ更新も不要かもしれないが、
+             // scaleMode.FIT の挙動によっては必要になる場合があるため残しておく
              this.backgroundImage.setPosition(this.gameWidth / 2, this.gameHeight / 2);
              this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight);
         }
         // UIイベント発行はコメントアウトしたまま
         // if (this.scene.isActive('UIScene')) { this.events.emit('gameResize'); }
 
-        // 物理世界の境界をリサイズに合わせて再設定する必要があるかもしれない
-        // 固定サイズの場合はリサイズが発生しても gameWidth/gameHeight は変わらないため、境界の再設定は不要なはず
-        // this.physics.world.setBoundsCollision(true, true, true, false, 0, 0, gameSize.width, gameSize.height);
+        // ★ 物理世界の境界をリサイズに合わせて再設定する必要があるかもしれない (固定サイズなので不要なはずだが念のため)
+        // this.physics.world.setBoundsCollision(true, true, true, false, 0, 0, this.gameWidth, this.gameHeight);
     }
 
     // setupStage 関数はコメントアウトしたまま
