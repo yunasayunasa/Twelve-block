@@ -183,7 +183,7 @@ class GameScene extends Phaser.Scene {
                          .setOrigin(0.5, 0.5)
                          .setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2)
                          // ★★★ オフセット値を調整してみる (例: -5, -5) ★★★
-                         .setCircle(BALL_RADIUS, +45, -+45)
+                         .setCircle(BALL_RADIUS, +50, -45)
                          .setCollideWorldBounds(true)
                          .setBounce(1);
 
