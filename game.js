@@ -174,6 +174,9 @@ class GameScene extends Phaser.Scene {
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
 
+        // ★ 物理世界の境界サイズをログ出力
+        console.log(`Physics World Bounds - x: ${this.physics.world.bounds.x}, y: ${this.physics.world.bounds.y}, width: ${this.physics.world.bounds.width}, height: ${this.physics.world.bounds.height}`);
+
         // ゲーム背景画像の表示 (ロードが成功すれば表示される)
         // 背景画像の表示位置とサイズは gameWidth, gameHeight に依存
         this.backgroundImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'game_background');
