@@ -442,7 +442,7 @@ class UIScene extends Phaser.Scene {
 
 // --- Phaserゲーム設定 ---
 const config = {
-    type: Phaser.CANVAS, // ★ レンダリングタイプを CANVAS に変更
+    type: Phaser.CANVAS, // レンダリングタイプを CANVAS に変更
     scale: {
         mode: Phaser.Scale.NONE, // モードは NONE のまま
         parent: 'phaser-game-container', // parent は残しておく
