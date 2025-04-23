@@ -4,7 +4,7 @@ const PADDLE_WIDTH_RATIO = 0.2; // パドルは生成しないが定数は残す
 const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
 const BALL_RADIUS = 12; // ボールは生成しないが定数は残す
-// ★ ボールの初期速度は下方向に変更 (物理演算が有効なので影響する)
+// ボールの初期速度は下方向に変更 (物理演算が有効なので影響する)
 const BALL_INITIAL_VELOCITY_Y = 350; // 下方向を正とする
 
 const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150]; // 初期速度Xも未使用だが残す
@@ -166,7 +166,12 @@ class GameScene extends Phaser.Scene {
 
     create() {
         console.log("GameScene create started"); // ログ追加
-        this.gameWidth = this.scale.width; this.gameHeight = this.scale.height;
+
+        // ★ 画面サイズをログ出力
+        console.log(`Scale Manager - width: ${this.scale.width}, height: ${this.scale.height}`);
+        this.gameWidth = this.scale.width;
+        this.gameHeight = this.scale.height;
+
 
         // ゲーム背景画像の表示 (ロードが成功すれば表示される)
         this.backgroundImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'game_background');
@@ -190,8 +195,10 @@ class GameScene extends Phaser.Scene {
         // ボールを物理グループとして作成
         this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
         // ボールの生成・追加
-        // 初期位置は適当に画面中央付近
-        this.createAndAddBall(this.gameWidth / 2, this.gameHeight / 2);
+        // ★ 初期位置を固定値に変更
+        const initialBallX = this.gameWidth / 2; // 画面幅の中央
+        const initialBallY = this.gameHeight * 0.3; // 画面高さの上の方
+        this.createAndAddBall(initialBallX, initialBallY);
 
 
         // ステージセットアップ、ブロック、パワーアップ、ヴァジラ、マキラ関連は全てコメントアウトしたまま
@@ -221,6 +228,9 @@ class GameScene extends Phaser.Scene {
 
     handleResize(gameSize, baseSize, displaySize, resolution) {
         console.log("GameScene handleResize"); // ログ追加
+        // ★ リサイズ時の画面サイズもログ出力
+        console.log(`Resize - new width: ${gameSize.width}, new height: ${gameSize.height}`);
+
         this.gameWidth = gameSize.width;
         this.gameHeight = gameSize.height;
         // this.updatePaddleSize(); // パドルサイズ更新は不要なのでコメントアウトしたまま
@@ -236,7 +246,7 @@ class GameScene extends Phaser.Scene {
     // setupStage() { ... }
 
     update() {
-        // update 関数内のボールに関するループ処理全体をコメントアウトしたまま
+        // ★ update 関数内のボールに関するループ処理全体をコメントアウトしたまま
         // この最小構成では、update 関数内で特別に行う処理はない
         // ボールは物理演算で自動的に動く
     }
@@ -299,8 +309,8 @@ class GameScene extends Phaser.Scene {
 
     // handleWorldBounds 関数を有効に戻す (ワールド境界衝突イベント用)
     handleWorldBounds(body, up, down, left, right) {
-         console.log("handleWorldBounds called"); // ★ 呼び出しログを追加
-         console.log(`  Collision: up=${up}, down=${down}, left=${left}, right=${right}`); // ★ 衝突方向ログを追加
+         console.log("handleWorldBounds called"); // 呼び出しログを追加
+         console.log(`  Collision: up=${up}, down=${down}, left=${left}, right=${right}`); // 衝突方向ログを追加
 
          const ball = body.gameObject;
          if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls.contains(ball) || !ball.active) return;
