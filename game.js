@@ -31,10 +31,9 @@ const POWERUP_SPEED_Y = 100;
 const POWERUP_TYPES = { KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara', BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra', MAKIRA: 'makira', MAKORA: 'makora' };
 const NORMAL_MODE_POWERUP_POOL = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ];
 const ALLSTARS_MODE_POWERUP_POOL = [...NORMAL_MODE_POWERUP_POOL];
-// ★ PowerUpの色定義はアイコン画像を使うようになるため、UIでの色表示以外では使用しなくなるが、コード内で参照されている箇所があるため残しておく
+// PowerUpの色定義はアイコン画像を使うようになるため、UIでの色表示以外では使用しなくなるが、コード内で参照されている箇所があるため残しておく
 const POWERUP_COLORS = { [POWERUP_TYPES.KUBIRA]: 0x800080, [POWERUP_TYPES.SHATORA]: 0xffa500, [POWERUP_TYPES.HAILA]: 0xadd8e6, [POWERUP_TYPES.ANCHIRA]: 0xffc0cb, [POWERUP_TYPES.SINDARA]: 0xd2b48c, [POWERUP_TYPES.BIKARA]: 0xffffff, [POWERUP_TYPES.INDARA]: 0x4682b4, [POWERUP_TYPES.ANILA]: 0xffefd5, [POWERUP_TYPES.BAISRAVA]: 0xffd700, [POWERUP_TYPES.VAJRA]: 0xffff00, [POWERUP_TYPES.MAKIRA]: 0x008080, [POWERUP_TYPES.MAKORA]: 0xffffff, };
-const MAKORA_COPYABLE_POWERS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA ];
-// ★ ビカラの色の定義はUIやボールの色付けで使う可能性があるため残しておく
+// ビカラの色の定義はUIやボールの色付けで使う可能性があるため残しておく
 const BIKARA_COLORS = { yin: 0x444444, yang: 0xfffafa };
 const POWERUP_DURATION = { [POWERUP_TYPES.KUBIRA]: 10000, [POWERUP_TYPES.SHATORA]: 3000, [POWERUP_TYPES.HAILA]: 10000, [POWERUP_TYPES.MAKIRA]: 6667 };
 const BIKARA_YANG_COUNT_MAX = 2;
@@ -62,7 +61,7 @@ const DROP_POOL_UI_ICON_SIZE = 18;
 const DROP_POOL_UI_SPACING = 5;
 const UI_BOTTOM_OFFSET = 30;
 
-// ★ 文字パターンの定義 (干支を追加)
+// 文字パターンの定義 (干支を追加)
 const SYMBOL_PATTERNS = {
     '3': [
         [1, 1, 1, 1, 1],
@@ -89,14 +88,14 @@ const SYMBOL_PATTERNS = {
     ],
 };
 
-// ★ パワーアップタイプに対応するアイコン画像のキー定義
+// パワーアップタイプに対応するアイコン画像のキー定義
 const POWERUP_ICON_KEYS = {
     [POWERUP_TYPES.KUBIRA]: 'icon_kubira',
     [POWERUP_TYPES.SHATORA]: 'icon_shatora',
     [POWERUP_TYPES.HAILA]: 'icon_haila',
     [POWERUP_TYPES.ANCHIRA]: 'icon_anchira',
     [POWERUP_TYPES.SINDARA]: 'icon_sindara',
-    [POWERUP_TYPES.BIKARA]: 'icon_bikara_yang', // ★ ビカラは陽アイコンを使用
+    [POWERUP_TYPES.BIKARA]: 'icon_bikara_yang', // ドロップアイテムとしてはビカラ陽アイコンを使用
     [POWERUP_TYPES.INDARA]: 'icon_indara',
     [POWERUP_TYPES.ANILA]: 'icon_anila',
     [POWERUP_TYPES.BAISRAVA]: 'icon_baisrava',
@@ -104,24 +103,46 @@ const POWERUP_ICON_KEYS = {
     [POWERUP_TYPES.MAKIRA]: 'icon_makira',
     [POWERUP_TYPES.MAKORA]: 'icon_makora',
 };
-// 全てのアイコンタイプをリスト化
-const ALL_POWERUP_TYPES_LIST = Object.values(POWERUP_TYPES);
+// ボールに重ねるビカラアイコンのキー定義 (ステップ2で使う予定)
+const BIKARA_BALL_ICON_KEYS = {
+    yin: 'icon_bikara_yin', // ビカラ陰のアイコンファイル名（仮）
+    yang: 'icon_bikara_yang' // ビカラ陽のアイコンファイル名
+};
+
+// 全てのロードが必要なアイコンタイプのリスト
+const ALL_ICON_TYPES_TO_LOAD = [
+    ...Object.values(POWERUP_TYPES),
+    // ボールに重ねるビカラ陰アイコンもロード対象に追加
+    POWERUP_TYPES.BIKARA // Bikaraの場合はicon_bikara_yangはPOWERUP_ICON_KEYSでロード済み
+    // もしicon_bikara_yinが別のファイル名ならここに追加する必要がある
+];
 
 
 // --- BootScene ---
-// BootScene の preload 関数のみを以下のように修正
 class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
     preload() {
         this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
-        // ★ 背景画像のみをロード
+        // 背景画像のロード
         this.load.image('title_background', 'assets/title_background.jpg');
         this.load.image('game_background', 'assets/background1.jpg');
 
-        // ★ ボール画像とアイコン画像のロードは一時的にコメントアウトまたは削除
-        // this.load.image('ball_image', 'assets/ball.png');
-        // ALL_POWERUP_TYPES_LIST.forEach(type => { ... });
-        // this.load.image(BIKARA_BALL_ICON_KEYS.yin, 'assets/icon_bikara_yin.png');
+        // ★ ボール画像のロード
+        this.load.image('ball_image', 'assets/ball.png');
+
+        // ★ 各パワーアップアイコン画像のロード
+        ALL_POWERUP_TYPES_LIST.forEach(type => {
+            const key = POWERUP_ICON_KEYS[type];
+            if (key) {
+                // ビカラは特別に 'icon_bikara_yang.png' をロード
+                const fileName = (type === POWERUP_TYPES.BIKARA) ? 'icon_bikara_yang.png' : `${key}.png`;
+                 this.load.image(key, `assets/${fileName}`);
+            }
+        });
+
+        // ★ ビカラ陰のアイコンもロード（ボール用）
+        // BIKARA_BALL_ICON_KEYS.yin が icon_bikara_yin というキー名の場合
+        this.load.image(BIKARA_BALL_ICON_KEYS.yin, 'assets/icon_bikara_yin.png'); // ★ ビカラ陰アイコンのファイル名（仮）
     }
     create() { this.scene.start('TitleScene'); }
 }
@@ -196,12 +217,13 @@ class GameScene extends Phaser.Scene {
         this.time.delayedCall(50, () => { if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
         this.physics.world.setBoundsCollision(true, true, true, false); this.physics.world.on('worldbounds', this.handleWorldBounds, this);
         this.paddle = this.physics.add.image(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET, 'whitePixel').setTint(0xffffff).setImmovable(true).setData('originalWidthRatio', PADDLE_WIDTH_RATIO); this.updatePaddleSize();
-        // ★ ボールを物理グループとして作成（画像キーはまだwhitePixelのまま）
+        // ボールを物理グループとして作成（画像キーはまだwhitePixelのまま）
         this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
-        // ★ createAndAddBallでボール画像を適用する
+        // createAndAddBallでボール画像を適用する
         this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
 
-        this.setupStage();
+        this.setupStage(); // ★ この中で createBricks() が呼ばれる
+
         this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'GAME OVER\nTap to Restart', { fontSize: '48px', fill: '#f00', align: 'center' }).setOrigin(0.5).setVisible(false).setDepth(1);
         this.powerUps = this.physics.add.group(); this.familiars = this.physics.add.group(); this.makiraBeams = this.physics.add.group();
         this.setColliders();
@@ -226,7 +248,10 @@ class GameScene extends Phaser.Scene {
         if (this.scene.isActive('UIScene')) { this.events.emit('gameResize'); }
     }
 
-    setupStage() { if (this.currentMode === GAME_MODE.NORMAL) { const shuffledPool = Phaser.Utils.Array.Shuffle([...NORMAL_MODE_POWERUP_POOL]); this.stageDropPool = shuffledPool.slice(0, 4); this.events.emit('updateDropPoolUI', this.stageDropPool); } else { this.stageDropPool = [...ALLSTARS_MODE_POWERUP_POOL]; this.events.emit('updateDropPoolUI', []); } this.createBricks(); }
+    setupStage() { if (this.currentMode === GAME_MODE.NORMAL) { const shuffledPool = Phaser.Utils.Array.Shuffle([...NORMAL_MODE_POWERUP_POOL]); this.stageDropPool = shuffledPool.slice(0, 4); this.events.emit('updateDropPoolUI', this.stageDropPool); } else { this.stageDropPool = [...ALLSTARS_MODE_POWERUP_POOL]; this.events.emit('updateDropPoolUI', []); }
+        // ★ createBricks() 関数を一時的に空にする
+        this.createBricks();
+    }
 
     update() {
         if (this.isGameOver || this.isStageClearing || this.lives <= 0) { return; }
@@ -242,15 +267,20 @@ class GameScene extends Phaser.Scene {
 
     setColliders() {
         if (this.ballPaddleCollider) this.ballPaddleCollider.destroy(); if (this.ballBrickCollider) this.ballBrickCollider.destroy(); if (this.ballBrickOverlap) this.ballBrickOverlap.destroy(); if (this.ballBallCollider) this.ballBallCollider.destroy(); if (this.makiraBeamBrickOverlap) this.makiraBeamBrickOverlap.destroy();
-        if (!this.balls || !this.paddle || !this.bricks) return;
+        // ★ this.bricks が null や空のグループの場合にエラーにならないようチェック
+        if (!this.balls || !this.paddle) return;
+
         this.ballPaddleCollider = this.physics.add.collider(this.paddle, this.balls, this.hitPaddle, null, this);
-        this.ballBrickCollider = this.physics.add.collider(this.bricks, this.balls, this.hitBrick, (brick, ball) => { const isBikara = ball.getData('isBikara'); const isPenetrating = ball.getData('isPenetrating'); const isSindaraMerging = ball.getData('isSindara') && ball.getData('isMerging'); const isSindaraAttracting = ball.getData('isSindara') && ball.getData('isAttracting'); return !(isPenetrating || isBikara || isSindaraMerging || isSindaraAttracting); }, this);
-        this.ballBrickOverlap = this.physics.add.overlap(this.balls, this.bricks, this.handleBallBrickOverlap, (ball, brick) => { return ball.getData('isPenetrating') || ball.getData('isBikara') || (ball.getData('isSindara') && (ball.getData('isAttracting') || ball.getData('isMerging'))); }, this);
+        // ブロックが存在する場合のみコライダーを設定
+        if (this.bricks && this.bricks.getLength() > 0) {
+             this.ballBrickCollider = this.physics.add.collider(this.bricks, this.balls, this.hitBrick, (brick, ball) => { const isBikara = ball.getData('isBikara'); const isPenetrating = ball.getData('isPenetrating'); const isSindaraMerging = ball.getData('isSindara') && ball.getData('isMerging'); const isSindaraAttracting = ball.getData('isSindara') && ball.getData('isAttracting'); return !(isPenetrating || isBikara || isSindaraMerging || isSindaraAttracting); }, this);
+             this.ballBrickOverlap = this.physics.add.overlap(this.balls, this.bricks, this.handleBallBrickOverlap, (ball, brick) => { return ball.getData('isPenetrating') || ball.getData('isBikara') || (ball.getData('isSindara') && (ball.getData('isAttracting') || ball.getData('isMerging'))); }, this);
+             if (this.makiraBeams) { this.makiraBeamBrickOverlap = this.physics.add.overlap(this.makiraBeams, this.bricks, this.hitBrickWithMakiraBeam, null, this); }
+        }
         this.ballBallCollider = this.physics.add.collider(this.balls, this.balls, this.handleBallCollision, (ball1, ball2) => { return ball1.getData('isSindara') && ball2.getData('isSindara') && ball1.getData('isAttracting') && ball2.getData('isAttracting'); }, this);
-        if (this.makiraBeams && this.bricks) { this.makiraBeamBrickOverlap = this.physics.add.overlap(this.makiraBeams, this.bricks, this.hitBrickWithMakiraBeam, null, this); }
     }
 
-    // ★ createAndAddBall 関数でボール画像を適用
+    // createAndAddBall 関数でボール画像を適用
     createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
         // whitePixelの代わりにball_imageキーを使用
         const ball = this.balls.create(x, y, 'ball_image').setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);
@@ -262,126 +292,82 @@ class GameScene extends Phaser.Scene {
 
     launchBall() { if (!this.isBallLaunched && this.balls) { const firstBall = this.balls.getFirstAlive(); if (firstBall) { const initialVelocityX = Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0], BALL_INITIAL_VELOCITY_X_RANGE[1]); firstBall.setVelocity(initialVelocityX, BALL_INITIAL_VELOCITY_Y); this.isBallLaunched = true; } } }
 
-    // createBricks 関数 (変更なし)
+    // ★★★ createBricks 関数（ほぼ空にする） ★★★
     createBricks() {
+        console.log(`Generating Bricks (Temporarily Empty) for Stage ${this.currentStage}`); // ★ ログを変更
         if (this.bricks) { this.bricks.clear(true, true); this.bricks.destroy(); }
         this.bricks = this.physics.add.staticGroup();
-        const stage = this.currentStage;
-        const maxStage = MAX_STAGE;
-        const rows = BRICK_ROWS + Math.floor(stage / 3);
-        const cols = BRICK_COLS + Math.floor(stage / 4);
-        const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2;
-        const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4)));
-        const actualCols = Math.min(cols, BRICK_COLS + 4);
-        let durableRatio = 0;
-        let indestructibleRatio = 0;
-        let progress = 0;
-        if (stage >= 3) {
-            progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1);
-            durableRatio = progress * 0.5;
-            indestructibleRatio = progress * 0.15;
-        }
-        const bW = this.scale.width * BRICK_WIDTH_RATIO;
-        const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING;
-        const oX = (this.scale.width - totalBrickWidth) / 2;
 
-        // 特殊配置タイプ決定ロジック
-        let specialLayoutType = null; // null, 'wall', 's_shape', 'center_hollow', 'symbol'
-        const stageString = stage.toString();
-        if (stage > 2 && stage % 8 === 0) { specialLayoutType = 's_shape'; }
-        else if (stage > 2 && stage % 4 === 0) { specialLayoutType = 'wall'; }
-        else if (stage > 4 && stage % 6 === 0) { specialLayoutType = 'center_hollow'; }
-        // SYMBOL_PATTERNSにキーが存在すれば symbol タイプに
-        else if (stage >= 3 && SYMBOL_PATTERNS[stageString]) {
-             specialLayoutType = 'symbol';
-        }
+        // ★ ここから元のブロック生成ロジックをコメントアウト ★
 
-        let density;
-        if (stage <= 3) { density = 0.4; }
-        else { density = 0.4 + 0.5 * progress; }
+        // const stage = this.currentStage;
+        // const maxStage = MAX_STAGE;
+        // const rows = BRICK_ROWS + Math.floor(stage / 3);
+        // const cols = BRICK_COLS + Math.floor(stage / 4);
+        // const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2;
+        // const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4)));
+        // const actualCols = Math.min(cols, BRICK_COLS + 4);
+        // let durableRatio = 0;
+        // let indestructibleRatio = 0;
+        // let progress = 0;
+        // if (stage >= 3) {
+        //     progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1);
+        //     durableRatio = progress * 0.5;
+        //     indestructibleRatio = progress * 0.15;
+        // }
+        // const bW = this.scale.width * BRICK_WIDTH_RATIO;
+        // const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING;
+        // const oX = (this.scale.width - totalBrickWidth) / 2;
 
-        // --- 配置タイプに応じた生成ロジック ---
-        if (specialLayoutType === 'wall') {
-            console.log(`Generating Special Layout: Wall (Stage ${stage}, Density: ${density.toFixed(3)})`);
-            const exitColTop = Math.floor(actualCols / 2); const exitColBottom = Math.floor(actualCols / 2);
-            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; let generateBrick = true; let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; const isOuterWall = (i === 0 || i === actualRows - 1 || j === 0 || j === actualCols - 1); const isExit = (i === 0 && j === exitColTop) || (i === actualRows - 1 && j === exitColBottom); if (isOuterWall && !isExit) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; isDurable = false; } else { if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else { if (isExit) { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } else { const rand = Phaser.Math.FloatBetween(0, 1); if (stage >= 3 && rand < durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } } } } if (generateBrick) { const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; } } }
-            if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Wall layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
+        // let specialLayoutType = null;
+        // const stageString = stage.toString();
+        // if (stage > 2 && stage % 8 === 0) { specialLayoutType = 's_shape'; }
+        // else if (stage > 2 && stage % 4 === 0) { specialLayoutType = 'wall'; }
+        // else if (stage > 4 && stage % 6 === 0) { specialLayoutType = 'center_hollow'; }
+        // else if (stage >= 3 && SYMBOL_PATTERNS[stageString]) {
+        //      specialLayoutType = 'symbol';
+        // }
 
-        } else if (specialLayoutType === 's_shape') {
-            console.log(`Generating Special Layout: S-Shape (Stage ${stage}, Density: ${density.toFixed(3)})`);
-            const wallRow1 = Math.floor(actualRows / 3); const wallRow2 = Math.floor(actualRows * 2 / 3); const wallLengthCols = Math.floor(actualCols * 2 / 3); let generatedDestroyableCount = 0;
-            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; let generateBrick = true; let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; const isWallPart = (i === wallRow1 && j >= actualCols - wallLengthCols) || (i === wallRow2 && j < wallLengthCols); if (isWallPart) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; isDurable = false; } else { if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else { const rand = Phaser.Math.FloatBetween(0, 1); if (stage >= 3 && rand < durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } } } if (generateBrick) { const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; if (maxHits !== -1) generatedDestroyableCount++; } } }
-            if (generatedDestroyableCount < 5 && stage > 1) { console.warn(`S-Shape generated only ${generatedDestroyableCount} destroyable bricks, retrying...`); this.time.delayedCall(10, this.createBricks, [], this); return; }
+        // let density;
+        // if (stage <= 3) { density = 0.4; }
+        // else { density = 0.4 + 0.5 * progress; }
 
-        } else if (specialLayoutType === 'center_hollow') {
-            console.log(`Generating Special Layout: Center Hollow (Stage ${stage}, Density: ${density.toFixed(3)})`);
-            let generatedCount = 0; const hollowRowStart = Math.floor(actualRows / 4); const hollowRowEnd = Math.floor(actualRows * 3 / 4); const hollowColStart = Math.floor(actualCols / 4); const hollowColEnd = Math.floor(actualCols * 3 / 4);
-            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; const isInHollowArea = (i >= hollowRowStart && i < hollowRowEnd && j >= hollowColStart && j < hollowColEnd); if (isInHollowArea) { continue; } if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
-            if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Center Hollow layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
+        // if (specialLayoutType === 'wall') {
+        //     console.log(`Generating Special Layout: Wall (Stage ${stage}, Density: ${density.toFixed(3)})`);
+        //     // ... wall generation logic ...
+        // } else if (specialLayoutType === 's_shape') {
+        //     console.log(`Generating Special Layout: S-Shape (Stage ${stage}, Density: ${density.toFixed(3)})`);
+        //     // ... s_shape generation logic ...
+        // } else if (specialLayoutType === 'center_hollow') {
+        //      console.log(`Generating Special Layout: Center Hollow (Stage ${stage}, Density: ${density.toFixed(3)})`);
+        //     // ... center_hollow generation logic ...
+        // } else if (specialLayoutType === 'symbol') {
+        //      console.log(`Generating Special Layout: Symbol '${stageString}' (Stage ${stage})`);
+        //     // ... symbol generation logic ...
+        // } else { // 通常配置
+        //     console.log(`Generating Normal Layout (Stage ${stage}, Density: ${density.toFixed(3)})`);
+        //     // ... normal generation logic ...
+        // }
 
-        } else if (specialLayoutType === 'symbol') {
-            console.log(`Generating Special Layout: Symbol '${stageString}' (Stage ${stage})`);
-            const pattern = SYMBOL_PATTERNS[stageString];
-            let generatedCount = 0;
+        // console.log(`Bricks generated: ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
+        // ★ ここまでコメントアウト ★
 
-            if (pattern && pattern.length > 0 && pattern[0].length > 0) {
-                const patternRows = pattern.length;
-                const patternCols = pattern[0].length;
-                const patternTotalHeight = patternRows * BRICK_HEIGHT + (patternRows - 1) * BRICK_SPACING;
-                const patternTotalWidth = patternCols * bW + (patternCols - 1) * BRICK_SPACING;
-                const startY = BRICK_OFFSET_TOP + Math.max(0, (this.scale.height * 0.4 - patternTotalHeight) / 2); // 上部40%の中央
-                const startX = (this.scale.width - patternTotalWidth) / 2; // 横方向中央
 
-                for (let i = 0; i < patternRows; i++) {
-                    for (let j = 0; j < patternCols; j++) {
-                        if (pattern[i][j] === 1) {
-                            const bX = startX + j * (bW + BRICK_SPACING) + bW / 2;
-                            const bY = startY + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2;
-                            const brickType = 'normal';
-                            const brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS);
-                            const maxHits = 1;
-                            const isDurable = false;
-                            const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor);
-                            brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType });
-                            brick.refreshBody();
-                            generatedCount++;
-                        }
-                    }
-                }
-                 if (generatedCount < 3 && stage > 1) {
-                     console.warn(`Symbol layout '${stageString}' generated only ${generatedCount} bricks, retrying as normal...`);
-                     this.time.delayedCall(10, () => { this.createBricksFallbackToNormal(); }, [], this);
-                     return;
-                 }
-            } else {
-                console.warn(`Symbol pattern for stage ${stage} not found or invalid. Falling back to normal layout.`);
-                this.createBricksFallbackToNormal();
-                return;
-            }
-
-        } else { // 通常配置
-            console.log(`Generating Normal Layout (Stage ${stage}, Density: ${density.toFixed(3)})`);
-            let generatedCount = 0;
-            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
-            if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Normal layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
-        }
-        console.log(`Bricks generated: ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
-        this.setColliders();
+        // ★ 空の物理グループを作成したまま setColliders を呼び出す
+        this.setColliders(); // setColliders 内で bricks の存在チェックを追加済み
     }
 
-    // 通常配置フォールバック用のヘルパーメソッド (変更なし)
+    // 通常配置フォールバック用のヘルパーメソッドも空にする (使用されないはずだが念のため)
     createBricksFallbackToNormal() {
-        console.log("Falling back to Normal Layout generation...");
-        const stage = this.currentStage; const maxStage = MAX_STAGE; const rows = BRICK_ROWS + Math.floor(stage / 3); const cols = BRICK_COLS + Math.floor(stage / 4); const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2; const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4))); const actualCols = Math.min(cols, BRICK_COLS + 4); let durableRatio = 0; let indestructibleRatio = 0; let progress = 0; if (stage >= 3) { progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1); durableRatio = progress * 0.5; indestructibleRatio = progress * 0.15; } const bW = this.scale.width * BRICK_WIDTH_RATIO; const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING; const oX = (this.scale.width - totalBrickWidth) / 2; let density; if (stage <= 3) { density = 0.4; } else { density = 0.4 + 0.5 * progress; }
-        let generatedCount = 0;
-        for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
-        if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Normal layout (fallback) generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
-        console.log(`Bricks generated (fallback): ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
-        this.setColliders();
+        console.log("Falling back to Normal Layout generation (Temporarily Empty)..."); // ★ ログを変更
+        if (this.bricks) { this.bricks.clear(true, true); this.bricks.destroy(); }
+        this.bricks = this.physics.add.staticGroup(); // 空のグループ
+        this.setColliders(); // setColliders 内で bricks の存在チェックを追加済み
     }
+    // ★★★ createBricks 修正版ここまで ★★★
 
 
-    // ★ dropSpecificPowerUp 関数でアイコン画像を適用
+    // dropSpecificPowerUp 関数でアイコン画像を適用
     dropSpecificPowerUp(x, y, type) {
         const iconKey = POWERUP_ICON_KEYS[type];
         if (!iconKey) {
@@ -434,7 +420,7 @@ class GameScene extends Phaser.Scene {
     activatePower(type) { const targetBalls = this.balls.getMatching('active', true); if (targetBalls.length === 0) return; if (POWERUP_DURATION[type]) { if (this.powerUpTimers[type]) { this.powerUpTimers[type].remove(); } } switch (type) { case POWERUP_TYPES.KUBIRA: this.activateKubira(targetBalls); break; case POWERUP_TYPES.SHATORA: this.activateShatora(targetBalls); break; case POWERUP_TYPES.HAILA: this.activateHaira(targetBalls); break; case POWERUP_TYPES.ANCHIRA: if (targetBalls.length === 1) this.activateAnchira(targetBalls[0]); break; case POWERUP_TYPES.SINDARA: if (targetBalls.length === 1) this.activateSindara(targetBalls[0]); break; case POWERUP_TYPES.BIKARA: this.activateBikara(targetBalls); break; case POWERUP_TYPES.INDARA: this.activateIndara(targetBalls); break; case POWERUP_TYPES.ANILA: this.activateAnila(targetBalls); break; } targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').add(type); ball.setData('lastActivatedPower', type); this.updateBallTint(ball); } }); const duration = POWERUP_DURATION[type]; if (duration) { this.powerUpTimers[type] = this.time.delayedCall(duration, () => { this.deactivatePowerByType(type); this.powerUpTimers[type] = null; }, [], this); } }
     deactivatePowerByType(type) { const targetBalls = this.balls.getMatching('active', true); if (targetBalls.length === 0 || type === POWERUP_TYPES.MAKIRA || type === POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKORA) return; switch (type) { case POWERUP_TYPES.KUBIRA: this.deactivateKubira(targetBalls); break; case POWERUP_TYPES.SHATORA: this.deactivateShatora(targetBalls); break; case POWERUP_TYPES.HAILA: this.deactivateHaira(targetBalls); break; } targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').delete(type); this.updateBallTint(ball); } }); }
 
-    // ★ updateBallTint 関数 (まだアイコン重ね表示はせず色のみ更新)
+    // updateBallTint 関数 (まだアイコン重ね表示はせず色のみ更新)
     updateBallTint(ball) {
         if (!ball || !ball.active) return;
         const activePowers = ball.getData('activePowers');
@@ -457,7 +443,7 @@ class GameScene extends Phaser.Scene {
             }
 
             if (powerToUse) {
-                 // ★ ここではまだアイコンの重ね表示はせず、特定のパワーアップの色変化のみ対応
+                 // ここではまだアイコンの重ね表示はせず、特定のパワーアップの色変化のみ対応
                  if (powerToUse === POWERUP_TYPES.BIKARA) {
                     // Bikaraの色はyin/yangで変わる
                     targetColor = BIKARA_COLORS[ball.getData('bikaraState')] || BIKARA_COLORS.yin;
@@ -484,7 +470,7 @@ class GameScene extends Phaser.Scene {
         // 画像に対してsetTintを行う
         ball.setTint(targetColor);
 
-        // ★ ステップ2でアイコン表示のロジックを追加予定
+        // ステップ2でアイコン表示のロジックを追加予定
     }
     // --- 個別パワーアップ効果 ---
     activateKubira(balls) { balls.forEach(b => b.setData('isPenetrating', true)); }
@@ -540,21 +526,21 @@ class GameScene extends Phaser.Scene {
 class UIScene extends Phaser.Scene {
     constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; this.vajraGaugeText = null; this.dropPoolIconsGroup = null; this.gameSceneListenerAttached = false; this.gameScene = null; }
     create() { this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; const textStyle = { fontSize: '24px', fill: '#fff' }; this.livesText = this.add.text(16, 16, 'ライフ: ', textStyle); this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ', textStyle).setOrigin(0.5, 0); this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: ', textStyle).setOrigin(1, 0); this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff' }).setOrigin(0, 1).setVisible(false); this.dropPoolIconsGroup = this.add.group();
-        // ★ UIでのドロッププールアイコン表示も画像を使う
+        // UIでのドロッププールアイコン表示も画像を使う
         // ただし、この段階ではまだUIへのアイコン表示自体を実装していないため、
         // updateDropPoolDisplayはwhitePixelのままにしておくか、空にするか選択。
         // とりあえずアイコン画像への切り替えはステップ2で行うこととし、現状維持
         this.updateDropPoolDisplay([]);
         this.gameScene = this.scene.get('GameScene'); if (this.gameScene) { this.gameScene.events.on('gameResize', this.onGameResize, this); } try { const gameScene = this.scene.get('GameScene'); if (gameScene && gameScene.scene.settings.status === Phaser.Scenes.RUNNING) { this.registerGameEventListeners(gameScene); } else { this.scene.get('GameScene').events.once('create', this.registerGameEventListeners, this); } } catch (e) { console.error("Error setting up UIScene listeners:", e); } this.events.on('shutdown', () => { this.unregisterGameEventListeners(); if (this.gameScene && this.gameScene.events) { this.gameScene.events.off('gameResize', this.onGameResize, this); } }); }
     onGameResize() { this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; this.livesText?.setPosition(16, 16); this.stageText?.setPosition(this.gameWidth / 2, 16); this.scoreText?.setPosition(this.gameWidth - 16, 16); this.vajraGaugeText?.setPosition(16, this.gameHeight - UI_BOTTOM_OFFSET); this.updateDropPoolPosition(); }
-    registerGameEventListeners(gameScene) { if (!gameScene || !gameScene.events || this.gameSceneListenerAttached) return; this.unregisterGameEventListeners(gameScene); gameScene.events.on('updateLives', this.updateLivesDisplay, this); gameScene.events.on('updateScore', this.updateScoreDisplay, this); gameScene.events.on('updateStage', this.updateStageDisplay, this); gameScene.events.on('activateVajraUI', this.activateVajraUIDisplay, this); gameScene.events.on('updateVajraGauge', this.updateVajraGaugeDisplay, this); gameScene.events.on('deactivateVajraUI', this.deactivateVajraUIDisplay, this); gameScene.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this); this.gameSceneListenerAttached = true; try { this.updateLivesDisplay(gameScene.lives); this.updateScoreDisplay(gameScene.score); this.updateStageDisplay(gameScene.currentStage); if (gameScene.isVajraSystemActive) this.activateVajraUIDisplay(gameScene.vajraGauge, VAJRA_GAUGE_MAX); else this.deactivateVajraUIDisplay(); this.updateDropPoolDisplay(gameScene.stageDropPool); } catch (e) { console.error("Error reflecting initial state in UIScene:", e); } }
+    registerGameEventListeners(gameScene) { if (!gameScene || !gameScene.events || this.gameSceneListenerAttached) return; this.unregisterGameEventListeners(gameScene); gameScene.events.on('updateLives', this.updateLivesDisplay, this); gameScene.events.on('updateScore', this.updateScoreDisplay, this); gameScene.events.on('updateStage', this.updateStageDisplay, this); gameScene.events.on('activateVajraUI', this.activateVajraUIDisplay, this); gameScene.events.on('updateVajraGauge', this.updateVajraGaugeDisplay, this); gameScene.events.on('deactivateVajraUIDisplay', this.deactivateVajraUIDisplay, this); gameScene.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this); this.gameSceneListenerAttached = true; try { this.updateLivesDisplay(gameScene.lives); this.updateScoreDisplay(gameScene.score); this.updateStageDisplay(gameScene.currentStage); if (gameScene.isVajraSystemActive) this.activateVajraUIDisplay(gameScene.vajraGauge, VAJRA_GAUGE_MAX); else this.deactivateVajraUIDisplay(); this.updateDropPoolDisplay(gameScene.stageDropPool); } catch (e) { console.error("Error reflecting initial state in UIScene:", e); } }
     unregisterGameEventListeners(gameScene = null) { const gs = gameScene || this.gameScene || (this.scene.manager ? this.scene.manager.getScene('GameScene') : null); if (gs && gs.events) { gs.events.off('updateLives', this.updateLivesDisplay, this); gs.events.off('updateScore', this.updateScoreDisplay, this); gs.events.off('updateStage', this.updateStageDisplay, this); gs.events.off('activateVajraUI', this.activateVajraUIDisplay, this); gs.events.off('updateVajraGauge', this.updateVajraGaugeDisplay, this); gs.events.off('deactivateVajraUI', this.deactivateVajraUIDisplay, this); gs.events.off('create', this.registerGameEventListeners, this); gs.events.off('updateDropPoolUI', this.updateDropPoolDisplay, this); } this.gameSceneListenerAttached = false; }
     updateLivesDisplay(lives) { if (this.livesText) this.livesText.setText(`ライフ: ${lives}`); } updateScoreDisplay(score) { if (this.scoreText) this.scoreText.setText(`スコア: ${score}`); } updateStageDisplay(stage) { if (this.stageText) this.stageText.setText(`ステージ: ${stage}`); }
     activateVajraUIDisplay(initialValue, maxValue) { if (this.vajraGaugeText) { this.vajraGaugeText.setText(`奥義: ${initialValue}/${maxValue}`).setVisible(true); this.updateDropPoolPosition(); } }
     updateVajraGaugeDisplay(currentValue) { if (this.vajraGaugeText && this.vajraGaugeText.visible) { this.vajraGaugeText.setText(`奥義: ${currentValue}/${VAJRA_GAUGE_MAX}`); this.updateDropPoolPosition(); } }
     deactivateVajraUIDisplay() { if (this.vajraGaugeText) { this.vajraGaugeText.setVisible(false); this.updateDropPoolPosition(); } }
 
-    // ★ updateDropPoolDisplay 関数 (ステップ2で画像表示に修正予定)
+    // updateDropPoolDisplay 関数 (ステップ2で画像表示に修正予定)
     updateDropPoolDisplay(dropPoolTypes) {
         if (!this.dropPoolIconsGroup) return;
         this.dropPoolIconsGroup.clear(true, true);
@@ -563,11 +549,11 @@ class UIScene extends Phaser.Scene {
             return;
         }
         dropPoolTypes.forEach((type, index) => {
-            // ★ この段階ではまだアイコン画像を使わず、whitePixel+Tintで仮表示
+            // この段階ではまだアイコン画像を使わず、whitePixel+Tintで仮表示
             const color = POWERUP_COLORS[type] || 0x888888;
-            const icon = this.add.image(0, 0, 'whitePixel') // ★ whitePixelを使用
+            const icon = this.add.image(0, 0, 'whitePixel') // whitePixelを使用
                           .setDisplaySize(DROP_POOL_UI_ICON_SIZE, DROP_POOL_UI_ICON_SIZE)
-                          .setTint(color) // ★ Tintを使用
+                          .setTint(color) // Tintを使用
                           .setOrigin(0, 0.5);
             this.dropPoolIconsGroup.add(icon);
         });
