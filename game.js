@@ -88,14 +88,14 @@ const SYMBOL_PATTERNS = {
     ],
 };
 
-// パワーアップタイプに対応するアイコン画像のキー定義
+// パワーアップタイプに対応するアイコン画像のキー定義 (ロードしないので一時的に未使用)
 const POWERUP_ICON_KEYS = {
     [POWERUP_TYPES.KUBIRA]: 'icon_kubira',
     [POWERUP_TYPES.SHATORA]: 'icon_shatora',
     [POWERUP_TYPES.HAILA]: 'icon_haila',
     [POWERUP_TYPES.ANCHIRA]: 'icon_anchira',
     [POWERUP_TYPES.SINDARA]: 'icon_sindara',
-    [POWERUP_TYPES.BIKARA]: 'icon_bikara_yang', // ドロップアイテムとしてはビカラ陽アイコンを使用
+    [POWERUP_TYPES.BIKARA]: 'icon_bikara_yang',
     [POWERUP_TYPES.INDARA]: 'icon_indara',
     [POWERUP_TYPES.ANILA]: 'icon_anila',
     [POWERUP_TYPES.BAISRAVA]: 'icon_baisrava',
@@ -103,18 +103,16 @@ const POWERUP_ICON_KEYS = {
     [POWERUP_TYPES.MAKIRA]: 'icon_makira',
     [POWERUP_TYPES.MAKORA]: 'icon_makora',
 };
-// ボールに重ねるビカラアイコンのキー定義 (ステップ2で使う予定)
+// ボールに重ねるビカラアイコンのキー定義 (ロードしないので一時的に未使用)
 const BIKARA_BALL_ICON_KEYS = {
-    yin: 'icon_bikara_yin', // ビカラ陰のアイコンファイル名（仮）
-    yang: 'icon_bikara_yang' // ビカラ陽のアイコンファイル名
+    yin: 'icon_bikara_yin',
+    yang: 'icon_bikara_yang'
 };
 
-// 全てのロードが必要なアイコンタイプのリスト
+// 全てのロードが必要なアイコンタイプのリスト (ロードしないので一時的に未使用)
 const ALL_ICON_TYPES_TO_LOAD = [
     ...Object.values(POWERUP_TYPES),
-    // ボールに重ねるビカラ陰アイコンもロード対象に追加
-    POWERUP_TYPES.BIKARA // Bikaraの場合はicon_bikara_yangはPOWERUP_ICON_KEYSでロード済み
-    // もしicon_bikara_yinが別のファイル名ならここに追加する必要がある
+    POWERUP_TYPES.BIKARA
 ];
 
 
@@ -123,26 +121,20 @@ class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
     preload() {
         this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
-        // 背景画像のロード
+        // ★ 背景画像のみをロード
         this.load.image('title_background', 'assets/title_background.jpg');
         this.load.image('game_background', 'assets/background1.jpg');
 
-        // ★ ボール画像のロード
-        this.load.image('ball_image', 'assets/ball.png');
-
-        // ★ 各パワーアップアイコン画像のロード
-        ALL_POWERUP_TYPES_LIST.forEach(type => {
-            const key = POWERUP_ICON_KEYS[type];
-            if (key) {
-                // ビカラは特別に 'icon_bikara_yang.png' をロード
-                const fileName = (type === POWERUP_TYPES.BIKARA) ? 'icon_bikara_yang.png' : `${key}.png`;
-                 this.load.image(key, `assets/${fileName}`);
-            }
-        });
-
-        // ★ ビカラ陰のアイコンもロード（ボール用）
-        // BIKARA_BALL_ICON_KEYS.yin が icon_bikara_yin というキー名の場合
-        this.load.image(BIKARA_BALL_ICON_KEYS.yin, 'assets/icon_bikara_yin.png'); // ★ ビカラ陰アイコンのファイル名（仮）
+        // ★ ボール画像とアイコン画像のロードは一時的にコメントアウト
+        // this.load.image('ball_image', 'assets/ball.png');
+        // ALL_POWERUP_TYPES_LIST.forEach(type => {
+        //     const key = POWERUP_ICON_KEYS[type];
+        //     if (key) {
+        //          const fileName = (type === POWERUP_TYPES.BIKARA) ? 'icon_bikara_yang.png' : `${key}.png`;
+        //           this.load.image(key, `assets/${fileName}`);
+        //     }
+        // });
+        // this.load.image(BIKARA_BALL_ICON_KEYS.yin, 'assets/icon_bikara_yin.png');
     }
     create() { this.scene.start('TitleScene'); }
 }
@@ -152,7 +144,7 @@ class TitleScene extends Phaser.Scene {
     constructor() { super('TitleScene'); }
     create() {
         const w = this.scale.width; const h = this.scale.height;
-        // タイトル背景画像の表示
+        // タイトル背景画像の表示 (ロードが成功すれば表示される)
         const bg = this.add.image(w / 2, h / 2, 'title_background');
         bg.setDisplaySize(w, h); // これで画面いっぱいに表示されます（アスペクト比は無視）
 
@@ -208,7 +200,7 @@ class GameScene extends Phaser.Scene {
     create() {
         this.gameWidth = this.scale.width; this.gameHeight = this.scale.height;
 
-        // ゲーム背景画像の表示
+        // ゲーム背景画像の表示 (ロードが成功すれば表示される)
         this.backgroundImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'game_background');
         this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight); // 画面いっぱいに表示
 
@@ -217,12 +209,12 @@ class GameScene extends Phaser.Scene {
         this.time.delayedCall(50, () => { if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
         this.physics.world.setBoundsCollision(true, true, true, false); this.physics.world.on('worldbounds', this.handleWorldBounds, this);
         this.paddle = this.physics.add.image(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET, 'whitePixel').setTint(0xffffff).setImmovable(true).setData('originalWidthRatio', PADDLE_WIDTH_RATIO); this.updatePaddleSize();
-        // ボールを物理グループとして作成（画像キーはまだwhitePixelのまま）
+        // ボールを物理グループとして作成
         this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
-        // createAndAddBallでボール画像を適用する
+        // createAndAddBallでボール画像を適用する -> 一時的にwhitePixelに戻す
         this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
 
-        this.setupStage(); // ★ この中で createBricks() が呼ばれる
+        this.setupStage();
 
         this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'GAME OVER\nTap to Restart', { fontSize: '48px', fill: '#f00', align: 'center' }).setOrigin(0.5).setVisible(false).setDepth(1);
         this.powerUps = this.physics.add.group(); this.familiars = this.physics.add.group(); this.makiraBeams = this.physics.add.group();
@@ -249,7 +241,7 @@ class GameScene extends Phaser.Scene {
     }
 
     setupStage() { if (this.currentMode === GAME_MODE.NORMAL) { const shuffledPool = Phaser.Utils.Array.Shuffle([...NORMAL_MODE_POWERUP_POOL]); this.stageDropPool = shuffledPool.slice(0, 4); this.events.emit('updateDropPoolUI', this.stageDropPool); } else { this.stageDropPool = [...ALLSTARS_MODE_POWERUP_POOL]; this.events.emit('updateDropPoolUI', []); }
-        // ★ createBricks() 関数を一時的に空にする
+        // createBricks() 関数は一時的に空のまま
         this.createBricks();
     }
 
@@ -267,7 +259,7 @@ class GameScene extends Phaser.Scene {
 
     setColliders() {
         if (this.ballPaddleCollider) this.ballPaddleCollider.destroy(); if (this.ballBrickCollider) this.ballBrickCollider.destroy(); if (this.ballBrickOverlap) this.ballBrickOverlap.destroy(); if (this.ballBallCollider) this.ballBallCollider.destroy(); if (this.makiraBeamBrickOverlap) this.makiraBeamBrickOverlap.destroy();
-        // ★ this.bricks が null や空のグループの場合にエラーにならないようチェック
+        // this.bricks が null や空のグループの場合にエラーにならないようチェック
         if (!this.balls || !this.paddle) return;
 
         this.ballPaddleCollider = this.physics.add.collider(this.paddle, this.balls, this.hitPaddle, null, this);
@@ -280,10 +272,10 @@ class GameScene extends Phaser.Scene {
         this.ballBallCollider = this.physics.add.collider(this.balls, this.balls, this.handleBallCollision, (ball1, ball2) => { return ball1.getData('isSindara') && ball2.getData('isSindara') && ball1.getData('isAttracting') && ball2.getData('isAttracting'); }, this);
     }
 
-    // createAndAddBall 関数でボール画像を適用
+    // createAndAddBall 関数 -> 一時的にwhitePixelに戻す
     createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
-        // whitePixelの代わりにball_imageキーを使用
-        const ball = this.balls.create(x, y, 'ball_image').setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);
+        // ★ whitePixelキーを使用
+        const ball = this.balls.create(x, y, 'whitePixel').setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);
         if (ball.body) { ball.setVelocity(vx, vy); ball.body.onWorldBounds = true; } else { console.error("Failed to create ball physics body!"); ball.destroy(); return null; }
         ball.setData({ activePowers: data ? new Set(data.activePowers) : new Set(), lastActivatedPower: data ? data.lastActivatedPower : null, isPenetrating: data ? data.isPenetrating : false, isFast: data ? data.isFast : false, isSlow: data ? data.isSlow : false, isAnchira: data ? data.isAnchira : false, isSindara: data ? data.isSindara : false, sindaraPartner: null, isAttracting: false, isMerging: false, isBikara: data ? data.isBikara : false, bikaraState: data ? data.bikaraState : null, bikaraYangCount: 0, isIndaraActive: data ? data.isIndaraActive : false, indaraHomingCount: data ? data.indaraHomingCount : 0, isAnilaActive: data ? data.isAnilaActive : false });
         if (data) { this.updateBallTint(ball); if (ball.getData('isFast')) this.applySpeedModifier(ball, POWERUP_TYPES.SHATORA); else if (ball.getData('isSlow')) this.applySpeedModifier(ball, POWERUP_TYPES.HAILA); }
@@ -292,118 +284,38 @@ class GameScene extends Phaser.Scene {
 
     launchBall() { if (!this.isBallLaunched && this.balls) { const firstBall = this.balls.getFirstAlive(); if (firstBall) { const initialVelocityX = Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0], BALL_INITIAL_VELOCITY_X_RANGE[1]); firstBall.setVelocity(initialVelocityX, BALL_INITIAL_VELOCITY_Y); this.isBallLaunched = true; } } }
 
-    // ★★★ createBricks 関数（ほぼ空にする） ★★★
+    // createBricks 関数（ほぼ空にする）
     createBricks() {
-        console.log(`Generating Bricks (Temporarily Empty) for Stage ${this.currentStage}`); // ★ ログを変更
+        console.log(`Generating Bricks (Temporarily Empty) for Stage ${this.currentStage}`); // ログを変更
         if (this.bricks) { this.bricks.clear(true, true); this.bricks.destroy(); }
         this.bricks = this.physics.add.staticGroup();
 
-        // ★ ここから元のブロック生成ロジックをコメントアウト ★
+        // 元のブロック生成ロジックはコメントアウトのまま
 
-        // const stage = this.currentStage;
-        // const maxStage = MAX_STAGE;
-        // const rows = BRICK_ROWS + Math.floor(stage / 3);
-        // const cols = BRICK_COLS + Math.floor(stage / 4);
-        // const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2;
-        // const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4)));
-        // const actualCols = Math.min(cols, BRICK_COLS + 4);
-        // let durableRatio = 0;
-        // let indestructibleRatio = 0;
-        // let progress = 0;
-        // if (stage >= 3) {
-        //     progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1);
-        //     durableRatio = progress * 0.5;
-        //     indestructibleRatio = progress * 0.15;
-        // }
-        // const bW = this.scale.width * BRICK_WIDTH_RATIO;
-        // const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING;
-        // const oX = (this.scale.width - totalBrickWidth) / 2;
-
-        // let specialLayoutType = null;
-        // const stageString = stage.toString();
-        // if (stage > 2 && stage % 8 === 0) { specialLayoutType = 's_shape'; }
-        // else if (stage > 2 && stage % 4 === 0) { specialLayoutType = 'wall'; }
-        // else if (stage > 4 && stage % 6 === 0) { specialLayoutType = 'center_hollow'; }
-        // else if (stage >= 3 && SYMBOL_PATTERNS[stageString]) {
-        //      specialLayoutType = 'symbol';
-        // }
-
-        // let density;
-        // if (stage <= 3) { density = 0.4; }
-        // else { density = 0.4 + 0.5 * progress; }
-
-        // if (specialLayoutType === 'wall') {
-        //     console.log(`Generating Special Layout: Wall (Stage ${stage}, Density: ${density.toFixed(3)})`);
-        //     // ... wall generation logic ...
-        // } else if (specialLayoutType === 's_shape') {
-        //     console.log(`Generating Special Layout: S-Shape (Stage ${stage}, Density: ${density.toFixed(3)})`);
-        //     // ... s_shape generation logic ...
-        // } else if (specialLayoutType === 'center_hollow') {
-        //      console.log(`Generating Special Layout: Center Hollow (Stage ${stage}, Density: ${density.toFixed(3)})`);
-        //     // ... center_hollow generation logic ...
-        // } else if (specialLayoutType === 'symbol') {
-        //      console.log(`Generating Special Layout: Symbol '${stageString}' (Stage ${stage})`);
-        //     // ... symbol generation logic ...
-        // } else { // 通常配置
-        //     console.log(`Generating Normal Layout (Stage ${stage}, Density: ${density.toFixed(3)})`);
-        //     // ... normal generation logic ...
-        // }
-
-        // console.log(`Bricks generated: ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
-        // ★ ここまでコメントアウト ★
-
-
-        // ★ 空の物理グループを作成したまま setColliders を呼び出す
+        // 空の物理グループを作成したまま setColliders を呼び出す
         this.setColliders(); // setColliders 内で bricks の存在チェックを追加済み
     }
 
     // 通常配置フォールバック用のヘルパーメソッドも空にする (使用されないはずだが念のため)
     createBricksFallbackToNormal() {
-        console.log("Falling back to Normal Layout generation (Temporarily Empty)..."); // ★ ログを変更
+        console.log("Falling back to Normal Layout generation (Temporarily Empty)..."); // ログを変更
         if (this.bricks) { this.bricks.clear(true, true); this.bricks.destroy(); }
         this.bricks = this.physics.add.staticGroup(); // 空のグループ
         this.setColliders(); // setColliders 内で bricks の存在チェックを追加済み
     }
-    // ★★★ createBricks 修正版ここまで ★★★
 
 
-    // dropSpecificPowerUp 関数でアイコン画像を適用
+    // dropSpecificPowerUp 関数 -> 一時的にwhitePixel+Tintに戻す
     dropSpecificPowerUp(x, y, type) {
-        const iconKey = POWERUP_ICON_KEYS[type];
-        if (!iconKey) {
-             console.warn(`Attempted to drop powerup with no icon key: ${type}`);
-             // アイコンがない場合はwhitePixelで代替表示
-             const color = POWERUP_COLORS[type] || 0x888888;
-             let powerUp = this.powerUps.create(x, y, 'whitePixel');
+        // ★ whitePixel + Tint に戻す
+        const color = POWERUP_COLORS[type] || 0x888888;
+        let powerUp = null;
+        try {
+             powerUp = this.powerUps.create(x, y, 'whitePixel');
              if (powerUp) {
                  powerUp.setDisplaySize(POWERUP_SIZE, POWERUP_SIZE).setTint(color).setData('type', type);
                   if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); } else { console.error(`No physics body for powerup type: ${type}! Destroying.`); powerUp.destroy(); }
              } else { console.error(`Failed to create powerup object for type: ${type}!`); }
-             return;
-        }
-
-        let powerUp = null;
-        try {
-            // アイコン画像を使用してPowerUpオブジェクトを作成
-            powerUp = this.powerUps.create(x, y, iconKey);
-            if (powerUp) {
-                powerUp.setDisplaySize(POWERUP_SIZE, POWERUP_SIZE)
-                       .setData('type', type);
-                // 画像なのでtintは基本不要だが、デバッグや特殊な表現のために残すこともできる
-                // powerUp.setTint(POWERUP_COLORS[type] || 0xffffff);
-
-                if (powerUp.body) {
-                    powerUp.setVelocity(0, POWERUP_SPEED_Y);
-                    powerUp.body.setCollideWorldBounds(false);
-                    powerUp.body.setAllowGravity(false);
-                } else {
-                    console.error(`No physics body for powerup type: ${type}! Destroying.`);
-                    powerUp.destroy();
-                    powerUp = null;
-                }
-            } else {
-                console.error(`Failed to create powerup object for type: ${type}!`);
-            }
         } catch (error) {
             console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error);
             if (powerUp && powerUp.active) {
@@ -420,57 +332,49 @@ class GameScene extends Phaser.Scene {
     activatePower(type) { const targetBalls = this.balls.getMatching('active', true); if (targetBalls.length === 0) return; if (POWERUP_DURATION[type]) { if (this.powerUpTimers[type]) { this.powerUpTimers[type].remove(); } } switch (type) { case POWERUP_TYPES.KUBIRA: this.activateKubira(targetBalls); break; case POWERUP_TYPES.SHATORA: this.activateShatora(targetBalls); break; case POWERUP_TYPES.HAILA: this.activateHaira(targetBalls); break; case POWERUP_TYPES.ANCHIRA: if (targetBalls.length === 1) this.activateAnchira(targetBalls[0]); break; case POWERUP_TYPES.SINDARA: if (targetBalls.length === 1) this.activateSindara(targetBalls[0]); break; case POWERUP_TYPES.BIKARA: this.activateBikara(targetBalls); break; case POWERUP_TYPES.INDARA: this.activateIndara(targetBalls); break; case POWERUP_TYPES.ANILA: this.activateAnila(targetBalls); break; } targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').add(type); ball.setData('lastActivatedPower', type); this.updateBallTint(ball); } }); const duration = POWERUP_DURATION[type]; if (duration) { this.powerUpTimers[type] = this.time.delayedCall(duration, () => { this.deactivatePowerByType(type); this.powerUpTimers[type] = null; }, [], this); } }
     deactivatePowerByType(type) { const targetBalls = this.balls.getMatching('active', true); if (targetBalls.length === 0 || type === POWERUP_TYPES.MAKIRA || type === POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKORA) return; switch (type) { case POWERUP_TYPES.KUBIRA: this.deactivateKubira(targetBalls); break; case POWERUP_TYPES.SHATORA: this.deactivateShatora(targetBalls); break; case POWERUP_TYPES.HAILA: this.deactivateHaira(targetBalls); break; } targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').delete(type); this.updateBallTint(ball); } }); }
 
-    // updateBallTint 関数 (まだアイコン重ね表示はせず色のみ更新)
+    // updateBallTint 関数 (色のみ更新に戻す)
     updateBallTint(ball) {
         if (!ball || !ball.active) return;
         const activePowers = ball.getData('activePowers');
-        let targetColor = DEFAULT_BALL_COLOR; // デフォルトの色 (画像自体はball.pngだが色も変える可能性を考慮)
+        // ★ デフォルトの色 (画像はwhitePixelに戻っているので、Tintが直接色になる)
+        let targetColor = DEFAULT_BALL_COLOR;
 
         if (activePowers && activePowers.size > 0) {
             const lastPower = ball.getData('lastActivatedPower');
             let powerToUse = lastPower;
 
-            // 最後に取得したパワーが失効している場合は、アクティブな他のパワーを探す
             if (!lastPower || !activePowers.has(lastPower)) {
                 const activePowersArray = Array.from(activePowers);
                 if (activePowersArray.length > 0) {
-                    // この時点では単純にリストの最後のパワーを使う
                     powerToUse = activePowersArray[activePowersArray.length - 1];
                     ball.setData('lastActivatedPower', powerToUse);
                 } else {
-                    powerToUse = null; // アクティブなパワーがない
+                    powerToUse = null;
                 }
             }
 
             if (powerToUse) {
-                 // ここではまだアイコンの重ね表示はせず、特定のパワーアップの色変化のみ対応
                  if (powerToUse === POWERUP_TYPES.BIKARA) {
-                    // Bikaraの色はyin/yangで変わる
                     targetColor = BIKARA_COLORS[ball.getData('bikaraState')] || BIKARA_COLORS.yin;
                  } else if (powerToUse === POWERUP_TYPES.SINDARA) {
-                    // Sindaraは状態によって色が変わる
                     if (ball.getData('isMerging')) targetColor = SINDARA_MERGE_COLOR;
                     else if (ball.getData('isAttracting')) targetColor = SINDARA_ATTRACT_COLOR;
-                    // SindaraがアクティブだがAttracting/Mergingでない場合はデフォルト色か他のパワーの色
                     else {
                          const otherPowers = Array.from(activePowers).filter(p => p !== POWERUP_TYPES.SINDARA);
                          if (otherPowers.length > 0) {
-                             const otherPower = otherPowers[otherPowers.length - 1]; // ここも単純に最後のパワー
+                             const otherPower = otherPowers[otherPowers.length - 1];
                              targetColor = POWERUP_COLORS[otherPower] || DEFAULT_BALL_COLOR;
                          } else {
                              targetColor = DEFAULT_BALL_COLOR;
                          }
                     }
                  } else {
-                    // それ以外のパワーアップの場合は、そのパワーアップの色にする（画像になるので効果は薄れるが、将来的なTint表現のために残す）
                     targetColor = POWERUP_COLORS[powerToUse] || DEFAULT_BALL_COLOR;
                  }
             }
         }
-        // 画像に対してsetTintを行う
+        // ★ whitePixelに対してsetTintを行う
         ball.setTint(targetColor);
-
-        // ステップ2でアイコン表示のロジックを追加予定
     }
     // --- 個別パワーアップ効果 ---
     activateKubira(balls) { balls.forEach(b => b.setData('isPenetrating', true)); }
@@ -526,21 +430,18 @@ class GameScene extends Phaser.Scene {
 class UIScene extends Phaser.Scene {
     constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; this.vajraGaugeText = null; this.dropPoolIconsGroup = null; this.gameSceneListenerAttached = false; this.gameScene = null; }
     create() { this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; const textStyle = { fontSize: '24px', fill: '#fff' }; this.livesText = this.add.text(16, 16, 'ライフ: ', textStyle); this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ', textStyle).setOrigin(0.5, 0); this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: ', textStyle).setOrigin(1, 0); this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff' }).setOrigin(0, 1).setVisible(false); this.dropPoolIconsGroup = this.add.group();
-        // UIでのドロッププールアイコン表示も画像を使う
-        // ただし、この段階ではまだUIへのアイコン表示自体を実装していないため、
-        // updateDropPoolDisplayはwhitePixelのままにしておくか、空にするか選択。
-        // とりあえずアイコン画像への切り替えはステップ2で行うこととし、現状維持
+        // UIでのドロッププールアイコン表示はwhitePixel+Tintのまま
         this.updateDropPoolDisplay([]);
         this.gameScene = this.scene.get('GameScene'); if (this.gameScene) { this.gameScene.events.on('gameResize', this.onGameResize, this); } try { const gameScene = this.scene.get('GameScene'); if (gameScene && gameScene.scene.settings.status === Phaser.Scenes.RUNNING) { this.registerGameEventListeners(gameScene); } else { this.scene.get('GameScene').events.once('create', this.registerGameEventListeners, this); } } catch (e) { console.error("Error setting up UIScene listeners:", e); } this.events.on('shutdown', () => { this.unregisterGameEventListeners(); if (this.gameScene && this.gameScene.events) { this.gameScene.events.off('gameResize', this.onGameResize, this); } }); }
     onGameResize() { this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; this.livesText?.setPosition(16, 16); this.stageText?.setPosition(this.gameWidth / 2, 16); this.scoreText?.setPosition(this.gameWidth - 16, 16); this.vajraGaugeText?.setPosition(16, this.gameHeight - UI_BOTTOM_OFFSET); this.updateDropPoolPosition(); }
-    registerGameEventListeners(gameScene) { if (!gameScene || !gameScene.events || this.gameSceneListenerAttached) return; this.unregisterGameEventListeners(gameScene); gameScene.events.on('updateLives', this.updateLivesDisplay, this); gameScene.events.on('updateScore', this.updateScoreDisplay, this); gameScene.events.on('updateStage', this.updateStageDisplay, this); gameScene.events.on('activateVajraUI', this.activateVajraUIDisplay, this); gameScene.events.on('updateVajraGauge', this.updateVajraGaugeDisplay, this); gameScene.events.on('deactivateVajraUIDisplay', this.deactivateVajraUIDisplay, this); gameScene.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this); this.gameSceneListenerAttached = true; try { this.updateLivesDisplay(gameScene.lives); this.updateScoreDisplay(gameScene.score); this.updateStageDisplay(gameScene.currentStage); if (gameScene.isVajraSystemActive) this.activateVajraUIDisplay(gameScene.vajraGauge, VAJRA_GAUGE_MAX); else this.deactivateVajraUIDisplay(); this.updateDropPoolDisplay(gameScene.stageDropPool); } catch (e) { console.error("Error reflecting initial state in UIScene:", e); } }
+    registerGameEventListeners(gameScene) { if (!gameScene || !gameScene.events || this.gameSceneListenerAttached) return; this.unregisterGameEventListeners(gameScene); gameScene.events.on('updateLives', this.updateLivesDisplay, this); gameScene.events.on('updateScore', this.updateScoreDisplay, this); gameScene.events.on('updateStage', this.updateStageDisplay, this); gameScene.events.on('activateVajraUI', this.activateVajraUIDisplay, this); gameScene.events.on('updateVajraGauge', this.updateVajraGaugeDisplay, this); gameScene.events.on('deactivateVajraUI', this.deactivateVajraUIDisplay, this); gameScene.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this); this.gameSceneListenerAttached = true; try { this.updateLivesDisplay(gameScene.lives); this.updateScoreDisplay(gameScene.score); this.updateStageDisplay(gameScene.currentStage); if (gameScene.isVajraSystemActive) this.activateVajraUIDisplay(gameScene.vajraGauge, VAJRA_GAUGE_MAX); else this.deactivateVajraUIDisplay(); this.updateDropPoolDisplay(gameScene.stageDropPool); } catch (e) { console.error("Error reflecting initial state in UIScene:", e); } }
     unregisterGameEventListeners(gameScene = null) { const gs = gameScene || this.gameScene || (this.scene.manager ? this.scene.manager.getScene('GameScene') : null); if (gs && gs.events) { gs.events.off('updateLives', this.updateLivesDisplay, this); gs.events.off('updateScore', this.updateScoreDisplay, this); gs.events.off('updateStage', this.updateStageDisplay, this); gs.events.off('activateVajraUI', this.activateVajraUIDisplay, this); gs.events.off('updateVajraGauge', this.updateVajraGaugeDisplay, this); gs.events.off('deactivateVajraUI', this.deactivateVajraUIDisplay, this); gs.events.off('create', this.registerGameEventListeners, this); gs.events.off('updateDropPoolUI', this.updateDropPoolDisplay, this); } this.gameSceneListenerAttached = false; }
     updateLivesDisplay(lives) { if (this.livesText) this.livesText.setText(`ライフ: ${lives}`); } updateScoreDisplay(score) { if (this.scoreText) this.scoreText.setText(`スコア: ${score}`); } updateStageDisplay(stage) { if (this.stageText) this.stageText.setText(`ステージ: ${stage}`); }
     activateVajraUIDisplay(initialValue, maxValue) { if (this.vajraGaugeText) { this.vajraGaugeText.setText(`奥義: ${initialValue}/${maxValue}`).setVisible(true); this.updateDropPoolPosition(); } }
-    updateVajraGaugeDisplay(currentValue) { if (this.vajraGaugeText && this.vajraGaugeText.visible) { this.vajraGaugeText.setText(`奥義: ${currentValue}/${VAJRA_GAUGE_MAX}`); this.updateDropPoolPosition(); } }
+    updateVajraGaugeDisplay(currentValue) { if (this.vajraGaugeText && this.vajraGaugeText.visible) { this.vajraGaugeText.setText(`奥義: ${currentValue}/${VAJRA_GAJUGAGE_MAX}`); this.updateDropPoolPosition(); } } // Typo fix: VAJRA_GAJUGAGE_MAX -> VAJRA_GAUGE_MAX
     deactivateVajraUIDisplay() { if (this.vajraGaugeText) { this.vajraGaugeText.setVisible(false); this.updateDropPoolPosition(); } }
 
-    // updateDropPoolDisplay 関数 (ステップ2で画像表示に修正予定)
+    // updateDropPoolDisplay 関数 (whitePixel+Tintのまま)
     updateDropPoolDisplay(dropPoolTypes) {
         if (!this.dropPoolIconsGroup) return;
         this.dropPoolIconsGroup.clear(true, true);
@@ -549,7 +450,7 @@ class UIScene extends Phaser.Scene {
             return;
         }
         dropPoolTypes.forEach((type, index) => {
-            // この段階ではまだアイコン画像を使わず、whitePixel+Tintで仮表示
+            // whitePixel+Tintで仮表示
             const color = POWERUP_COLORS[type] || 0x888888;
             const icon = this.add.image(0, 0, 'whitePixel') // whitePixelを使用
                           .setDisplaySize(DROP_POOL_UI_ICON_SIZE, DROP_POOL_UI_ICON_SIZE)
