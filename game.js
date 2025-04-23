@@ -1,5 +1,5 @@
 // --- 定数 ---
-// (変更なし - ただし画像関連の定数は一時的に参照されない)
+// (全ての定数は変更なし - ただし多くの定数は一時的に参照されない)
 const PADDLE_WIDTH_RATIO = 0.2;
 const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
@@ -31,9 +31,8 @@ const POWERUP_SPEED_Y = 100;
 const POWERUP_TYPES = { KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara', BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra', MAKIRA: 'makira', MAKORA: 'makora' };
 const NORMAL_MODE_POWERUP_POOL = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ];
 const ALLSTARS_MODE_POWERUP_POOL = [...NORMAL_MODE_POWERUP_POOL];
-// PowerUpの色定義はアイコン画像を使うようになるため、UIでの色表示以外では使用しなくなるが、コード内で参照されている箇所があるため残しておく
 const POWERUP_COLORS = { [POWERUP_TYPES.KUBIRA]: 0x800080, [POWERUP_TYPES.SHATORA]: 0xffa500, [POWERUP_TYPES.HAILA]: 0xadd8e6, [POWERUP_TYPES.ANCHIRA]: 0xffc0cb, [POWERUP_TYPES.SINDARA]: 0xd2b48c, [POWERUP_TYPES.BIKARA]: 0xffffff, [POWERUP_TYPES.INDARA]: 0x4682b4, [POWERUP_TYPES.ANILA]: 0xffefd5, [POWERUP_TYPES.BAISRAVA]: 0xffd700, [POWERUP_TYPES.VAJRA]: 0xffff00, [POWERUP_TYPES.MAKIRA]: 0x008080, [POWERUP_TYPES.MAKORA]: 0xffffff, };
-// ビカラの色の定義はUIやボールの色付けで使う可能性があるため残しておく
+const MAKORA_COPYABLE_POWERS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA ];
 const BIKARA_COLORS = { yin: 0x444444, yang: 0xfffafa };
 const POWERUP_DURATION = { [POWERUP_TYPES.KUBIRA]: 10000, [POWERUP_TYPES.SHATORA]: 3000, [POWERUP_TYPES.HAILA]: 10000, [POWERUP_TYPES.MAKIRA]: 6667 };
 const BIKARA_YANG_COUNT_MAX = 2;
@@ -89,7 +88,7 @@ class BootScene extends Phaser.Scene {
         // this.load.image(BIKARA_BALL_ICON_KEYS.yin, 'assets/icon_bikara_yin.png');
     }
     create() {
-        // ★ タイトルシーンではなく直接ゲームシーンを開始（UIシーンも）
+        // ★ TitleScene を飛ばして直接ゲームシーンを開始（UIシーンも）
         this.scene.start('GameScene');
         this.scene.launch('UIScene');
     }
@@ -109,18 +108,28 @@ class BootScene extends Phaser.Scene {
 class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
-        this.paddle = null; this.balls = null; this.bricks = null; this.powerUps = null; this.lives = 0; this.gameOverText = null; this.isBallLaunched = false; this.gameWidth = 0; this.gameHeight = 0; this.currentMode = null; this.currentStage = 1; this.score = 0;
-        // ★ コライダー関連のプロパティは使用しないためコメントアウト
+        // ★ 物理演算対象オブジェクトやゲーム要素関連のプロパティを null に初期化
+        this.paddle = null; this.balls = null; this.bricks = null; this.powerUps = null; this.gameOverText = null;
+        // ★ ゲーム状態関連のプロパティ
+        this.lives = 0; this.isBallLaunched = false; this.currentMode = null; this.currentStage = 1; this.score = 0;
+        this.gameWidth = 0; this.gameHeight = 0;
+
+        // ★ コライダー関連のプロパティは使用しないため null に初期化
         // this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null;
         // this.makiraBeamBrickOverlap = null;
-        // ★ パワーアップ関連のプロパティは使用しないためコメントアウト
+
+        // ★ パワーアップ関連のプロパティは使用しないため null または空に初期化
         // this.powerUpTimers = {};
         // this.sindaraAttractionTimer = null; this.sindaraMergeTimer = null; this.sindaraPenetrationTimer = null;
+
         this.isStageClearing = false; this.isGameOver = false;
-        // ★ ヴァジラ・マキラ関連のプロパティは使用しないためコメントアウト
+
+        // ★ ヴァジラ・マキラ関連のプロパティは使用しないため null または空に初期化
         // this.isVajraSystemActive = false; this.vajraGauge = 0;
         // this.isMakiraActive = false; this.familiars = null; this.makiraBeams = null; this.makiraAttackTimer = null;
-        this.stageDropPool = [];
+
+        this.stageDropPool = []; // ★ 空のまま
+
         // 背景画像を保持するためのプロパティ
         this.backgroundImage = null;
     }
@@ -150,7 +159,7 @@ class GameScene extends Phaser.Scene {
     preload() { } // BootSceneでロード済み
 
     create() {
-        console.log("GameScene create started"); // ★ ログ追加
+        console.log("GameScene create started"); // ログ追加
         this.gameWidth = this.scale.width; this.gameHeight = this.scale.height;
 
         // ゲーム背景画像の表示 (ロードが成功すれば表示される)
@@ -159,7 +168,7 @@ class GameScene extends Phaser.Scene {
 
         this.cameras.main.setBackgroundColor('#222'); // 背景画像で見えなくなりますが、念のため残します
 
-        // ★ UI シーンへのイベント発行はコメントアウト (UI シーンも最小限に修正が必要かも)
+        // ★ UI シーンへのイベント発行はコメントアウト
         // this.time.delayedCall(50, () => { if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
 
         // ★ 物理世界の境界設定のみ残す
@@ -168,14 +177,14 @@ class GameScene extends Phaser.Scene {
         // this.physics.world.on('worldbounds', this.handleWorldBounds, this);
 
 
-        // パドルの生成
-        this.paddle = this.physics.add.image(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET, 'whitePixel').setTint(0xffffff).setImmovable(true).setData('originalWidthRatio', PADDLE_WIDTH_RATIO);
-        this.updatePaddleSize();
+        // ★ パドルの生成をコメントアウト
+        // this.paddle = this.physics.add.image(...).setImmovable(true).setData(...);
+        // this.updatePaddleSize();
 
-        // ボールを物理グループとして作成
+        // ★ ボールを物理グループとして作成 -> オブジェクトは追加しない
         this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
-        // createAndAddBallでボールをwhitePixelで生成・追加
-        this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
+        // ★ ボールの生成・追加をコメントアウト
+        // this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
 
         // ★ ステージセットアップ、ブロック、パワーアップ、ヴァジラ、マキラ関連は全てコメントアウト
         // this.setupStage();
@@ -188,24 +197,8 @@ class GameScene extends Phaser.Scene {
         // this.setColliders();
         // this.physics.add.overlap(this.paddle, this.powerUps, this.collectPowerUp, null, this);
 
-        // ★ 入力イベントリスナー設定は残す (パドル操作)
-        this.input.on('pointermove', (pointer) => {
-            // if (!this.isGameOver && this.lives > 0 && this.paddle && !this.isStageClearing) { // ★ 条件を簡略化
-            if (this.paddle) {
-                const targetX = pointer.x;
-                const halfWidth = this.paddle.displayWidth / 2;
-                const clampedX = Phaser.Math.Clamp(targetX, halfWidth, this.scale.width - halfWidth);
-                this.paddle.x = clampedX;
-                // if (!this.isBallLaunched) { // ★ 条件を簡略化
-                    this.balls.getChildren().forEach(ball => {
-                        if (ball.active) {
-                            ball.x = clampedX;
-                        }
-                    });
-                // }
-            }
-        });
-        // ★ pointerdown リスナーはコメントアウト (ボール発射など不要な処理を避ける)
+        // ★ 入力イベントリスナー設定は全てコメントアウト
+        // this.input.on('pointermove', (...) => { ... });
         // this.input.on('pointerdown', () => { ... });
 
         // ★ リサイズリスナーは残す
@@ -213,16 +206,17 @@ class GameScene extends Phaser.Scene {
         // ★ shutdown リスナーは残す
         this.events.on('shutdown', this.shutdown, this);
 
-        console.log("GameScene create finished"); // ★ ログ追加
+        console.log("GameScene create finished"); // ログ追加
     }
 
-    updatePaddleSize() { if (!this.paddle) return; const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio'); this.paddle.setDisplaySize(newWidth, PADDLE_HEIGHT); this.paddle.refreshBody(); const halfWidth = this.paddle.displayWidth / 2; this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth); }
+    // ★ updatePaddleSize はコメントアウトしたまま
+    // updatePaddleSize() { ... }
 
     handleResize(gameSize, baseSize, displaySize, resolution) {
-        console.log("GameScene handleResize"); // ★ ログ追加
+        console.log("GameScene handleResize"); // ログ追加
         this.gameWidth = gameSize.width;
         this.gameHeight = gameSize.height;
-        this.updatePaddleSize();
+        // this.updatePaddleSize(); // ★ コメントアウト
         if (this.backgroundImage) {
              this.backgroundImage.setPosition(this.gameWidth / 2, this.gameHeight / 2);
              this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight);
@@ -234,33 +228,19 @@ class GameScene extends Phaser.Scene {
     // setupStage() { ... }
 
     update() {
-        // console.log("GameScene update"); // ★ updateログは重いのでコメントアウト
-        // ★ update メソッドの主要な処理はコメントアウト
+        // console.log("GameScene update"); // updateログは重いのでコメントアウト
+        // ★ update メソッドの主要な処理は全てコメントアウト
         // if (this.isGameOver || this.isStageClearing || this.lives <= 0) { return; }
         // ... (ボールの画面外判定、Sindara処理、Makira処理など全てコメントアウト) ...
 
-        // update関数内には、パドルとボールの物理演算による自動的な動き以外、
-        // この最小構成では特別な処理は不要なはず。
-        // 物理演算はPhaserが自動で行う。
+        // この最小構成では、update 関数内で特別に行う処理はない
     }
 
     // ★ setColliders 関数はコメントアウトしたまま
     // setColliders() { ... }
 
-    // createAndAddBall 関数でボールをwhitePixelで生成
-    createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
-        // whitePixelキーを使用
-        const ball = this.balls.create(x, y, 'whitePixel').setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);
-        if (ball.body) {
-             // ★ ボールの初期速度を設定（とりあえず下方向）
-             ball.setVelocity(0, NORMAL_BALL_SPEED); // ★ BALL_INITIAL_VELOCITY_Y は上方向なので下方向にする
-             // ball.body.onWorldBounds = true; // ★ 一時コメントアウト
-        } else { console.error("Failed to create ball physics body!"); ball.destroy(); return null; }
-        // ★ Ballのデータ設定も最小限に
-        // ball.setData({ activePowers: ..., lastActivatedPower: ..., isPenetrating: ..., ... });
-        // if (data) { this.updateBallTint(ball); if (ball.getData('isFast')) ... }
-        return ball;
-    }
+    // ★ createAndAddBall 関数はコメントアウトしたまま
+    // createAndAddBall(x, y, vx = 0, vy = 0, data = null) { ... }
 
     // ★ launchBall 関数はコメントアウトしたまま
     // launchBall() { ... }
@@ -269,23 +249,8 @@ class GameScene extends Phaser.Scene {
     // createBricks() { ... }
     // createBricksFallbackToNormal() { ... }
 
-    // ★ dropSpecificPowerUp 関数 -> whitePixel+Tintに戻したまま
-     dropSpecificPowerUp(x, y, type) {
-        const color = POWERUP_COLORS[type] || 0x888888;
-        let powerUp = null;
-        try {
-             powerUp = this.powerUps.create(x, y, 'whitePixel');
-             if (powerUp) {
-                 powerUp.setDisplaySize(POWERUP_SIZE, POWERUP_SIZE).setTint(color).setData('type', type);
-                  if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); } else { console.error(`No physics body for powerup type: ${type}! Destroying.`); powerUp.destroy(); }
-             } else { console.error(`Failed to create powerup object for type: ${type}!`); }
-        } catch (error) {
-            console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error);
-            if (powerUp && powerUp.active) {
-                powerUp.destroy();
-            }
-        }
-    }
+    // ★ dropSpecificPowerUp 関数はコメントアウトしたまま
+     dropSpecificPowerUp(x, y, type) { /* ... */ }
 
     // ★ dropPowerUp 関数はコメントアウトしたまま
     // dropPowerUp(x, y) { ... }
@@ -300,19 +265,16 @@ class GameScene extends Phaser.Scene {
     // activatePower(type) { ... }
     // deactivatePowerByType(type) { ... }
 
-    // updateBallTint 関数 (色のみ更新に戻したまま - ただしほぼ使用されない)
-    updateBallTint(ball) {
-        if (!ball || !ball.active) return;
-        // この最小構成ではパワーアップがないため、基本的にDEFAULT_BALL_COLORになる
-        ball.setTint(DEFAULT_BALL_COLOR);
-    }
+    // ★ updateBallTint 関数はコメントアウトしたまま
+    // updateBallTint(ball) { ... }
+
     // ★ 個別パワーアップ効果関連の関数は全てコメントアウト
     // activateKubira() { ... }
     // deactivateKubira() { ... }
     // applySpeedModifier() { ... }
     // resetBallSpeed() { ... }
     // ... (他のパワーアップ関連関数) ...
-    // handleWorldBounds() { ... } // ★ コメントアウト
+    // handleWorldBounds() { ... }
 
     // ★ ゲーム進行関連の関数は全てコメントアウト
     // loseLife() { ... }
@@ -324,12 +286,12 @@ class GameScene extends Phaser.Scene {
 
     // shutdown 関数は残す (クリーンアップのため)
     shutdown() {
-        console.log("GameScene shutdown started"); // ★ ログ追加
+        console.log("GameScene shutdown started"); // ログ追加
         if (this.scale) this.scale.off('resize', this.handleResize, this);
-        // if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this); // ★ コメントアウト
+        // if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this); // コメントアウト
         this.events.removeAllListeners();
         if (this.input) this.input.removeAllListeners();
-        this.isGameOver = false; // ★ プロパティのリセットのみ残す
+        this.isGameOver = false; // プロパティのリセットのみ残す
         this.isStageClearing = false;
 
         // ★ クリーンアップ処理も最小限に
@@ -342,71 +304,73 @@ class GameScene extends Phaser.Scene {
         // if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
         if (this.time) this.time.removeAllEvents();
 
-        if (this.balls) this.balls.destroy(true); this.balls = null;
-        if (this.bricks) this.bricks.destroy(true); this.bricks = null;
-        if (this.powerUps) this.powerUps.destroy(true); this.powerUps = null;
-        if (this.paddle) this.paddle.destroy(); this.paddle = null;
-        if (this.familiars) this.familiars.destroy(true); this.familiars = null;
-        if (this.makiraBeams) this.makiraBeams.destroy(true); this.makiraBeams = null;
-        if (this.gameOverText) this.gameOverText.destroy(); this.gameOverText = null;
+        // ★ 物理演算対象オブジェクトのグループ破棄をコメントアウト
+        // if (this.balls) this.balls.destroy(true); this.balls = null;
+        // if (this.bricks) this.bricks.destroy(true); this.bricks = null;
+        // if (this.powerUps) this.powerUps.destroy(true); this.powerUps = null;
+        // if (this.paddle) this.paddle.destroy(); this.paddle = null;
+        // if (this.familiars) this.familiars.destroy(true); this.familiars = null;
+        // if (this.makiraBeams) this.makiraBeams.destroy(true); this.makiraBeams = null;
+        // if (this.gameOverText) this.gameOverText.destroy(); this.gameOverText = null;
 
         // ★ コライダーオブジェクトの破棄もコメントアウト
         // this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
 
-        // 背景画像オブジェクトも破棄する
+        // 背景画像オブジェクトのみ破棄する
         if (this.backgroundImage) { this.backgroundImage.destroy(); this.backgroundImage = null; }
-         console.log("GameScene shutdown finished"); // ★ ログ追加
+         console.log("GameScene shutdown finished"); // ログ追加
     }
 }
 
 
 // --- UIScene ---
 class UIScene extends Phaser.Scene {
-    constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; this.vajraGaugeText = null; this.dropPoolIconsGroup = null; this.gameSceneListenerAttached = false; this.gameScene = null; }
+    constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; /* this.vajraGaugeText = null; this.dropPoolIconsGroup = null; */ this.gameSceneListenerAttached = false; this.gameScene = null; } // ★ プロパティをコメントアウト
     create() {
-        console.log("UIScene create started"); // ★ ログ追加
+        console.log("UIScene create started"); // ログ追加
         this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; const textStyle = { fontSize: '24px', fill: '#fff' };
 
         // ★ UIテキストの生成のみ残す
-        this.livesText = this.add.text(16, 16, 'ライフ: ', textStyle);
-        this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ', textStyle).setOrigin(0.5, 0);
-        this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: ', textStyle).setOrigin(1, 0);
+        this.livesText = this.add.text(16, 16, 'ライフ: -', textStyle); // ★ 仮のテキスト
+        this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: -', textStyle).setOrigin(0.5, 0); // ★ 仮のテキスト
+        this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: -', textStyle).setOrigin(1, 0); // ★ 仮のテキスト
+
         // this.vajraGaugeText = this.add.text(...).setVisible(false); // ★ コメントアウト
         // this.dropPoolIconsGroup = this.add.group(); // ★ コメントアウト
 
-        // ★ UI 表示更新関連のイベントリスナー設定はコメントアウト
+        // ★ UI 表示更新関連のイベントリスナー設定は全てコメントアウト
         // this.gameScene = this.scene.get('GameScene'); if (this.gameScene) { this.gameScene.events.on('gameResize', this.onGameResize, this); } try { const gameScene = this.scene.get('GameScene'); if (gameScene && gameScene.scene.settings.status === Phaser.Scenes.RUNNING) { this.registerGameEventListeners(gameScene); } else { this.scene.get('GameScene').events.once('create', this.registerGameEventListeners, this); } } catch (e) { console.error("Error setting up UIScene listeners:", e); }
         // this.events.on('shutdown', () => { this.unregisterGameEventListeners(); if (this.gameScene && this.gameScene.events) { this.gameScene.events.off('gameResize', this.onGameResize, this); } });
 
-        // ★ 初期表示の更新もコメントアウト
+        // ★ 初期表示の更新も全てコメントアウト
         // this.updateDropPoolDisplay([]);
         // this.updateLivesDisplay(3); // 仮の値
         // this.updateScoreDisplay(0); // 仮の値
         // this.updateStageDisplay(1); // 仮の値
 
-        console.log("UIScene create finished"); // ★ ログ追加
+        console.log("UIScene create finished"); // ログ追加
     }
 
-    // ★ UI 更新関連の関数は全てコメントアウト
-    onGameResize() { /* console.log("UIScene handleResize"); */ this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; this.livesText?.setPosition(16, 16); this.stageText?.setPosition(this.gameWidth / 2, 16); this.scoreText?.setPosition(this.gameWidth - 16, 16); /* this.vajraGaugeText?.setPosition(16, this.gameHeight - UI_BOTTOM_OFFSET); this.updateDropPoolPosition(); */ } // ★ Vajra/DropPool関連もコメントアウト
-    registerGameEventListeners(gameScene) { /* ... */ }
-    unregisterGameEventListeners(gameScene = null) { /* ... */ }
-    updateLivesDisplay(lives) { if (this.livesText) this.livesText.setText(`ライフ: ${lives}`); } // ★ この関数自体は残すが、リスナーがないので呼ばれない
-    updateScoreDisplay(score) { if (this.scoreText) this.scoreText.setText(`スコア: ${score}`); } // ★ この関数自体は残すが、リスナーがないので呼ばれない
-    updateStageDisplay(stage) { if (this.stageText) this.stageText.setText(`ステージ: ${stage}`); } // ★ この関数自体は残すが、リスナーがないので呼ばれない
+    // ★ UI 更新関連の関数は全てコメントアウト（または最小限化）
+    onGameResize() { /* console.log("UIScene handleResize"); */ this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; this.livesText?.setPosition(16, 16); this.stageText?.setPosition(this.gameWidth / 2, 16); this.scoreText?.setPosition(this.gameWidth - 16, 16); /* this.vajraGaugeText?.setPosition(16, this.gameHeight - UI_BOTTOM_OFFSET); this.updateDropPoolPosition(); */ }
+    // registerGameEventListeners() { ... }
+    // unregisterGameEventListeners() { ... }
+    // updateLivesDisplay() { ... }
+    // updateScoreDisplay() { ... }
+    // updateStageDisplay() { ... }
     // activateVajraUIDisplay() { ... }
     // updateVajraGaugeDisplay() { ... }
     // deactivateVajraUIDisplay() { ... }
-    updateDropPoolDisplay(dropPoolTypes) { /* ... */ }
-    updateDropPoolPosition() { /* ... */ }
+    // updateDropPoolDisplay() { ... }
+    // updateDropPoolPosition() { ... }
 }
 
 // --- Phaserゲーム設定 ---
 const config = {
     type: Phaser.AUTO,
     scale: { mode: Phaser.Scale.FIT, parent: 'phaser-game-container', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
-    physics: { default: 'arcade', arcade: { debug: false, gravity: { y: 0 } } }, // ★ デバッグ表示は Off に戻す
-    scene: [BootScene, GameScene, UIScene], // ★ TitleScene を除外
+    physics: { default: 'arcade', arcade: { debug: false, gravity: { y: 0 } } }, // 物理演算は有効のまま
+    scene: [BootScene, GameScene, UIScene], // TitleScene を除外したまま
     input: { activePointers: 3, },
     render: { pixelArt: false, antialias: true, }
 };
