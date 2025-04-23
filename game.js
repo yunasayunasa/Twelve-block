@@ -2,8 +2,8 @@
 const PADDLE_WIDTH_RATIO = 0.2;
 const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
-const BALL_RADIUS = 18; // 30のまま
-const PHYSICS_BALL_RADIUS = 60; // ★★★ 当たり判定(紫に見える緑円)の半径 (ここを調整！) ★★★
+const BALL_RADIUS = 9; // ★ 見た目のボール画像の半径 (18 / 2)
+const PHYSICS_BALL_RADIUS = 60; // ★ 当たり判定(緑円)の半径
 const BALL_INITIAL_VELOCITY_Y = -350;
 const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150];
 const BRICK_ROWS = 5;
@@ -141,7 +141,7 @@ class GameScene extends Phaser.Scene {
         this.physics.world.setBoundsCollision(true, true, true, false); this.physics.world.on('worldbounds', this.handleWorldBounds, this);
         this.paddle = this.physics.add.image(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET, 'whitePixel').setTint(0xffffff).setImmovable(true).setData('originalWidthRatio', PADDLE_WIDTH_RATIO); this.updatePaddleSize();
         this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
-        this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
+        this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS); // 見た目の半径を使用
         this.setupStage();
         this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'GAME OVER\nTap to Restart', { fontSize: '48px', fill: '#f00', align: 'center' }).setOrigin(0.5).setVisible(false).setDepth(1);
         this.powerUps = this.physics.add.group(); this.familiars = this.physics.add.group(); this.makiraBeams = this.physics.add.group();
@@ -182,8 +182,10 @@ class GameScene extends Phaser.Scene {
     createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
         const ball = this.balls.create(x, y, 'ball_image')
                          .setOrigin(0.5, 0.5)
+                         // 見た目のサイズは BALL_RADIUS を使う (直径 = 18)
                          .setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2)
-                         // ★★★ オフセット値を調整してみる (例: -5, -5) ★★★
+                         // 当たり判定(緑円)のサイズは PHYSICS_BALL_RADIUS を使う (半径 = 60)
+                         // オフセットは(0, 0)のまま
                          .setCircle(PHYSICS_BALL_RADIUS)
                          .setCollideWorldBounds(true)
                          .setBounce(1);
@@ -191,12 +193,13 @@ class GameScene extends Phaser.Scene {
         if (ball.body) {
              ball.setVelocity(vx, vy);
              ball.body.onWorldBounds = true;
-             // ログ出力でオフセット値を確認
+             // ログ出力
              console.log(`Ball created at x=${ball.x}, y=${ball.y}`);
+             console.log(`Ball display size width=${ball.displayWidth}, height=${ball.displayHeight}`); // 見た目のサイズ
              console.log(`Ball body position x=${ball.body.x}, y=${ball.body.y}`);
              console.log(`Ball body center x=${ball.body.center.x}, y=${ball.body.center.y}`);
-             console.log(`Ball body size width=${ball.body.width}, height=${ball.body.height}, radius=${ball.body.radius}`);
-             console.log(`Ball body offset x=${ball.body.offset.x}, y=${ball.body.offset.y}`); // ★ オフセット値を確認
+             console.log(`Ball body size width=${ball.body.width}, height=${ball.body.height}, radius=${ball.body.radius}`); // 半径が60になっているはず
+             console.log(`Ball body offset x=${ball.body.offset.x}, y=${ball.body.offset.y}`);
              console.log(`Ball initial velocity vx=${ball.body.velocity.x}, vy=${ball.body.velocity.y}`);
         } else {
             console.error("Failed to create ball physics body!");
@@ -232,7 +235,7 @@ class GameScene extends Phaser.Scene {
         return ball;
     }
 
-    // ... (残りの GameScene メソッド) ...
+    // ... (残りの GameScene メソッドは変更なし) ...
     launchBall() { if (!this.isBallLaunched && this.balls) { const firstBall = this.balls.getFirstAlive(); if (firstBall) { const initialVelocityX = Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0], BALL_INITIAL_VELOCITY_X_RANGE[1]);
         console.log(`Ball launched with vx=${initialVelocityX}, vy=${BALL_INITIAL_VELOCITY_Y}`);
         firstBall.setVelocity(initialVelocityX, BALL_INITIAL_VELOCITY_Y); this.isBallLaunched = true; } } }
@@ -441,7 +444,7 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            debug: true, // ★★★ デバッグモードは有効のまま ★★★
+            debug: false, // ★★★ デバッグモードをオフに戻す ★★★
             gravity: { y: 0 }
         }
     },
