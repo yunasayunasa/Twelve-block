@@ -186,7 +186,7 @@ class GameScene extends Phaser.Scene {
         this.physics.world.on('worldbounds', this.handleWorldBounds, this);
 
 
-        // ★ 背景画像の表示をコメントアウト
+        // 背景画像の表示をコメントアウトしたまま
         // this.backgroundImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'game_background');
         // this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight); // 画面いっぱいに表示
 
@@ -242,12 +242,12 @@ class GameScene extends Phaser.Scene {
         // リサイズ時の画面サイズもログ出力
         console.log(`Resize - new width: ${gameSize.width}, new height: ${gameSize.height}`);
 
-        // リサイズ時に gameWidth と gameHeight を更新 (固定サイズの場合は不要だが、念のため残しておく)
+        // リサイズ時に gameWidth と gameHeight を更新 (固定サイズなので不要だが、念のためコメントアウトしたまま)
         // this.gameWidth = gameSize.width;
         // this.gameHeight = gameSize.height;
 
         // this.updatePaddleSize(); // パドルサイズ更新は不要なのでコメントアウトしたまま
-        // ★ 背景画像の表示更新をコメントアウト
+        // 背景画像の表示更新をコメントアウトしたまま
         // if (this.backgroundImage) {
         //      this.backgroundImage.setPosition(this.gameWidth / 2, this.gameHeight / 2);
         //      this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight);
@@ -391,7 +391,7 @@ class GameScene extends Phaser.Scene {
         // コライダーオブジェクトの破棄もコメントアウトしたまま
         // this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
 
-        // ★ 背景画像オブジェクトの破棄をコメントアウト（生成しないので破棄も不要）
+        // 背景画像オブジェクトの破棄をコメントアウト（生成しないので破棄も不要）
         // if (this.backgroundImage) { this.backgroundImage.destroy(); this.backgroundImage = null; }
          console.log("GameScene shutdown finished"); // ログ追加
     }
@@ -442,9 +442,9 @@ class UIScene extends Phaser.Scene {
 
 // --- Phaserゲーム設定 ---
 const config = {
-    type: Phaser.AUTO,
+    type: Phaser.CANVAS, // ★ レンダリングタイプを CANVAS に変更
     scale: {
-        mode: Phaser.Scale.NONE, // モードを NONE に変更
+        mode: Phaser.Scale.NONE, // モードは NONE のまま
         parent: 'phaser-game-container', // parent は残しておく
         width: 375, // 幅を固定値に変更
         height: 667 // 高さを固定値に変更
