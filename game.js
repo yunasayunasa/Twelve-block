@@ -207,7 +207,7 @@ class GameScene extends Phaser.Scene {
         // ボールの生成・追加
         // 初期位置は画面の物理座標で指定
         const initialBallX = this.gameWidth / 2; // 画面幅の中央
-        const initialBallY = this.gameHeight * 0.3; // 画面高さの上の方 (gameHeightが0の場合は0になる)
+        const initialBallY = this.gameHeight * 0.3; // 画面高さの上の方
         this.createAndAddBall(initialBallX, initialBallY);
 
 
@@ -285,6 +285,8 @@ class GameScene extends Phaser.Scene {
              // ★ 生成直後のボールの物理ボディの位置と速度をログ出力
              console.log(`Ball created at x=${ball.x}, y=${ball.y}`); // 表示オブジェクトの位置
              console.log(`Ball body position x=${ball.body.x}, y=${ball.body.y}`); // 物理ボディの位置
+             // ★ ボール物理ボディの幅と高さをログ出力
+             console.log(`Ball body width=${ball.body.width}, height=${ball.body.height}`); // 物理ボディのサイズ
              console.log(`Ball initial velocity vx=${ball.body.velocity.x}, vy=${ball.body.velocity.y}`);
 
         } else { console.error("Failed to create ball physics body!"); ball.destroy(); return null; }
@@ -443,10 +445,10 @@ class UIScene extends Phaser.Scene {
 const config = {
     type: Phaser.AUTO,
     scale: {
-        mode: Phaser.Scale.FIT, // ★ モードは FIT のまま残しておく
-        parent: 'phaser-game-container', // ★ parent も残しておく
-        width: 375, // ★ 幅を固定値に変更 (ユーザー提供ログの幅を使用)
-        height: 667 // ★ 高さを固定値に変更 (ゲーム背景画像の高さを仮に使用)
+        mode: Phaser.Scale.NONE, // ★ モードを NONE に変更
+        parent: 'phaser-game-container', // parent は残しておく
+        width: 375, // 幅を固定値に変更
+        height: 667 // 高さを固定値に変更
     },
     physics: { default: 'arcade', arcade: { debug: false, gravity: { y: 0 } } }, // 物理演算は有効のまま
     scene: [BootScene, GameScene, UIScene], // TitleScene を除外したまま
