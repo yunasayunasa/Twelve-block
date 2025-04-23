@@ -5,7 +5,7 @@ const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
 const BALL_RADIUS = 12; // ボールは生成しないが定数は残す
 // ボールの初期速度は下方向に変更 (物理演算が有効なので影響する)
-const BALL_INITIAL_VELOCITY_Y = 350; // 下方向を正とする
+const BALL_INITIAL_VELOCITY_Y = 350; // 下方向を正とする (初期速度も重力で変わるはず)
 
 const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150]; // 初期速度Xも未使用だが残す
 const BRICK_ROWS = 5;
@@ -167,14 +167,14 @@ class GameScene extends Phaser.Scene {
     create() {
         console.log("GameScene create started"); // ログ追加
 
-        // ★ 画面サイズをログ出力 (scale.width, scale.height は config で設定された値)
+        // 画面サイズをログ出力 (scale.width, scale.height は config で設定された値)
         console.log(`Scale Manager - width: ${this.scale.width}, height: ${this.scale.height}`);
 
-        // ★ gameWidth, gameHeight を Scale Manager の width, height で設定
+        // gameWidth, gameHeight を Scale Manager の width, height で設定
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
 
-        // ★ 物理世界の境界サイズをログ出力
+        // 物理世界の境界サイズをログ出力
         console.log(`Physics World Bounds - x: ${this.physics.world.bounds.x}, y: ${this.physics.world.bounds.y}, width: ${this.physics.world.bounds.width}, height: ${this.physics.world.bounds.height}`);
 
         // ゲーム背景画像の表示 (ロードが成功すれば表示される)
@@ -282,10 +282,10 @@ class GameScene extends Phaser.Scene {
              ball.setVelocity(0, NORMAL_BALL_SPEED); // 下方向に速度を与える
              ball.body.onWorldBounds = true; // ワールド境界衝突イベントを有効に戻す
 
-             // ★ 生成直後のボールの物理ボディの位置と速度をログ出力
+             // 生成直後のボールの物理ボディの位置と速度をログ出力
              console.log(`Ball created at x=${ball.x}, y=${ball.y}`); // 表示オブジェクトの位置
              console.log(`Ball body position x=${ball.body.x}, y=${ball.body.y}`); // 物理ボディの位置
-             // ★ ボール物理ボディの幅と高さをログ出力
+             // ボール物理ボディの幅と高さをログ出力
              console.log(`Ball body width=${ball.body.width}, height=${ball.body.height}`); // 物理ボディのサイズ
              console.log(`Ball initial velocity vx=${ball.body.velocity.x}, vy=${ball.body.velocity.y}`);
 
