@@ -167,13 +167,15 @@ class GameScene extends Phaser.Scene {
     create() {
         console.log("GameScene create started"); // ログ追加
 
-        // ★ 画面サイズをログ出力
+        // ★ 画面サイズをログ出力 (scale.width, scale.height は config で設定された値)
         console.log(`Scale Manager - width: ${this.scale.width}, height: ${this.scale.height}`);
+
+        // ★ gameWidth, gameHeight を Scale Manager の width, height で設定
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
 
-
         // ゲーム背景画像の表示 (ロードが成功すれば表示される)
+        // 背景画像の表示位置とサイズは gameWidth, gameHeight に依存
         this.backgroundImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'game_background');
         this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight); // 画面いっぱいに表示
 
@@ -183,8 +185,12 @@ class GameScene extends Phaser.Scene {
         // this.time.delayedCall(50, () => { if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
 
         // 物理世界の境界設定のみ残す
-        this.physics.world.setBoundsCollision(true, true, true, false);
+        // physics.world.setBoundsCollision の引数は物理世界の座標系で解釈される
+        this.physics.world.setBoundsCollision(true, true, true, false); // 左、右、上は境界衝突有効、下は無効
+
+
         // ワールド境界衝突リスナーを有効に戻す (ボールの跳ね返り確認のため)
+        // イベントが発生するのは、物理ボディが物理世界の境界に衝突したとき
         this.physics.world.on('worldbounds', this.handleWorldBounds, this);
 
 
@@ -193,11 +199,12 @@ class GameScene extends Phaser.Scene {
         // this.updatePaddleSize(); // パドルサイズ更新も不要
 
         // ボールを物理グループとして作成
-        this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
+        this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true }); // collideWorldBounds=true でワールド境界で物理的な衝突が発生
+
         // ボールの生成・追加
-        // ★ 初期位置を固定値に変更
+        // 初期位置は画面の物理座標で指定
         const initialBallX = this.gameWidth / 2; // 画面幅の中央
-        const initialBallY = this.gameHeight * 0.3; // 画面高さの上の方
+        const initialBallY = this.gameHeight * 0.3; // 画面高さの上の方 (gameHeightが0の場合は0になる)
         this.createAndAddBall(initialBallX, initialBallY);
 
 
@@ -228,25 +235,33 @@ class GameScene extends Phaser.Scene {
 
     handleResize(gameSize, baseSize, displaySize, resolution) {
         console.log("GameScene handleResize"); // ログ追加
-        // ★ リサイズ時の画面サイズもログ出力
+        // リサイズ時の画面サイズもログ出力
         console.log(`Resize - new width: ${gameSize.width}, new height: ${gameSize.height}`);
 
-        this.gameWidth = gameSize.width;
-        this.gameHeight = gameSize.height;
+        // ★ リサイズ時に gameWidth と gameHeight を更新 (固定サイズの場合は不要だが、念のため残しておく)
+        // this.gameWidth = gameSize.width;
+        // this.gameHeight = gameSize.height;
+
         // this.updatePaddleSize(); // パドルサイズ更新は不要なのでコメントアウトしたまま
         if (this.backgroundImage) {
+             // ★ 固定サイズなので、背景画像の位置とサイズ更新も不要かもしれないが、
+             // ★ scaleMode.FIT の挙動によっては必要になる場合があるため残しておく
              this.backgroundImage.setPosition(this.gameWidth / 2, this.gameHeight / 2);
              this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight);
         }
         // UIイベント発行はコメントアウトしたまま
         // if (this.scene.isActive('UIScene')) { this.events.emit('gameResize'); }
+
+        // 物理世界の境界をリサイズに合わせて再設定する必要があるかもしれない
+        // 固定サイズの場合はリサイズが発生しても gameWidth/gameHeight は変わらないため、境界の再設定は不要なはず
+        // this.physics.world.setBoundsCollision(true, true, true, false, 0, 0, gameSize.width, gameSize.height);
     }
 
     // setupStage 関数はコメントアウトしたまま
     // setupStage() { ... }
 
     update() {
-        // ★ update 関数内のボールに関するループ処理全体をコメントアウトしたまま
+        // update 関数内のボールに関するループ処理全体をコメントアウトしたまま
         // この最小構成では、update 関数内で特別に行う処理はない
         // ボールは物理演算で自動的に動く
     }
@@ -257,14 +272,16 @@ class GameScene extends Phaser.Scene {
     // createAndAddBall 関数 -> ボールをwhitePixelで生成し、初期速度を設定
     createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
         // whitePixelキーを使用
+        // x, y は GameScene の物理世界の座標
         const ball = this.balls.create(x, y, 'whitePixel').setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2).setTint(DEFAULT_BALL_COLOR).setCircle(BALL_RADIUS).setCollideWorldBounds(true).setBounce(1);
         if (ball.body) {
              // ボールの初期速度を設定（下方向に適当な速度）
              ball.setVelocity(0, NORMAL_BALL_SPEED); // 下方向に速度を与える
              ball.body.onWorldBounds = true; // ワールド境界衝突イベントを有効に戻す
 
-             // ★ 生成直後のボールの位置と速度をログ出力
-             console.log(`Ball created at x=${ball.x}, y=${ball.y}`);
+             // ★ 生成直後のボールの物理ボディの位置と速度をログ出力
+             console.log(`Ball created at x=${ball.x}, y=${ball.y}`); // 表示オブジェクトの位置
+             console.log(`Ball body position x=${ball.body.x}, y=${ball.body.y}`); // 物理ボディの位置
              console.log(`Ball initial velocity vx=${ball.body.velocity.x}, vy=${ball.body.velocity.y}`);
 
         } else { console.error("Failed to create ball physics body!"); ball.destroy(); return null; }
@@ -422,7 +439,12 @@ class UIScene extends Phaser.Scene {
 // --- Phaserゲーム設定 ---
 const config = {
     type: Phaser.AUTO,
-    scale: { mode: Phaser.Scale.FIT, parent: 'phaser-game-container', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
+    scale: {
+        mode: Phaser.Scale.FIT, // ★ モードは FIT のまま残しておく
+        parent: 'phaser-game-container', // ★ parent も残しておく
+        width: 375, // ★ 幅を固定値に変更 (ユーザー提供ログの幅を使用)
+        height: 667 // ★ 高さを固定値に変更 (ゲーム背景画像の高さを仮に使用)
+    },
     physics: { default: 'arcade', arcade: { debug: false, gravity: { y: 0 } } }, // 物理演算は有効のまま
     scene: [BootScene, GameScene, UIScene], // TitleScene を除外したまま
     input: { activePointers: 3, }, // 入力は使用しないが有効のままにしておく
