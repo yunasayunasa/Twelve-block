@@ -2,7 +2,8 @@
 const PADDLE_WIDTH_RATIO = 0.2;
 const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
-const BALL_RADIUS = 20; // 30のまま
+const BALL_RADIUS = 30; // 30のまま
+const PHYSICS_BALL_RADIUS = 10; // ★★★ 当たり判定(紫に見える緑円)の半径 (ここを調整！) ★★★
 const BALL_INITIAL_VELOCITY_Y = -350;
 const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150];
 const BRICK_ROWS = 5;
@@ -183,7 +184,7 @@ class GameScene extends Phaser.Scene {
                          .setOrigin(0.5, 0.5)
                          .setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2)
                          // ★★★ オフセット値を調整してみる (例: -5, -5) ★★★
-                         .setCircle(BALL_RADIUS, +50, -45)
+                         .setCircle(PHYSICS_BALL_RADIUS)
                          .setCollideWorldBounds(true)
                          .setBounce(1);
 
