@@ -2,7 +2,7 @@
 const PADDLE_WIDTH_RATIO = 0.2;
 const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
-const BALL_RADIUS = 9; // ★ 見た目のボール画像の半径 (18 / 2)
+const BALL_RADIUS = 18; // ★ 見た目のボール画像の半径 
 const PHYSICS_BALL_RADIUS = 60; // ★ 当たり判定(緑円)の半径
 const BALL_INITIAL_VELOCITY_Y = -350;
 const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150];
