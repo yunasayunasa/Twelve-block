@@ -174,25 +174,25 @@ class GameScene extends Phaser.Scene {
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
 
-        // ★ 物理世界の境界を明示的に設定
+        // 物理世界の境界を明示的に設定
         // physics.world.setBoundsCollision の引数は物理世界の座標系で解釈される
         this.physics.world.setBoundsCollision(true, true, true, false, 0, 0, this.gameWidth, this.gameHeight); // 左、右、上は境界衝突有効、下は無効。境界の範囲を0,0からgameWidth,gameHeightまでと明示的に指定。
 
         // 物理世界の境界サイズをログ出力
         console.log(`Physics World Bounds - x: ${this.physics.world.bounds.x}, y: ${this.physics.world.bounds.y}, width: ${this.physics.world.bounds.width}, height: ${this.physics.world.bounds.height}`);
 
-
         // ワールド境界衝突リスナーを有効に戻す (ボールの跳ね返り確認のため)
         // イベントが発生するのは、物理ボディが物理世界の境界に衝突したとき
         this.physics.world.on('worldbounds', this.handleWorldBounds, this);
 
 
-        // ゲーム背景画像の表示 (ロードが成功すれば表示される)
-        // 背景画像の表示位置とサイズは gameWidth, gameHeight に依存
-        this.backgroundImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'game_background');
-        this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight); // 画面いっぱいに表示
+        // ★ 背景画像の表示をコメントアウト
+        // this.backgroundImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'game_background');
+        // this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight); // 画面いっぱいに表示
 
-        this.cameras.main.setBackgroundColor('#222'); // 背景画像で見えなくなりますが、念のため残します
+        // 背景色を設定（背景画像がない場合はこれが表示される）
+        this.cameras.main.setBackgroundColor('#222');
+
 
         // UI シーンへのイベント発行はコメントアウト
         // this.time.delayedCall(50, () => { if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
@@ -247,16 +247,15 @@ class GameScene extends Phaser.Scene {
         // this.gameHeight = gameSize.height;
 
         // this.updatePaddleSize(); // パドルサイズ更新は不要なのでコメントアウトしたまま
-        if (this.backgroundImage) {
-             // 固定サイズなので、背景画像の位置とサイズ更新も不要かもしれないが、
-             // scaleMode.FIT の挙動によっては必要になる場合があるため残しておく
-             this.backgroundImage.setPosition(this.gameWidth / 2, this.gameHeight / 2);
-             this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight);
-        }
+        // ★ 背景画像の表示更新をコメントアウト
+        // if (this.backgroundImage) {
+        //      this.backgroundImage.setPosition(this.gameWidth / 2, this.gameHeight / 2);
+        //      this.backgroundImage.setDisplaySize(this.gameWidth, this.gameHeight);
+        // }
         // UIイベント発行はコメントアウトしたまま
         // if (this.scene.isActive('UIScene')) { this.events.emit('gameResize'); }
 
-        // ★ 物理世界の境界をリサイズに合わせて再設定する必要があるかもしれない (固定サイズなので不要なはずだが念のため)
+        // 物理世界の境界をリサイズに合わせて再設定する必要があるかもしれない (固定サイズなので不要なはずだが念のため)
         // this.physics.world.setBoundsCollision(true, true, true, false, 0, 0, this.gameWidth, this.gameHeight);
     }
 
@@ -392,8 +391,8 @@ class GameScene extends Phaser.Scene {
         // コライダーオブジェクトの破棄もコメントアウトしたまま
         // this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
 
-        // 背景画像オブジェクトのみ破棄する
-        if (this.backgroundImage) { this.backgroundImage.destroy(); this.backgroundImage = null; }
+        // ★ 背景画像オブジェクトの破棄をコメントアウト（生成しないので破棄も不要）
+        // if (this.backgroundImage) { this.backgroundImage.destroy(); this.backgroundImage = null; }
          console.log("GameScene shutdown finished"); // ログ追加
     }
 }
@@ -445,7 +444,7 @@ class UIScene extends Phaser.Scene {
 const config = {
     type: Phaser.AUTO,
     scale: {
-        mode: Phaser.Scale.NONE, // ★ モードを NONE に変更
+        mode: Phaser.Scale.NONE, // モードを NONE に変更
         parent: 'phaser-game-container', // parent は残しておく
         width: 375, // 幅を固定値に変更
         height: 667 // 高さを固定値に変更
