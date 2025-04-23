@@ -236,21 +236,7 @@ class GameScene extends Phaser.Scene {
     // setupStage() { ... }
 
     update() {
-        // ★ update 関数内のボールに関するループ処理全体をコメントアウト
-        // this.balls.getChildren().forEach(ball => {
-        //     if (ball.active) {
-        //          if (this.isBallLaunched && !this.isStageClearing && ball.y > this.gameHeight + ball.displayHeight) { ... }
-        //          if (ball.getData('isSindara')) { ... }
-        //          if (ball.body && this.isBallLaunched) { ... }
-        //     }
-        // });
-        // if (sindaraBalls.length === 1 ...) { ... }
-        // if (activeBallCount === 0 ...) { ... }
-        // this.powerUps.children.each(...);
-        // if (this.balls.countActive(true) === 1 ...) { ... }
-        // if (this.isMakiraActive && this.paddle ...) { ... }
-        // if (this.makiraBeams) { ... }
-
+        // update 関数内のボールに関するループ処理全体をコメントアウトしたまま
         // この最小構成では、update 関数内で特別に行う処理はない
         // ボールは物理演算で自動的に動く
     }
