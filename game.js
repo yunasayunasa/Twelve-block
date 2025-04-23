@@ -2,7 +2,7 @@
 const PADDLE_WIDTH_RATIO = 0.2;
 const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
-const BALL_RADIUS = 30; // ★★★ 30で試す ★★★
+const BALL_RADIUS = 30; // 30のまま
 const BALL_INITIAL_VELOCITY_Y = -350;
 const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150];
 const BRICK_ROWS = 5;
@@ -21,7 +21,6 @@ const MAX_STAGE = 12;
 const GAME_MODE = { NORMAL: 'normal', ALL_STARS: 'all_stars' };
 const BRICK_COLORS = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffff00, 0xff00ff, 0x00ffff ];
 const BRICK_MARKED_COLOR = 0x666666;
-// const DEFAULT_BALL_COLOR = 0x00ff00; // 画像を使うので不要に
 
 const POWERUP_DROP_RATE = 0.7;
 const BAISRAVA_DROP_RATE = 0.02;
@@ -91,7 +90,6 @@ class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
     preload() {
         this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
-        // ★ 通常ボール画像のロード (assets/ball.png が必要)
         this.load.image('ball_image', 'assets/ball.png');
     }
     create() { this.scene.start('TitleScene'); }
@@ -112,7 +110,7 @@ class TitleScene extends Phaser.Scene {
 
 // --- GameScene ---
 class GameScene extends Phaser.Scene {
-    constructor() {
+     constructor() {
         super('GameScene');
         this.paddle = null; this.balls = null; this.bricks = null; this.powerUps = null; this.lives = 0; this.gameOverText = null; this.isBallLaunched = false; this.gameWidth = 0; this.gameHeight = 0; this.currentMode = null; this.currentStage = 1; this.score = 0;
         this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null;
@@ -134,7 +132,7 @@ class GameScene extends Phaser.Scene {
         this.stageDropPool = [];
     }
 
-    preload() { } // BootSceneでロード済み
+    preload() { }
 
     create() {
         this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; this.cameras.main.setBackgroundColor('#222');
@@ -154,7 +152,7 @@ class GameScene extends Phaser.Scene {
         this.events.on('shutdown', this.shutdown, this);
     }
 
-    updatePaddleSize() { if (!this.paddle) return; const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio'); this.paddle.setDisplaySize(newWidth, PADDLE_HEIGHT); this.paddle.refreshBody(); const halfWidth = this.paddle.displayWidth / 2; this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth); }
+     updatePaddleSize() { if (!this.paddle) return; const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio'); this.paddle.setDisplaySize(newWidth, PADDLE_HEIGHT); this.paddle.refreshBody(); const halfWidth = this.paddle.displayWidth / 2; this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth); }
     handleResize(gameSize, baseSize, displaySize, resolution) { this.gameWidth = gameSize.width; this.gameHeight = gameSize.height; this.updatePaddleSize(); if (this.scene.isActive('UIScene')) { this.events.emit('gameResize'); } }
     setupStage() { if (this.currentMode === GAME_MODE.NORMAL) { const shuffledPool = Phaser.Utils.Array.Shuffle([...NORMAL_MODE_POWERUP_POOL]); this.stageDropPool = shuffledPool.slice(0, 4); this.events.emit('updateDropPoolUI', this.stageDropPool); } else { this.stageDropPool = [...ALLSTARS_MODE_POWERUP_POOL]; this.events.emit('updateDropPoolUI', []); } this.createBricks(); }
 
@@ -181,20 +179,23 @@ class GameScene extends Phaser.Scene {
     }
 
     createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
-        // ボール生成時に 'ball_image' を使用
         const ball = this.balls.create(x, y, 'ball_image')
-                         .setOrigin(0.5, 0.5) // ★★★ 原点を明示的に中心に設定 ★★★
+                         .setOrigin(0.5, 0.5)
                          .setDisplaySize(BALL_RADIUS * 2, BALL_RADIUS * 2)
-                         .setCircle(BALL_RADIUS)
+                         // ★★★ オフセット値を調整してみる (例: -5, -5) ★★★
+                         .setCircle(BALL_RADIUS, -5, -5)
                          .setCollideWorldBounds(true)
                          .setBounce(1);
 
         if (ball.body) {
              ball.setVelocity(vx, vy);
              ball.body.onWorldBounds = true;
+             // ログ出力でオフセット値を確認
              console.log(`Ball created at x=${ball.x}, y=${ball.y}`);
              console.log(`Ball body position x=${ball.body.x}, y=${ball.body.y}`);
+             console.log(`Ball body center x=${ball.body.center.x}, y=${ball.body.center.y}`);
              console.log(`Ball body size width=${ball.body.width}, height=${ball.body.height}, radius=${ball.body.radius}`);
+             console.log(`Ball body offset x=${ball.body.offset.x}, y=${ball.body.offset.y}`); // ★ オフセット値を確認
              console.log(`Ball initial velocity vx=${ball.body.velocity.x}, vy=${ball.body.velocity.y}`);
         } else {
             console.error("Failed to create ball physics body!");
@@ -221,15 +222,16 @@ class GameScene extends Phaser.Scene {
             isAnilaActive: data ? data.isAnilaActive : false
         });
         if (data) {
-            this.updateBallTint(ball); // パワーアップ状態を反映
+            this.updateBallTint(ball);
             if (ball.getData('isFast')) this.applySpeedModifier(ball, POWERUP_TYPES.SHATORA);
             else if (ball.getData('isSlow')) this.applySpeedModifier(ball, POWERUP_TYPES.HAILA);
         } else {
-            ball.clearTint(); // 通常ボールはTintをクリア
+            ball.clearTint();
         }
         return ball;
     }
 
+    // ... (残りの GameScene メソッド) ...
     launchBall() { if (!this.isBallLaunched && this.balls) { const firstBall = this.balls.getFirstAlive(); if (firstBall) { const initialVelocityX = Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0], BALL_INITIAL_VELOCITY_X_RANGE[1]);
         console.log(`Ball launched with vx=${initialVelocityX}, vy=${BALL_INITIAL_VELOCITY_Y}`);
         firstBall.setVelocity(initialVelocityX, BALL_INITIAL_VELOCITY_Y); this.isBallLaunched = true; } } }
@@ -412,7 +414,8 @@ class GameScene extends Phaser.Scene {
 
 // --- UIScene ---
 class UIScene extends Phaser.Scene {
-    constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; this.vajraGaugeText = null; this.dropPoolIconsGroup = null; this.gameSceneListenerAttached = false; this.gameScene = null; }
+    // ... (変更なし) ...
+     constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; this.vajraGaugeText = null; this.dropPoolIconsGroup = null; this.gameSceneListenerAttached = false; this.gameScene = null; }
     create() {
         console.log("UIScene create started");
         this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; const textStyle = { fontSize: '24px', fill: '#fff' };
