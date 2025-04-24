@@ -215,17 +215,131 @@ class GameScene extends Phaser.Scene {
     }
 
     launchBall() { if (!this.isBallLaunched && this.balls) { const firstBall = this.balls.getFirstAlive(); if (firstBall) { const initialVelocityX = Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0], BALL_INITIAL_VELOCITY_X_RANGE[1]); firstBall.setVelocity(initialVelocityX, BALL_INITIAL_VELOCITY_Y); this.isBallLaunched = true; } } }
-    createBricks() { /* ... (変更なし) ... */ }
-    createBricksFallbackToNormal() { /* ... (変更なし) ... */ }
-    handleBrickHit(brick, damage = 1) { /* ... (変更なし) ... */ }
-    handleBrickDestruction(brick) { /* ... (変更なし) ... */ }
-    hitBrick(brick, ball) { /* ... (変更なし) ... */ }
-    handleBallBrickOverlap(ball, brick) { /* ... (変更なし) ... */ }
-    handleBikaraYangDestroy(ball, hitBrick) { /* ... (変更なし) ... */ }
-    hitBrickWithMakiraBeam(beam, brick) { /* ... (変更なし) ... */ }
-    triggerVajraDestroy() { /* ... (変更なし) ... */ }
-    activateBaisrava() { /* ... (変更なし) ... */ }
-    getDestroyableBrickCount() { /* ... (変更なし) ... */ }
+
+    // --- ここから省略されていたメソッド群 ---
+    createBricks() {
+        console.log(`Generating Bricks (Stage ${this.currentStage})`);
+        if (this.bricks) { this.bricks.clear(true, true); this.bricks.destroy(); }
+        this.bricks = this.physics.add.staticGroup();
+        const stage = this.currentStage;
+        const maxStage = MAX_STAGE;
+        const rows = BRICK_ROWS + Math.floor(stage / 3);
+        const cols = BRICK_COLS + Math.floor(stage / 4);
+        const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2;
+        const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4)));
+        const actualCols = Math.min(cols, BRICK_COLS + 4);
+        let durableRatio = 0;
+        let indestructibleRatio = 0;
+        let progress = 0;
+        if (stage >= 3) {
+            progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1);
+            durableRatio = progress * 0.5;
+            indestructibleRatio = progress * 0.15;
+        }
+        const bW = this.scale.width * BRICK_WIDTH_RATIO;
+        const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING;
+        const oX = (this.scale.width - totalBrickWidth) / 2;
+
+        let specialLayoutType = null;
+        const stageString = stage.toString();
+        if (stage > 2 && stage % 8 === 0) { specialLayoutType = 's_shape'; }
+        else if (stage > 2 && stage % 4 === 0) { specialLayoutType = 'wall'; }
+        else if (stage > 4 && stage % 6 === 0) { specialLayoutType = 'center_hollow'; }
+        else if (stage >= 3 && SYMBOL_PATTERNS[stageString]) {
+             specialLayoutType = 'symbol';
+        }
+
+        let density;
+        if (stage <= 3) { density = 0.4; }
+        else { density = 0.4 + 0.5 * progress; }
+
+        if (specialLayoutType === 'wall') {
+            console.log(`Generating Special Layout: Wall (Stage ${stage}, Density: ${density.toFixed(3)})`);
+            const exitColTop = Math.floor(actualCols / 2); const exitColBottom = Math.floor(actualCols / 2);
+            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; let generateBrick = true; let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; const isOuterWall = (i === 0 || i === actualRows - 1 || j === 0 || j === actualCols - 1); const isExit = (i === 0 && j === exitColTop) || (i === actualRows - 1 && j === exitColBottom); if (isOuterWall && !isExit) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; isDurable = false; } else { if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else { if (isExit) { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } else { const rand = Phaser.Math.FloatBetween(0, 1); if (stage >= 3 && rand < durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } } } } if (generateBrick) { const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; } } }
+            if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Wall layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
+
+        } else if (specialLayoutType === 's_shape') {
+            console.log(`Generating Special Layout: S-Shape (Stage ${stage}, Density: ${density.toFixed(3)})`);
+            const wallRow1 = Math.floor(actualRows / 3); const wallRow2 = Math.floor(actualRows * 2 / 3); const wallLengthCols = Math.floor(actualCols * 2 / 3); let generatedDestroyableCount = 0;
+            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; let generateBrick = true; let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; const isWallPart = (i === wallRow1 && j >= actualCols - wallLengthCols) || (i === wallRow2 && j < wallLengthCols); if (isWallPart) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; isDurable = false; } else { if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else { const rand = Phaser.Math.FloatBetween(0, 1); if (stage >= 3 && rand < durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } } } if (generateBrick) { const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; if (maxHits !== -1) generatedDestroyableCount++; } } }
+            if (generatedDestroyableCount < 5 && stage > 1) { console.warn(`S-Shape generated only ${generatedDestroyableCount} destroyable bricks, retrying...`); this.time.delayedCall(10, this.createBricks, [], this); return; }
+
+        } else if (specialLayoutType === 'center_hollow') {
+            console.log(`Generating Special Layout: Center Hollow (Stage ${stage}, Density: ${density.toFixed(3)})`);
+            let generatedCount = 0; const hollowRowStart = Math.floor(actualRows / 4); const hollowRowEnd = Math.floor(actualRows * 3 / 4); const hollowColStart = Math.floor(actualCols / 4); const hollowColEnd = Math.floor(actualCols * 3 / 4);
+            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; const isInHollowArea = (i >= hollowRowStart && i < hollowRowEnd && j >= hollowColStart && j < hollowColEnd); if (isInHollowArea) { continue; } if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
+            if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Center Hollow layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
+
+        } else if (specialLayoutType === 'symbol') {
+            console.log(`Generating Special Layout: Symbol '${stageString}' (Stage ${stage})`);
+            const pattern = SYMBOL_PATTERNS[stageString];
+            let generatedCount = 0;
+
+            if (pattern && pattern.length > 0 && pattern[0].length > 0) {
+                const patternRows = pattern.length;
+                const patternCols = pattern[0].length;
+                const patternTotalHeight = patternRows * BRICK_HEIGHT + (patternRows - 1) * BRICK_SPACING;
+                const patternTotalWidth = patternCols * bW + (patternCols - 1) * BRICK_SPACING;
+                const startY = BRICK_OFFSET_TOP + Math.max(0, (this.scale.height * 0.4 - patternTotalHeight) / 2);
+                const startX = (this.scale.width - patternTotalWidth) / 2;
+
+                for (let i = 0; i < patternRows; i++) {
+                    for (let j = 0; j < patternCols; j++) {
+                        if (pattern[i][j] === 1) {
+                            const bX = startX + j * (bW + BRICK_SPACING) + bW / 2;
+                            const bY = startY + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2;
+                            const brickType = 'normal';
+                            const brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS);
+                            const maxHits = 1;
+                            const isDurable = false;
+                            const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor);
+                            brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType });
+                            brick.refreshBody();
+                            generatedCount++;
+                        }
+                    }
+                }
+                 if (generatedCount < 3 && stage > 1) {
+                     console.warn(`Symbol layout '${stageString}' generated only ${generatedCount} bricks, retrying as normal...`);
+                     this.time.delayedCall(10, () => { this.createBricksFallbackToNormal(); }, [], this);
+                     return;
+                 }
+            } else {
+                console.warn(`Symbol pattern for stage ${stage} not found or invalid. Falling back to normal layout.`);
+                this.createBricksFallbackToNormal();
+                return;
+            }
+
+        } else { // 通常配置
+            console.log(`Generating Normal Layout (Stage ${stage}, Density: ${density.toFixed(3)})`);
+            let generatedCount = 0;
+            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
+            if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Normal layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
+        }
+        console.log(`Bricks generated: ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
+        this.setColliders();
+    }
+
+    createBricksFallbackToNormal() {
+        console.log("Falling back to Normal Layout generation...");
+        const stage = this.currentStage; const maxStage = MAX_STAGE; const rows = BRICK_ROWS + Math.floor(stage / 3); const cols = BRICK_COLS + Math.floor(stage / 4); const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2; const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4))); const actualCols = Math.min(cols, BRICK_COLS + 4); let durableRatio = 0; let indestructibleRatio = 0; let progress = 0; if (stage >= 3) { progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1); durableRatio = progress * 0.5; indestructibleRatio = progress * 0.15; } const bW = this.scale.width * BRICK_WIDTH_RATIO; const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING; const oX = (this.scale.width - totalBrickWidth) / 2; let density; if (stage <= 3) { density = 0.4; } else { density = 0.4 + 0.5 * progress; }
+        let generatedCount = 0;
+        for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
+        if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Normal layout (fallback) generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
+        console.log(`Bricks generated (fallback): ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
+        this.setColliders();
+    }
+
+    handleBrickHit(brick, damage = 1) { if (!brick || !brick.active || !brick.getData) return false; const maxHits = brick.getData('maxHits'); if (maxHits === -1 && damage !== Infinity) { return false; } let currentHits = brick.getData('currentHits'); const isDurable = brick.getData('isDurable'); if (damage === Infinity) { currentHits = 0; } else { currentHits -= damage; } brick.setData('currentHits', currentHits); if (currentHits <= 0) { this.handleBrickDestruction(brick); return true; } else if (isDurable) { const darknessFactor = (maxHits - currentHits) * DURABLE_BRICK_HIT_DARKEN; const originalColor = Phaser.Display.Color.ValueToColor(DURABLE_BRICK_COLOR); const newColor = originalColor.darken(darknessFactor); brick.setTint(newColor.color); return false; } else { return false; } }
+    handleBrickDestruction(brick) { if (!brick || !brick.active) return false; const brickX = brick.x; const brickY = brick.y; brick.disableBody(true, true); this.score += 10; this.events.emit('updateScore', this.score); this.increaseVajraGauge(); if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) { this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA); return true; } if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) { this.dropPowerUp(brickX, brickY); } return false; }
+    hitBrick(brick, ball) { if (!brick || !ball || !brick.active || !ball.active || this.isStageClearing) return; if (brick.getData('maxHits') === -1) { return; } const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } }
+    handleBallBrickOverlap(ball, brick) { if (!ball || !brick || !ball.active || !brick.active || this.isStageClearing) return; const isBikara = ball.getData('isBikara'); const bikaraState = ball.getData('bikaraState'); const isPenetrating = ball.getData('isPenetrating') || (ball.getData('isSindara') && (ball.getData('isAttracting') || ball.getData('isMerging'))); if (brick.getData('maxHits') === -1) { let destroyed = false; if (isBikara && bikaraState === 'yang') { destroyed = this.handleBrickHit(brick, Infinity); } else if (isPenetrating) { destroyed = this.handleBrickHit(brick, Infinity); } if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } return; } if (isBikara) { if (bikaraState === 'yin') { this.markBrickByBikara(brick); return; } else if (bikaraState === 'yang') { this.handleBikaraYangDestroy(ball, brick); return; } } else if (isPenetrating) { const destroyed = this.handleBrickHit(brick, brick.getData('maxHits')); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } } else { console.warn("BallBrickOverlap called without Bikara or Penetrating state?"); const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } } }
+    handleBikaraYangDestroy(ball, hitBrick) { if (!ball || !ball.active || !ball.getData('isBikara') || ball.getData('bikaraState') !== 'yang') return; let destroyedCount = 0; const markedToDestroy = []; if (hitBrick.active) { markedToDestroy.push(hitBrick); hitBrick.setData('isMarkedByBikara', false); } this.bricks.getChildren().forEach(br => { if (br.active && br.getData('isMarkedByBikara') && !markedToDestroy.includes(br)) { markedToDestroy.push(br); br.setData('isMarkedByBikara', false); } }); markedToDestroy.forEach(br => { if (br.active) { const destroyed = this.handleBrickHit(br, Infinity); if (destroyed) destroyedCount++; } }); let currentYangCount = ball.getData('bikaraYangCount') || 0; currentYangCount++; ball.setData('bikaraYangCount', currentYangCount); if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } else if (currentYangCount >= BIKARA_YANG_COUNT_MAX) { this.deactivateBikara([ball]); this.updateBallTint(ball); } }
+    hitBrickWithMakiraBeam(beam, brick) { if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver) return; if (brick.getData('maxHits') === -1) { beam.destroy(); return; } try { beam.destroy(); } catch (error) { console.error("Error destroying Makira beam:", error); if (beam && beam.active) { beam.setActive(false).setVisible(false); if (beam.body) beam.body.enable = false; } } const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); } }
+    triggerVajraDestroy() { if (this.isStageClearing || this.isGameOver) return; if (!this.isVajraSystemActive) return; this.isVajraSystemActive = false; const activeBricks = this.bricks.getMatching('active', true); if (activeBricks.length === 0) { this.deactivateVajra(); return; } const countToDestroy = Math.min(activeBricks.length, VAJRA_DESTROY_COUNT); const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks); let destroyedCount = 0; for (let i = 0; i < countToDestroy; i++) { const brick = shuffledBricks[i]; if (brick && brick.active) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } } console.log(`Vajra destroyed ${destroyedCount} bricks.`); if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } else { this.deactivateVajra(); } }
+    activateBaisrava() { if (this.isStageClearing || this.isGameOver) return; const activeBricks = this.bricks.getMatching('active', true); let destroyedCount = 0; activeBricks.forEach(brick => { if (brick && brick.active) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } }); if (destroyedCount > 0) { console.log(`Baisrava destroyed ${destroyedCount} bricks.`); } this.stageClear(); }
+    getDestroyableBrickCount() { if (!this.bricks) return 0; return this.bricks.getMatching('active', true).filter(brick => brick.getData('maxHits') !== -1).length; }
 
     dropSpecificPowerUp(x, y, type) {
         let textureKey = 'whitePixel';
@@ -234,13 +348,11 @@ class GameScene extends Phaser.Scene {
 
         if (type === POWERUP_TYPES.ANCHIRA) { textureKey = 'anchira_icon'; tintColor = null; }
         else if (type === POWERUP_TYPES.BIKARA) { textureKey = 'icon_bikara_yang'; tintColor = null; }
-        // 今後他のアイコン追加
 
         if (!type || (tintColor === null && textureKey === 'whitePixel' && type !== POWERUP_TYPES.MAKORA)) {
-             // console.warn(`Attempted to drop invalid or uncolored powerup type: ${type}`); // Bikara/Makoraは白、Anchira/Bikaraはアイコンなのでこの警告は出ないはず
-             // return;
+             // console.warn(`Attempted to drop invalid or uncolored powerup type: ${type}`);
+             // return; // コメントアウト解除すると BIKARA が落ちなくなる可能性
          }
-
 
         let powerUp = null;
         try {
@@ -295,8 +407,8 @@ class GameScene extends Phaser.Scene {
         this.activatePower(type);
     }
 
-    activateMakora() { /* ... (変更なし) ... */ }
-    keepFurthestBall() { /* ... (変更なし) ... */ }
+    activateMakora() { const copyablePowerType = Phaser.Utils.Array.GetRandom(MAKORA_COPYABLE_POWERS); console.log(`Makora copied: ${copyablePowerType}`); switch(copyablePowerType) { case POWERUP_TYPES.KUBIRA: case POWERUP_TYPES.SHATORA: case POWERUP_TYPES.HAILA: case POWERUP_TYPES.BIKARA: case POWERUP_TYPES.INDARA: case POWERUP_TYPES.ANILA: this.activatePower(copyablePowerType); break; case POWERUP_TYPES.ANCHIRA: case POWERUP_TYPES.SINDARA: if (this.balls.countActive(true) > 1) { this.keepFurthestBall(); } this.activatePower(copyablePowerType); break; case POWERUP_TYPES.VAJRA: this.activateVajra(); break; case POWERUP_TYPES.MAKIRA: this.activateMakira(); break; } }
+    keepFurthestBall() { const activeBalls = this.balls.getMatching('active', true); if (activeBalls.length <= 1) return; let furthestBall = null; let maxDistSq = -1; const paddlePos = new Phaser.Math.Vector2(this.paddle.x, this.paddle.y); activeBalls.forEach(ball => { const distSq = Phaser.Math.Distance.Squared(paddlePos.x, paddlePos.y, ball.x, ball.y); if (distSq > maxDistSq) { maxDistSq = distSq; furthestBall = ball; } }); activeBalls.forEach(ball => { if (ball !== furthestBall) { ball.destroy(); } }); }
 
     activatePower(type) {
         const targetBalls = this.balls.getMatching('active', true);
@@ -344,9 +456,14 @@ class GameScene extends Phaser.Scene {
             case POWERUP_TYPES.HAILA: this.deactivateHaira(targetBalls); break;
             case POWERUP_TYPES.ANCHIRA: this.deactivateAnchira(targetBalls); break;
             case POWERUP_TYPES.BIKARA: this.deactivateBikara(targetBalls); break;
+             // ★ 他のパワーアップ解除もここに追加
+             case POWERUP_TYPES.SINDARA: this.deactivateSindara(targetBalls); break; // Sindara解除呼び出し
+             case POWERUP_TYPES.INDARA: targetBalls.forEach(b => this.deactivateIndaraForBall(b)); break; // Indara解除
+             case POWERUP_TYPES.ANILA: targetBalls.forEach(b => this.deactivateAnilaForBall(b)); break; // Anila解除
         }
 
-        if (type !== POWERUP_TYPES.ANCHIRA && type !== POWERUP_TYPES.BIKARA) {
+        // アイコンを使わないパワーアップの共通解除処理
+        if (type !== POWERUP_TYPES.ANCHIRA && type !== POWERUP_TYPES.BIKARA /* && type !== POWERUP_TYPES.SINDARA など*/) {
              targetBalls.forEach(ball => {
                  if (ball.active) {
                      ball.getData('activePowers').delete(type);
@@ -358,7 +475,7 @@ class GameScene extends Phaser.Scene {
 
      updateBallTint(ball) {
         if (!ball || !ball.active) return;
-        if (ball.texture.key !== 'ball_image') { ball.clearTint(); return; } // アイコンならTintしない
+        if (ball.texture.key !== 'ball_image') { ball.clearTint(); return; }
         const activePowers = ball.getData('activePowers');
         let targetColor = null;
         if (activePowers && activePowers.size > 0) {
@@ -414,14 +531,14 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    activateSindara(sourceBall) { /* ... (変更なし) ... */ }
-    startSindaraAttraction(ball1, ball2) { /* ... (変更なし) ... */ }
-    updateSindaraAttraction(ball) { /* ... (変更なし) ... */ }
-    handleBallCollision(ball1, ball2) { /* ... (変更なし) ... */ }
-    mergeSindaraBalls(ballToKeep, ballToRemove) { /* ... (変更なし) ... */ }
-    finishSindaraMerge(mergedBall) { /* ... (変更なし) ... */ }
-    deactivateSindaraPenetration(ball) { /* ... (変更なし) ... */ }
-    deactivateSindara(balls) { /* ... (変更なし) ... */ }
+    activateSindara(sourceBall) { if (!sourceBall || !sourceBall.active) { sourceBall?.getData('activePowers').delete(POWERUP_TYPES.SINDARA); this.updateBallTint(sourceBall); return; } const x = sourceBall.x; const y = sourceBall.y; const ballData = sourceBall.data.getAll(); const vx = Phaser.Math.Between(-150, 150); const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8)); const partnerBall = this.createAndAddBall(x + Phaser.Math.Between(-5, 5), y + Phaser.Math.Between(-5, 5), vx, vy, ballData); if (partnerBall) { sourceBall.setData({ isSindara: true, sindaraPartner: partnerBall, isAttracting: false, isMerging: false }); partnerBall.setData({ isSindara: true, sindaraPartner: sourceBall, isAttracting: false, isMerging: false }); if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = this.time.delayedCall(SINDARA_ATTRACTION_DELAY, () => { this.startSindaraAttraction(sourceBall, partnerBall); }, [], this); this.setColliders(); } else { sourceBall.getData('activePowers').delete(POWERUP_TYPES.SINDARA); this.updateBallTint(sourceBall); } }
+    startSindaraAttraction(ball1, ball2) { this.sindaraAttractionTimer = null; if (!ball1 || !ball2 || !ball1.active || !ball2.active || !ball1.getData('isSindara') || !ball2.getData('isSindara')) { const activeSindaraBalls = this.balls.getMatching('isSindara', true); if (activeSindaraBalls.length > 0) { this.deactivateSindara(activeSindaraBalls); activeSindaraBalls.forEach(b => this.updateBallTint(b)); } return; } ball1.setData({ isAttracting: true, isPenetrating: true }); ball2.setData({ isAttracting: true, isPenetrating: true }); this.updateBallTint(ball1); this.updateBallTint(ball2); this.setColliders(); }
+    updateSindaraAttraction(ball) { const partner = ball.getData('sindaraPartner'); if (partner && partner.active && ball.active && ball.getData('isAttracting') && partner.getData('isAttracting') && !ball.getData('isMerging') && !partner.getData('isMerging')) { this.physics.moveToObject(ball, partner, SINDARA_ATTRACTION_FORCE); } }
+    handleBallCollision(ball1, ball2) { if (ball1.active && ball2.active && ball1.getData('sindaraPartner') === ball2 && ball1.getData('isAttracting')) { this.mergeSindaraBalls(ball1, ball2); } }
+    mergeSindaraBalls(ballToKeep, ballToRemove) { const mergeX = (ballToKeep.x + ballToRemove.x) / 2; const mergeY = (ballToKeep.y + ballToRemove.y) / 2; ballToKeep.setPosition(mergeX, mergeY); ballToRemove.destroy(); ballToKeep.setData({ isMerging: true, isAttracting: false, isPenetrating: true, sindaraPartner: null }); this.updateBallTint(ballToKeep); if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraMergeTimer = this.time.delayedCall(SINDARA_MERGE_DURATION, () => { this.finishSindaraMerge(ballToKeep); }, [], this); if (this.sindaraAttractionTimer) { this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; } this.setColliders(); }
+    finishSindaraMerge(mergedBall) { this.sindaraMergeTimer = null; if (!mergedBall || !mergedBall.active) return; mergedBall.setData({ isMerging: false }); this.updateBallTint(mergedBall); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = this.time.delayedCall(SINDARA_POST_MERGE_PENETRATION_DURATION, () => { this.deactivateSindaraPenetration(mergedBall); }, [], this); this.setColliders(); }
+    deactivateSindaraPenetration(ball) { this.sindaraPenetrationTimer = null; if (!ball || !ball.active) return; if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { if (!ball.getData('isBikara') || ball.getData('bikaraState') !== 'yang') { ball.setData('isPenetrating', false); } } if (ball.getData('isSindara')) { ball.setData('isSindara', false); ball.getData('activePowers').delete(POWERUP_TYPES.SINDARA); this.resetBallSpeed(ball); this.updateBallTint(ball); } this.setColliders(); }
+    deactivateSindara(balls) { if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null; balls.forEach(b => { if (b.active && b.getData('isSindara')) { b.setData({ isSindara: false, sindaraPartner: null, isAttracting: false, isMerging: false }); if (!b.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { if (!b.getData('isBikara') || b.getData('bikaraState') !== 'yang') { b.setData('isPenetrating', false); } } b.getData('activePowers').delete(POWERUP_TYPES.SINDARA); } }); this.setColliders(); }
 
     activateBikara(balls) {
         balls.forEach(ball => {
@@ -493,7 +610,6 @@ class GameScene extends Phaser.Scene {
     createFamiliars() { /* ... (変更なし) ... */ }
     fireMakiraBeam() { /* ... (変更なし) ... */ }
 
-    // --- ゲーム進行関連 ---
     loseLife() {
         if (this.isStageClearing || this.isGameOver || this.lives <= 0) return;
         this.deactivateMakira(); this.deactivateVajra();
@@ -505,23 +621,13 @@ class GameScene extends Phaser.Scene {
         this.isBallLaunched = false;
         const activeBalls = this.balls.getMatching('active', true);
         if (activeBalls.length > 0) {
-            // ★ すべてのパワーアップ状態とテクスチャをリセット
-            const ballDeactivationFunctions = [
-                this.deactivateAnchira, this.deactivateBikara, this.deactivateSindara,
-                this.deactivateKubira, this.deactivateShatora, this.deactivateHaira
-            ];
-            ballDeactivationFunctions.forEach(func => func.call(this, activeBalls)); // 各解除関数を呼び出す
-
+            const ballDeactivationFunctions = [ this.deactivateAnchira, this.deactivateBikara, this.deactivateSindara, this.deactivateKubira, this.deactivateShatora, this.deactivateHaira ];
+            ballDeactivationFunctions.forEach(func => func.call(this, activeBalls));
             activeBalls.forEach(ball => {
                  if (ball.active) {
-                     this.deactivateIndaraForBall(ball);
-                     this.deactivateAnilaForBall(ball);
-                     ball.setData({
-                         isPenetrating: false, isFast: false, isSlow: false,
-                         activePowers: new Set(), lastActivatedPower: null
-                     });
-                     this.resetBallSpeed(ball);
-                     ball.setTexture('ball_image'); ball.clearTint();
+                     this.deactivateIndaraForBall(ball); this.deactivateAnilaForBall(ball);
+                     ball.setData({ isPenetrating: false, isFast: false, isSlow: false, activePowers: new Set(), lastActivatedPower: null });
+                     this.resetBallSpeed(ball); ball.setTexture('ball_image'); ball.clearTint();
                  }
             });
         }
@@ -541,8 +647,7 @@ class GameScene extends Phaser.Scene {
     }
 
     gameOver() {
-        if (this.isGameOver) return;
-        this.isGameOver = true;
+        if (this.isGameOver) return; this.isGameOver = true;
         this.deactivateMakira(); this.deactivateVajra();
         if (this.gameOverText) this.gameOverText.setVisible(true);
         this.physics.pause();
@@ -556,8 +661,7 @@ class GameScene extends Phaser.Scene {
 
     stageClear() {
          if (this.isStageClearing || this.isGameOver) return;
-         this.isStageClearing = true;
-         this.deactivateMakira(); this.deactivateVajra();
+         this.isStageClearing = true; this.deactivateMakira(); this.deactivateVajra();
          try {
              this.physics.pause();
              Object.keys(this.powerUpTimers).forEach(key => { if (this.powerUpTimers[key]) { this.powerUpTimers[key].remove(); this.powerUpTimers[key] = null; } });
@@ -566,17 +670,11 @@ class GameScene extends Phaser.Scene {
              if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
              const activeBalls = this.balls.getMatching('active', true);
              if (activeBalls.length > 0) {
-                 // ステージクリア時もボールの状態をリセット
-                 const ballDeactivationFunctions = [
-                    this.deactivateAnchira, this.deactivateBikara, this.deactivateSindara,
-                    this.deactivateKubira, this.deactivateShatora, this.deactivateHaira
-                 ];
+                 const ballDeactivationFunctions = [ this.deactivateAnchira, this.deactivateBikara, this.deactivateSindara, this.deactivateKubira, this.deactivateShatora, this.deactivateHaira ];
                  ballDeactivationFunctions.forEach(func => func.call(this, activeBalls));
-
                  activeBalls.forEach(ball => {
                      if(ball.active){
-                         this.deactivateIndaraForBall(ball);
-                         this.deactivateAnilaForBall(ball);
+                         this.deactivateIndaraForBall(ball); this.deactivateAnilaForBall(ball);
                          ball.setData({ isPenetrating: false, isFast: false, isSlow: false, activePowers: new Set(), lastActivatedPower: null });
                          ball.setTexture('ball_image'); ball.clearTint();
                      }
@@ -631,7 +729,7 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            debug: false, // デバッグモードはオフに
+            debug: false, // デバッグはオフに
             gravity: { y: 0 }
         }
     },
