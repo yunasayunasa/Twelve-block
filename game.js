@@ -30,7 +30,7 @@ const POWERUP_SPEED_Y = 100;
 const POWERUP_TYPES = { KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara', BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra', MAKIRA: 'makira', MAKORA: 'makora' };
 const NORMAL_MODE_POWERUP_POOL = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ];
 const ALLSTARS_MODE_POWERUP_POOL = [...NORMAL_MODE_POWERUP_POOL];
-const POWERUP_COLORS = { [POWERUP_TYPES.KUBIRA]: 0x800080, [POWERUP_TYPES.SHATORA]: 0xffa500, [POWERUP_TYPES.HAILA]: 0xadd8e6, /*[POWERUP_TYPES.ANCHIRA]: 0xffc0cb,*/ /*[POWERUP_TYPES.SINDARA]: 0xd2b48c,*/ /*[POWERUP_TYPES.BIKARA]: 0xffffff,*/ [POWERUP_TYPES.INDARA]: 0x4682b4, [POWERUP_TYPES.ANILA]: 0xffefd5, [POWERUP_TYPES.BAISRAVA]: 0xffd700, [POWERUP_TYPES.VAJRA]: 0xffff00, [POWERUP_TYPES.MAKIRA]: 0x008080, [POWERUP_TYPES.MAKORA]: 0xffffff, };
+const POWERUP_COLORS = { [POWERUP_TYPES.KUBIRA]: 0x800080, [POWERUP_TYPES.SHATORA]: 0xffa500, [POWERUP_TYPES.HAILA]: 0xadd8e6, /*[POWERUP_TYPES.ANCHIRA]: 0xffc0cb,*/ /*[POWERUP_TYPES.SINDARA]: 0xd2b48c,*/ /*[POWERUP_TYPES.BIKARA]: 0xffffff,*/ [POWERUP_TYPES.INDARA]: 0x4682b4, [POWERUP_TYPES.ANILA]: 0xffefd5, [POWERUP_TYPES.BAISRAVA]: 0xffd700, [POWERUP_TYPES.VAJRA]: 0xffff00, /*[POWERUP_TYPES.MAKIRA]: 0x008080,*/ [POWERUP_TYPES.MAKORA]: 0xffffff, }; // アイコン使うものは色不要
 const MAKORA_COPYABLE_POWERS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA ];
 // const BIKARA_COLORS = { yin: 0x444444, yang: 0xfffafa };
 const POWERUP_DURATION = { [POWERUP_TYPES.KUBIRA]: 10000, [POWERUP_TYPES.SHATORA]: 3000, [POWERUP_TYPES.HAILA]: 10000, [POWERUP_TYPES.MAKIRA]: 6667 };
@@ -53,8 +53,8 @@ const MAKIRA_BEAM_WIDTH = 10;
 const MAKIRA_BEAM_HEIGHT = 15;
 const MAKIRA_BEAM_COLOR = 0xff0000;
 const MAKIRA_FAMILIAR_OFFSET = 40;
-const MAKIRA_FAMILIAR_SIZE = 10; // ファミリアの基本サイズ
-// const MAKIRA_FAMILIAR_COLOR = 0x00ced1; // 画像使うので不要に
+const MAKIRA_FAMILIAR_SIZE = 10;
+// const MAKIRA_FAMILIAR_COLOR = 0x00ced1;
 const DROP_POOL_UI_ICON_SIZE = 18;
 const DROP_POOL_UI_SPACING = 5;
 const UI_BOTTOM_OFFSET = 30;
@@ -81,7 +81,8 @@ class BootScene extends Phaser.Scene {
         this.load.image('icon_super_sindara', 'assets/icon_super_sindara.png');
         // this.load.audio('voice_sindara', 'assets/voice_sindara.m4a');
         // this.load.audio('voice_sindara_merge', 'assets/voice_sindara_merge.m4a');
-        this.load.image('joykun', 'assets/joykun.png'); // マキラファミリア画像
+        this.load.image('joykun', 'assets/joykun.png');
+        this.load.image('icon_makira', 'assets/icon_makira.png');
         // this.load.audio('voice_makira', 'assets/voice_makira.m4a');
     }
     create() { this.scene.start('TitleScene'); }
@@ -205,8 +206,14 @@ class GameScene extends Phaser.Scene {
         if (data) {
             if (data.isBikara) { initialTexture = (data.bikaraState === 'yang' ? 'icon_bikara_yang' : 'icon_bikara_yin'); }
             else if (data.isAnchira) { initialTexture = 'anchira_icon'; }
-            else if (data.isSindara) { initialTexture = 'icon_sindara'; } // Sindara通常アイコン
-             // スーパーシンダラは状態変化で設定するのでここでは不要
+            else if (data.isSindara) {
+                 // スーパーシンダラ状態は isMerging が false で isPenetrating が true (かつ isSindara が true)
+                 if(!data.isMerging && data.isPenetrating) {
+                    initialTexture = 'icon_super_sindara';
+                 } else {
+                     initialTexture = 'icon_sindara';
+                 }
+            }
         }
 
         const ball = this.balls.create(x, y, initialTexture)
@@ -233,12 +240,12 @@ class GameScene extends Phaser.Scene {
             isSlow: data ? data.isSlow : false,
             isAnchira: data ? data.isAnchira : false,
             isSindara: data ? data.isSindara : false,
-            sindaraPartner: null,
-            isAttracting: false,
-            isMerging: false,
+            sindaraPartner: data ? data.sindaraPartner : null, // パートナー情報も引き継ぐ
+            isAttracting: data ? data.isAttracting : false,
+            isMerging: data ? data.isMerging : false,
             isBikara: data ? data.isBikara : false,
             bikaraState: data ? data.bikaraState : null,
-            bikaraYangCount: 0,
+            bikaraYangCount: data ? data.bikaraYangCount : 0,
             isIndaraActive: data ? data.isIndaraActive : false,
             indaraHomingCount: data ? data.indaraHomingCount : 0,
             isAnilaActive: data ? data.isAnilaActive : false
@@ -386,7 +393,6 @@ class GameScene extends Phaser.Scene {
             return;
         }
 
-        // 通常衝突
         const destroyed = this.handleBrickHit(brick, 1);
         if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) {
             this.stageClear();
@@ -436,6 +442,7 @@ class GameScene extends Phaser.Scene {
         if (type === POWERUP_TYPES.ANCHIRA) { textureKey = 'anchira_icon'; tintColor = null; }
         else if (type === POWERUP_TYPES.BIKARA) { textureKey = 'icon_bikara_yang'; tintColor = null; }
         else if (type === POWERUP_TYPES.SINDARA) { textureKey = 'icon_sindara'; tintColor = null; }
+        else if (type === POWERUP_TYPES.MAKIRA) { textureKey = 'icon_makira'; tintColor = null; }
 
         if (!type || (tintColor === null && textureKey === 'whitePixel' && type !== POWERUP_TYPES.MAKORA)) {
              // console.warn(`Attempted to drop invalid or uncolored powerup type: ${type}`);
@@ -498,8 +505,9 @@ class GameScene extends Phaser.Scene {
             case POWERUP_TYPES.BIKARA: this.activateBikara(targetBalls); break;
             case POWERUP_TYPES.INDARA: this.activateIndara(targetBalls); break;
             case POWERUP_TYPES.ANILA: this.activateAnila(targetBalls); break;
+            // MAKIRA は activateMakira() で処理するのでここでは何もしない
         }
-        if (type !== POWERUP_TYPES.ANCHIRA && type !== POWERUP_TYPES.BIKARA && type !== POWERUP_TYPES.SINDARA) {
+        if (type !== POWERUP_TYPES.ANCHIRA && type !== POWERUP_TYPES.BIKARA && type !== POWERUP_TYPES.SINDARA && type !== POWERUP_TYPES.MAKIRA) { // アイコン系とマキラ以外
              targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').add(type); ball.setData('lastActivatedPower', type); this.updateBallTint(ball); } });
          }
         const duration = POWERUP_DURATION[type];
@@ -508,7 +516,8 @@ class GameScene extends Phaser.Scene {
 
     deactivatePowerByType(type) {
         const targetBalls = this.balls.getMatching('active', true);
-        if (targetBalls.length === 0 || type === POWERUP_TYPES.MAKIRA || type === POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKORA) return;
+        if (targetBalls.length === 0 || type === POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKORA) return; // MAKIRAは独自タイマー
+
         switch (type) {
             case POWERUP_TYPES.KUBIRA: this.deactivateKubira(targetBalls); break;
             case POWERUP_TYPES.SHATORA: this.deactivateShatora(targetBalls); break;
@@ -518,8 +527,10 @@ class GameScene extends Phaser.Scene {
             case POWERUP_TYPES.SINDARA: this.deactivateSindara(targetBalls); break;
             case POWERUP_TYPES.INDARA: targetBalls.forEach(b => this.deactivateIndaraForBall(b)); break;
             case POWERUP_TYPES.ANILA: targetBalls.forEach(b => this.deactivateAnilaForBall(b)); break;
+            // MAKIRA は deactivateMakira() で処理
         }
-        if (type !== POWERUP_TYPES.ANCHIRA && type !== POWERUP_TYPES.BIKARA && type !== POWERUP_TYPES.SINDARA) {
+        // アイコンを使わないパワーアップの共通解除処理
+        if (type !== POWERUP_TYPES.ANCHIRA && type !== POWERUP_TYPES.BIKARA && type !== POWERUP_TYPES.SINDARA && type !== POWERUP_TYPES.MAKIRA) {
              targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').delete(type); this.updateBallTint(ball); } });
          }
     }
@@ -533,7 +544,7 @@ class GameScene extends Phaser.Scene {
             const lastPower = ball.getData('lastActivatedPower');
             let powerToUse = lastPower;
             if (!lastPower || !activePowers.has(lastPower)) { const activePowersArray = Array.from(activePowers); if (activePowersArray.length > 0) { powerToUse = activePowersArray[activePowersArray.length - 1]; ball.setData('lastActivatedPower', powerToUse); } else { powerToUse = null; } }
-            if (powerToUse && powerToUse !== POWERUP_TYPES.ANCHIRA && powerToUse !== POWERUP_TYPES.BIKARA && powerToUse !== POWERUP_TYPES.SINDARA) {
+            if (powerToUse && powerToUse !== POWERUP_TYPES.ANCHIRA && powerToUse !== POWERUP_TYPES.BIKARA && powerToUse !== POWERUP_TYPES.SINDARA && powerToUse !== POWERUP_TYPES.MAKIRA) {
                  targetColor = POWERUP_COLORS[powerToUse] || null;
             }
         }
@@ -682,6 +693,7 @@ class GameScene extends Phaser.Scene {
     activateVajra() { if (!this.isVajraSystemActive) { this.isVajraSystemActive = true; this.vajraGauge = 0; this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } }
     increaseVajraGauge() { if (this.isVajraSystemActive && !this.isStageClearing && !this.isGameOver) { this.vajraGauge += VAJRA_GAUGE_INCREMENT; this.vajraGauge = Math.min(this.vajraGauge, VAJRA_GAUGE_MAX); this.events.emit('updateVajraGauge', this.vajraGauge); if (this.vajraGauge >= VAJRA_GAUGE_MAX) { this.triggerVajraDestroy(); } } }
     deactivateVajra() { this.isVajraSystemActive = false; this.vajraGauge = 0; this.events.emit('deactivateVajraUI'); }
+
     activateMakira() {
         if (!this.isMakiraActive) { this.isMakiraActive = true; if (this.familiars) this.familiars.clear(true, true); else this.familiars = this.physics.add.group(); this.createFamiliars(); if (this.makiraBeams) this.makiraBeams.clear(true, true); else this.makiraBeams = this.physics.add.group(); if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = this.time.addEvent({ delay: MAKIRA_ATTACK_INTERVAL, callback: this.fireMakiraBeam, callbackScope: this, loop: true }); } const duration = POWERUP_DURATION[POWERUP_TYPES.MAKIRA]; if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = this.time.delayedCall(duration, () => { this.deactivateMakira(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; }, [], this); this.setColliders();
     }
@@ -828,4 +840,4 @@ const config = {
 // --- ゲーム開始 ---
 window.onload = () => {
     const game = new Phaser.Game(config);
-};マキラコキ
+};
