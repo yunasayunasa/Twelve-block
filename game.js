@@ -30,35 +30,12 @@ const POWERUP_SPEED_Y = 100;
 const POWERUP_TYPES = { KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara', BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra', MAKIRA: 'makira', MAKORA: 'makora' };
 const NORMAL_MODE_POWERUP_POOL = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ];
 const ALLSTARS_MODE_POWERUP_POOL = [...NORMAL_MODE_POWERUP_POOL];
-// --- Updated POWERUP_COLORS (Anila commented out) ---
-const POWERUP_COLORS = {
-    [POWERUP_TYPES.KUBIRA]: 0x800080,
-    [POWERUP_TYPES.SHATORA]: 0xffa500,
-    [POWERUP_TYPES.HAILA]: 0xadd8e6,
-    /* [POWERUP_TYPES.ANCHIRA]: 0xffc0cb, */ // Icon used
-    /* [POWERUP_TYPES.SINDARA]: 0xd2b48c, */ // Icon used
-    /* [POWERUP_TYPES.BIKARA]: 0xffffff, */ // Icon used
-    [POWERUP_TYPES.INDARA]: 0x4682b4,
-    /* [POWERUP_TYPES.ANILA]: 0xffefd5, */   // Icon used (Anila)
-    [POWERUP_TYPES.BAISRAVA]: 0xffd700,
-    [POWERUP_TYPES.VAJRA]: 0xffff00,
-    /* [POWERUP_TYPES.MAKIRA]: 0x008080, */ // Icon used
-    [POWERUP_TYPES.MAKORA]: 0xffffff,
-};
+// --- Anila color commented out ---
+const POWERUP_COLORS = { [POWERUP_TYPES.KUBIRA]: 0x800080, [POWERUP_TYPES.SHATORA]: 0xffa500, [POWERUP_TYPES.HAILA]: 0xadd8e6, /*[POWERUP_TYPES.ANCHIRA]: 0xffc0cb,*/ /*[POWERUP_TYPES.SINDARA]: 0xd2b48c,*/ /*[POWERUP_TYPES.BIKARA]: 0xffffff,*/ [POWERUP_TYPES.INDARA]: 0x4682b4, /*[POWERUP_TYPES.ANILA]: 0xffefd5,*/ [POWERUP_TYPES.BAISRAVA]: 0xffd700, [POWERUP_TYPES.VAJRA]: 0xffff00, /*[POWERUP_TYPES.MAKIRA]: 0x008080,*/ [POWERUP_TYPES.MAKORA]: 0xffffff, }; // アイコン使うものは色不要
 const MAKORA_COPYABLE_POWERS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA ];
-// const BIKARA_COLORS = { yin: 0x444444, yang: 0xfffafa }; // Not needed with icons
-// --- Updated POWERUP_DURATION (Added Anila) ---
-const POWERUP_DURATION = {
-    [POWERUP_TYPES.KUBIRA]: 10000,
-    [POWERUP_TYPES.SHATORA]: 3000,
-    [POWERUP_TYPES.HAILA]: 10000,
-    [POWERUP_TYPES.ANCHIRA]: 10000, // Duration needed for split balls to revert
-    [POWERUP_TYPES.SINDARA]: SINDARA_ATTRACTION_DELAY + SINDARA_MERGE_DURATION + SINDARA_POST_MERGE_PENETRATION_DURATION, // Approximate total duration
-    [POWERUP_TYPES.BIKARA]: 15000, // Bikara needs duration
-    [POWERUP_TYPES.INDARA]: 10000, // Indara needs duration
-    [POWERUP_TYPES.ANILA]: 10000,   // Anila needs duration
-    [POWERUP_TYPES.MAKIRA]: 6667,
-};
+// const BIKARA_COLORS = { yin: 0x444444, yang: 0xfffafa };
+// --- Anila has no duration ---
+const POWERUP_DURATION = { [POWERUP_TYPES.KUBIRA]: 10000, [POWERUP_TYPES.SHATORA]: 3000, [POWERUP_TYPES.HAILA]: 10000, [POWERUP_TYPES.MAKIRA]: 6667, [POWERUP_TYPES.ANCHIRA]: 10000, [POWERUP_TYPES.BIKARA]: 15000, [POWERUP_TYPES.SINDARA]: SINDARA_ATTRACTION_DELAY + SINDARA_MERGE_DURATION + SINDARA_POST_MERGE_PENETRATION_DURATION, [POWERUP_TYPES.INDARA]: 10000 };
 const BIKARA_YANG_COUNT_MAX = 2;
 const INDARA_MAX_HOMING_COUNT = 3;
 const NORMAL_BALL_SPEED = Math.abs(BALL_INITIAL_VELOCITY_Y);
@@ -67,8 +44,8 @@ const SINDARA_ATTRACTION_DELAY = 3000;
 const SINDARA_ATTRACTION_FORCE = 400;
 const SINDARA_MERGE_DURATION = 500;
 const SINDARA_POST_MERGE_PENETRATION_DURATION = 2000;
-// const SINDARA_ATTRACT_COLOR = 0xa52a2a; // Not needed
-// const SINDARA_MERGE_COLOR = 0xff4500; // Not needed
+// const SINDARA_ATTRACT_COLOR = 0xa52a2a;
+// const SINDARA_MERGE_COLOR = 0xff4500;
 const VAJRA_GAUGE_MAX = 100;
 const VAJRA_GAUGE_INCREMENT = 10;
 const VAJRA_DESTROY_COUNT = 5;
@@ -79,7 +56,7 @@ const MAKIRA_BEAM_HEIGHT = 15;
 const MAKIRA_BEAM_COLOR = 0xff0000;
 const MAKIRA_FAMILIAR_OFFSET = 40;
 const MAKIRA_FAMILIAR_SIZE = 10;
-// const MAKIRA_FAMILIAR_COLOR = 0x00ced1; // Icon used
+// const MAKIRA_FAMILIAR_COLOR = 0x00ced1;
 const DROP_POOL_UI_ICON_SIZE = 18;
 const DROP_POOL_UI_SPACING = 5;
 const UI_BOTTOM_OFFSET = 30;
@@ -95,7 +72,6 @@ class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
     preload() {
         this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
-        // --- Existing Assets ---
         this.load.image('ball_image', 'assets/ball.png');
         this.load.image('anchira_icon', 'assets/icon_anchira.png');
         // this.load.audio('voice_anchira', 'assets/voice_anchira.m4a');
@@ -107,11 +83,11 @@ class BootScene extends Phaser.Scene {
         this.load.image('icon_super_sindara', 'assets/icon_super_sindara.png');
         // this.load.audio('voice_sindara', 'assets/voice_sindara.m4a');
         // this.load.audio('voice_sindara_merge', 'assets/voice_sindara_merge.m4a');
-        this.load.image('joykun', 'assets/joykun.png'); // Makira Familiar
+        this.load.image('joykun', 'assets/joykun.png');
         this.load.image('icon_makira', 'assets/icon_makira.png');
         // this.load.audio('voice_makira', 'assets/voice_makira.m4a');
 
-        // --- Add Anila Asset ---
+        // --- Load Anila Assets ---
         this.load.image('icon_anila', 'assets/icon_anila.png');
         // this.load.audio('voice_anila', 'assets/voice_anila.m4a');
     }
@@ -192,8 +168,8 @@ class GameScene extends Phaser.Scene {
              if (ball.body && this.isBallLaunched) { const minSpeed = NORMAL_BALL_SPEED * 0.1; const maxSpeed = NORMAL_BALL_SPEED * 5; const speed = ball.body.velocity.length(); if (speed < minSpeed && speed > 0) { ball.body.velocity.normalize().scale(minSpeed); } else if (speed > maxSpeed) { ball.body.velocity.normalize().scale(maxSpeed); } } } });
         if (sindaraBalls.length === 1 && this.balls.getTotalUsed() > 1) {
              const remainingBall = sindaraBalls[0];
-             if (remainingBall.getData('isSindara') && !remainingBall.getData('isMerging')) {
-                this.deactivatePowerByType(POWERUP_TYPES.SINDARA);
+             if (remainingBall.getData('isSindara') && !remainingBall.getData('isMerging')) { // Check if not merging
+                this.deactivatePowerByType(POWERUP_TYPES.SINDARA); // Use central deactivation
              }
          }
         if (activeBallCount === 0 && this.isBallLaunched && !this.isStageClearing && this.lives > 0) { this.loseLife(); return; }
@@ -233,7 +209,6 @@ class GameScene extends Phaser.Scene {
         if (this.makiraBeams && this.bricks) { this.makiraBeamBrickOverlap = this.physics.add.overlap(this.makiraBeams, this.bricks, this.hitBrickWithMakiraBeam, null, this); }
     }
 
-
     createAndAddBall(x, y, vx = 0, vy = 0, data = null) {
         let initialTexture = 'ball_image';
         // --- Determine initial texture based on passed data ---
@@ -246,7 +221,6 @@ class GameScene extends Phaser.Scene {
             }
             // --- Add Anila Check ---
             else if (data.isAnilaActive) { initialTexture = 'icon_anila'; }
-            // Add checks for other gods here later
         }
 
         const ball = this.balls.create(x, y, initialTexture)
@@ -284,22 +258,18 @@ class GameScene extends Phaser.Scene {
             indaraHomingCount: data?.indaraHomingCount ?? 0,
             isAnilaActive: data?.isAnilaActive ?? false, // Added Anila flag
             // Initialize other flags as needed
-            isKubira: data?.isKubira ?? false,
-            isShatora: data?.isShatora ?? false,
-            isHaila: data?.isHaila ?? false,
-            // etc.
         });
 
         // --- Set initial tint/speed AFTER data is set ---
-        if (ball.texture.key === 'ball_image') {
-            this.updateBallTint(ball); // Apply tint only if it's the base image
+        // Apply tint only if it's the base ball image initially
+        if (initialTexture === 'ball_image') {
+            this.updateBallTint(ball);
         } else {
             ball.clearTint(); // Ensure icons start without tint
         }
 
         if (ball.getData('isFast')) this.applySpeedModifier(ball, POWERUP_TYPES.SHATORA);
         else if (ball.getData('isSlow')) this.applySpeedModifier(ball, POWERUP_TYPES.HAILA);
-        // --- End of setting appearance ---
 
         return ball;
     }
@@ -413,7 +383,6 @@ class GameScene extends Phaser.Scene {
     }
 
     createBricksFallbackToNormal() {
-        // --- Brick generation logic (no changes) ---
         console.log("Falling back to Normal Layout generation...");
         const stage = this.currentStage; const maxStage = MAX_STAGE; const rows = BRICK_ROWS + Math.floor(stage / 3); const cols = BRICK_COLS + Math.floor(stage / 4); const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2; const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4))); const actualCols = Math.min(cols, BRICK_COLS + 4); let durableRatio = 0; let indestructibleRatio = 0; let progress = 0; if (stage >= 3) { progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1); durableRatio = progress * 0.5; indestructibleRatio = progress * 0.15; } const bW = this.scale.width * BRICK_WIDTH_RATIO; const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING; const oX = (this.scale.width - totalBrickWidth) / 2; let density; if (stage <= 3) { density = 0.4; } else { density = 0.4 + 0.5 * progress; }
         let generatedCount = 0;
@@ -473,9 +442,7 @@ class GameScene extends Phaser.Scene {
         markedToDestroy.forEach(br => { if (br.active) { const destroyed = this.handleBrickHit(br, Infinity); if (destroyed) destroyedCount++; } });
         let currentYangCount = ball.getData('bikaraYangCount') || 0; currentYangCount++; ball.setData('bikaraYangCount', currentYangCount);
         if (destroyedCount > 0) { console.log(`Bikara Yang destroyed ${destroyedCount} bricks.`); }
-        if (currentYangCount >= BIKARA_YANG_COUNT_MAX) {
-            this.deactivatePowerByType(POWERUP_TYPES.BIKARA);
-        }
+        if (currentYangCount >= BIKARA_YANG_COUNT_MAX) { this.deactivateBikara([ball]); this.updateBallTint(ball); }
     }
 
     hitBrickWithMakiraBeam(beam, brick) { if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver) return; if (brick.getData('maxHits') === -1) { beam.destroy(); return; } try { beam.destroy(); } catch (error) { console.error("Error destroying Makira beam:", error); if (beam && beam.active) { beam.setActive(false).setVisible(false); if (beam.body) beam.body.enable = false; } } const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); } }
@@ -485,22 +452,19 @@ class GameScene extends Phaser.Scene {
 
     dropSpecificPowerUp(x, y, type) {
         let textureKey = 'whitePixel';
-        let tintColor = POWERUP_COLORS[type] || null; // Use color only if no icon defined
+        let tintColor = POWERUP_COLORS[type] || null;
         let displaySize = POWERUP_SIZE;
 
-        // --- Set texture based on type ---
-        switch (type) {
-            case POWERUP_TYPES.ANCHIRA: textureKey = 'anchira_icon'; tintColor = null; break;
-            case POWERUP_TYPES.BIKARA: textureKey = 'icon_bikara_yang'; tintColor = null; break;
-            case POWERUP_TYPES.SINDARA: textureKey = 'icon_sindara'; tintColor = null; break;
-            case POWERUP_TYPES.MAKIRA: textureKey = 'icon_makira'; tintColor = null; break;
-            case POWERUP_TYPES.ANILA: textureKey = 'icon_anila'; tintColor = null; break; // Added Anila
-            // Add other icons here later
-        }
+        if (type === POWERUP_TYPES.ANCHIRA) { textureKey = 'anchira_icon'; tintColor = null; }
+        else if (type === POWERUP_TYPES.BIKARA) { textureKey = 'icon_bikara_yang'; tintColor = null; }
+        else if (type === POWERUP_TYPES.SINDARA) { textureKey = 'icon_sindara'; tintColor = null; }
+        else if (type === POWERUP_TYPES.MAKIRA) { textureKey = 'icon_makira'; tintColor = null; }
+        // --- Add Anila ---
+        else if (type === POWERUP_TYPES.ANILA) { textureKey = 'icon_anila'; tintColor = null; }
 
-        if (!type || (textureKey === 'whitePixel' && tintColor === null && type !== POWERUP_TYPES.MAKORA)) {
-             // console.warn(`Attempted to drop unhandled powerup type: ${type}`);
-             return;
+        if (!type || (tintColor === null && textureKey === 'whitePixel' && type !== POWERUP_TYPES.MAKORA)) {
+             // console.warn(`Attempted to drop invalid or uncolored powerup type: ${type}`);
+             // return;
          }
 
         let powerUp = null;
@@ -508,19 +472,10 @@ class GameScene extends Phaser.Scene {
             powerUp = this.powerUps.create(x, y, textureKey);
             if (powerUp) {
                 powerUp.setDisplaySize(displaySize, displaySize).setData('type', type);
-                if (tintColor !== null) {
-                    powerUp.setTint(tintColor);
-                } else {
-                    powerUp.clearTint(); // Icons should not be tinted
-                }
-                if (powerUp.body) {
-                    powerUp.setVelocity(0, POWERUP_SPEED_Y);
-                    powerUp.body.setCollideWorldBounds(false);
-                    powerUp.body.setAllowGravity(false);
-                } else {
-                    console.error(`No physics body for powerup type: ${type}! Destroying.`);
-                    powerUp.destroy(); powerUp = null;
-                }
+                if (tintColor !== null) { powerUp.setTint(tintColor); }
+                else { powerUp.clearTint(); }
+                if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); }
+                else { console.error(`No physics body for powerup type: ${type}! Destroying.`); powerUp.destroy(); powerUp = null; }
             } else { console.error(`Failed to create powerup object for type: ${type}!`); }
         } catch (error) { console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error); if (powerUp && powerUp.active) { powerUp.destroy(); } }
     }
@@ -532,13 +487,7 @@ class GameScene extends Phaser.Scene {
         let diff = ball.x - paddle.x; const maxDiff = paddle.displayWidth / 2; let influence = diff / maxDiff; influence = Phaser.Math.Clamp(influence, -1, 1); const maxVx = NORMAL_BALL_SPEED * 0.8; let newVx = maxVx * influence; const minVy = NORMAL_BALL_SPEED * 0.5; let currentVy = ball.body.velocity.y; let newVy = -Math.abs(currentVy); if (Math.abs(newVy) < minVy) newVy = -minVy; let speedMultiplier = 1.0; if (ball.getData('isFast')) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.SHATORA]; else if (ball.getData('isSlow')) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.HAILA]; const targetSpeed = NORMAL_BALL_SPEED * speedMultiplier; const newVelocity = new Phaser.Math.Vector2(newVx, newVy).normalize().scale(targetSpeed); ball.setVelocity(newVelocity.x, newVelocity.y);
 
         if (ball.getData('isBikara')) { this.switchBikaraState(ball); }
-        if (ball.getData('isIndaraActive')) {
-            // Deactivate Indara logic, but visual update handled by timer/world bounds
-             this.deactivateIndaraForBall(ball);
-             // Tint update is handled by deactivatePowerByType if timer expires,
-             // or handleWorldBounds if homing finishes. Need updateBallTint here too?
-             this.updateBallTint(ball); // Update tint immediately on paddle hit
-        }
+        if (ball.getData('isIndaraActive')) { this.deactivateIndaraForBall(ball); this.updateBallTint(ball); }
     }
 
     collectPowerUp(paddle, powerUp) {
@@ -546,226 +495,113 @@ class GameScene extends Phaser.Scene {
         const type = powerUp.getData('type');
         if (!type) { console.warn("Collected powerup with no type data!"); powerUp.destroy(); return; }
         powerUp.destroy();
-
-        // --- Play voice ---
+        // --- Play Voice (Commented Out) ---
         if (type === POWERUP_TYPES.ANCHIRA) { /* this.sound.play('voice_anchira'); */ }
         else if (type === POWERUP_TYPES.BIKARA) { /* this.sound.play('voice_bikara_yin'); */ }
         else if (type === POWERUP_TYPES.SINDARA) { /* this.sound.play('voice_sindara'); */ }
         else if (type === POWERUP_TYPES.MAKIRA) { /* this.sound.play('voice_makira'); */ }
-        else if (type === POWERUP_TYPES.ANILA) { /* this.sound.play('voice_anila'); */ } // Added Anila voice
-        // ... other voices
+        // --- Add Anila Voice ---
+        else if (type === POWERUP_TYPES.ANILA) { /* this.sound.play('voice_anila'); */ }
 
-        // --- Handle special powerups ---
+        // --- Handle Special Cases ---
         if (type === POWERUP_TYPES.BAISRAVA) { this.activateBaisrava(); return; }
         if (type === POWERUP_TYPES.VAJRA) { this.activateVajra(); return; }
         if (type === POWERUP_TYPES.MAKIRA) { this.activateMakira(); return; }
         if (type === POWERUP_TYPES.MAKORA) { this.activateMakora(); return; }
 
-        // --- Handle ball consolidation ---
+        // --- Handle Ball Consolidation ---
         if (type === POWERUP_TYPES.ANCHIRA || type === POWERUP_TYPES.SINDARA) {
-            if (this.balls.countActive(true) > 1) { this.keepFurthestBall(); }
+             if (this.balls.countActive(true) > 1) { this.keepFurthestBall(); }
         }
 
-        // --- Activate the standard power ---
+        // --- Activate Standard Power ---
         this.activatePower(type);
     }
 
-    activateMakora() {
-        const targetBalls = this.balls.getMatching('active', true);
-        if (targetBalls.length === 0) return;
 
-        const copyablePowerType = Phaser.Utils.Array.GetRandom(MAKORA_COPYABLE_POWERS);
-        console.log(`Makora copied: ${copyablePowerType}`);
-
-        targetBalls.forEach(ball => {
-            if (ball.active) {
-                // Set Makora specific data
-                ball.setData('isMakora', true);
-                ball.setData('makoraCopiedType', copyablePowerType);
-                ball.getData('activePowers').add(POWERUP_TYPES.MAKORA);
-                ball.setData('lastActivatedPower', POWERUP_TYPES.MAKORA);
-
-                // Activate copied logic
-                let sourceBallForSplit = null;
-                if ((copyablePowerType === POWERUP_TYPES.ANCHIRA || copyablePowerType === POWERUP_TYPES.SINDARA)) {
-                     if (this.balls.countActive(true) > 1) this.keepFurthestBall();
-                     sourceBallForSplit = this.balls.getFirstAlive();
-                     if(!sourceBallForSplit) return;
-                     // Set flag on the source ball *before* calling activateXxx
-                     if(copyablePowerType === POWERUP_TYPES.ANCHIRA) sourceBallForSplit.setData('isAnchira', true);
-                     if(copyablePowerType === POWERUP_TYPES.SINDARA) sourceBallForSplit.setData('isSindara', true);
-                }
-
-                switch (copyablePowerType) {
-                    case POWERUP_TYPES.KUBIRA: this.activateKubira([ball]); break;
-                    case POWERUP_TYPES.SHATORA: this.activateShatora([ball]); break;
-                    case POWERUP_TYPES.HAILA: this.activateHaira([ball]); break;
-                    case POWERUP_TYPES.ANCHIRA: /* Flag set above */ break;
-                    case POWERUP_TYPES.SINDARA: /* Flag set above */ break;
-                    case POWERUP_TYPES.BIKARA: this.activateBikara([ball]); break;
-                    case POWERUP_TYPES.INDARA: this.activateIndara([ball]); break;
-                    case POWERUP_TYPES.ANILA: this.activateAnila([ball]); break;
-                    case POWERUP_TYPES.VAJRA: this.activateVajra(); break;
-                    case POWERUP_TYPES.MAKIRA: this.activateMakira(); break;
-                }
-
-                // Add copied power to active set (if not special)
-                if (copyablePowerType !== POWERUP_TYPES.VAJRA && copyablePowerType !== POWERUP_TYPES.MAKIRA && copyablePowerType !== POWERUP_TYPES.BAISRAVA) {
-                   ball.getData('activePowers').add(copyablePowerType);
-                }
-
-                // Call split/partner logic *after* setting flags and adding to activePowers
-                 if (copyablePowerType === POWERUP_TYPES.ANCHIRA && sourceBallForSplit) {
-                     this.activateAnchira(sourceBallForSplit); // Pass the ball to split
-                 } else if (copyablePowerType === POWERUP_TYPES.SINDARA && sourceBallForSplit) {
-                     this.activateSindara(sourceBallForSplit); // Pass the ball to create partner
-                 }
-
-                // Makora's appearance will depend on copied type - TODO: Needs handling in updateBallTint/Appearance
-                this.updateBallTint(ball); // Or updateBallAppearance? Needs thought
-
-                // Set timer for copied power duration
-                 const duration = POWERUP_DURATION[copyablePowerType];
-                 if (duration) {
-                     const timerKey = `makora_${copyablePowerType}`;
-                     if (this.powerUpTimers[timerKey]) this.powerUpTimers[timerKey].remove();
-                     this.powerUpTimers[timerKey] = this.time.delayedCall(duration, () => {
-                         if(ball.active) {
-                            this.deactivatePowerByType(copyablePowerType);
-                            ball.getData('activePowers')?.delete(POWERUP_TYPES.MAKORA);
-                            ball.setData('isMakora', false);
-                            ball.setData('makoraCopiedType', null);
-                            // Re-evaluate appearance
-                            if (ball.getData('lastActivatedPower') === POWERUP_TYPES.MAKORA) {
-                                const remainingPowers = Array.from(ball.getData('activePowers') ?? []);
-                                ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null);
-                            }
-                            this.updateBallTint(ball); // Re-apply tint/appearance
-                         }
-                         this.powerUpTimers[timerKey] = null;
-                     }, [], this);
-                 }
-            }
-        });
-    }
-
-
+    activateMakora() { const copyablePowerType = Phaser.Utils.Array.GetRandom(MAKORA_COPYABLE_POWERS); console.log(`Makora copied: ${copyablePowerType}`); switch(copyablePowerType) { case POWERUP_TYPES.KUBIRA: case POWERUP_TYPES.SHATORA: case POWERUP_TYPES.HAILA: case POWERUP_TYPES.BIKARA: case POWERUP_TYPES.INDARA: case POWERUP_TYPES.ANILA: this.activatePower(copyablePowerType); break; case POWERUP_TYPES.ANCHIRA: case POWERUP_TYPES.SINDARA: if (this.balls.countActive(true) > 1) { this.keepFurthestBall(); } this.activatePower(copyablePowerType); break; case POWERUP_TYPES.VAJRA: this.activateVajra(); break; case POWERUP_TYPES.MAKIRA: this.activateMakira(); break; } }
     keepFurthestBall() { const activeBalls = this.balls.getMatching('active', true); if (activeBalls.length <= 1) return; let furthestBall = null; let maxDistSq = -1; const paddlePos = new Phaser.Math.Vector2(this.paddle.x, this.paddle.y); activeBalls.forEach(ball => { const distSq = Phaser.Math.Distance.Squared(paddlePos.x, paddlePos.y, ball.x, ball.y); if (distSq > maxDistSq) { maxDistSq = distSq; furthestBall = ball; } }); activeBalls.forEach(ball => { if (ball !== furthestBall) { ball.destroy(); } }); }
 
     activatePower(type) {
         const targetBalls = this.balls.getMatching('active', true);
         if (targetBalls.length === 0) return;
 
-        // Clear existing timer for this specific power type
-        if (this.powerUpTimers[type]) {
+        // Clear existing timer only if duration exists for this type
+        if (POWERUP_DURATION[type] && this.powerUpTimers[type]) {
             this.powerUpTimers[type].remove();
-            this.powerUpTimers[type] = null;
+            this.powerUpTimers[type] = null; // Clear reference
         }
 
-        // Handle Anchira/Sindara source ball *before* the loop
-        let sourceBallForSplit = null;
-        if ((type === POWERUP_TYPES.ANCHIRA || type === POWERUP_TYPES.SINDARA) && targetBalls.length > 0) {
-            sourceBallForSplit = targetBalls[0]; // Assuming only one ball exists after keepFurthestBall
-        }
-
+        // Set data common to most powerups
         targetBalls.forEach(ball => {
-            if (ball.active) {
-                ball.getData('activePowers').add(type);
-                ball.setData('lastActivatedPower', type);
-
-                // Activate specific logic/flags (excluding split/partner logic)
-                switch (type) {
-                    case POWERUP_TYPES.KUBIRA: this.activateKubira([ball]); break;
-                    case POWERUP_TYPES.SHATORA: this.activateShatora([ball]); break;
-                    case POWERUP_TYPES.HAILA: this.activateHaira([ball]); break;
-                    case POWERUP_TYPES.ANCHIRA: this.activateAnchira([ball]); break; // Sets flag, texture, etc.
-                    case POWERUP_TYPES.SINDARA: this.activateSindara([ball]); break; // Sets flag, texture, etc.
-                    case POWERUP_TYPES.BIKARA: this.activateBikara([ball]); break;
-                    case POWERUP_TYPES.INDARA: this.activateIndara([ball]); break;
-                    case POWERUP_TYPES.ANILA: this.activateAnila([ball]); break;   // Call Anila activation
-                }
-
-                // Set deactivation timer if applicable
-                const duration = POWERUP_DURATION[type];
-                // Sindara duration is handled differently by its internal timers
-                if (duration && type !== POWERUP_TYPES.SINDARA) {
-                    this.powerUpTimers[type] = this.time.delayedCall(duration, () => {
-                        this.deactivatePowerByType(type);
-                        this.powerUpTimers[type] = null;
-                    }, [], this);
-                }
-            }
+             if (ball.active) {
+                 ball.getData('activePowers').add(type);
+                 ball.setData('lastActivatedPower', type);
+             }
         });
 
-        // Handle split/partner creation *after* data set on the source
-        if (type === POWERUP_TYPES.ANCHIRA && sourceBallForSplit) {
-            // Splitting logic moved inside activateAnchira
-        } else if (type === POWERUP_TYPES.SINDARA && sourceBallForSplit) {
-            // Partner logic moved inside activateSindara
+        // Activate specific logic
+        switch (type) {
+            case POWERUP_TYPES.KUBIRA: this.activateKubira(targetBalls); break;
+            case POWERUP_TYPES.SHATORA: this.activateShatora(targetBalls); break;
+            case POWERUP_TYPES.HAILA: this.activateHaira(targetBalls); break;
+            case POWERUP_TYPES.ANCHIRA: this.activateAnchira(targetBalls); break; // Pass array
+            case POWERUP_TYPES.SINDARA: this.activateSindara(targetBalls); break; // Pass array
+            case POWERUP_TYPES.BIKARA: this.activateBikara(targetBalls); break;
+            case POWERUP_TYPES.INDARA: this.activateIndara(targetBalls); break;
+            case POWERUP_TYPES.ANILA: this.activateAnila(targetBalls); break; // Activate Anila
+            // MAKIRA handled elsewhere
         }
 
-        // Update colliders if necessary (Bikara changes collision type)
-        if (type === POWERUP_TYPES.BIKARA) {
-             this.setColliders();
-         }
+        // Update tint/texture (handled within individual activate functions for icons)
+        if (type !== POWERUP_TYPES.ANCHIRA && type !== POWERUP_TYPES.BIKARA && type !== POWERUP_TYPES.SINDARA && type !== POWERUP_TYPES.MAKIRA && type !== POWERUP_TYPES.ANILA) {
+             targetBalls.forEach(ball => { if (ball.active) { this.updateBallTint(ball); } });
+        }
+
+        // Set new timer if duration exists
+        const duration = POWERUP_DURATION[type];
+        if (duration) { // Anila has no duration defined, so timer won't be set
+            this.powerUpTimers[type] = this.time.delayedCall(duration, () => {
+                this.deactivatePowerByType(type);
+                this.powerUpTimers[type] = null;
+            }, [], this);
+        }
     }
 
 
     deactivatePowerByType(type) {
         const targetBalls = this.balls.getMatching('active', true);
-        if (targetBalls.length === 0) return;
+        if (targetBalls.length === 0 || type === POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKORA || type === POWERUP_TYPES.BAISRAVA || type === POWERUP_TYPES.MAKIRA) return;
 
-        // Instant/Special powers don't use this standard deactivation
-        if (type === POWERUP_TYPES.MAKORA || type === POWERUP_TYPES.BAISRAVA || type === POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKIRA) return;
+        // Deactivate specific logic
+        switch (type) {
+            case POWERUP_TYPES.KUBIRA: this.deactivateKubira(targetBalls); break;
+            case POWERUP_TYPES.SHATORA: this.deactivateShatora(targetBalls); break;
+            case POWERUP_TYPES.HAILA: this.deactivateHaira(targetBalls); break;
+            case POWERUP_TYPES.ANCHIRA: this.deactivateAnchira(targetBalls); break;
+            case POWERUP_TYPES.BIKARA: this.deactivateBikara(targetBalls); break;
+            case POWERUP_TYPES.SINDARA: this.deactivateSindara(targetBalls); break;
+            case POWERUP_TYPES.INDARA: targetBalls.forEach(b => this.deactivateIndaraForBall(b)); break;
+            case POWERUP_TYPES.ANILA: targetBalls.forEach(b => this.deactivateAnilaForBall(b)); break; // Deactivate Anila
+        }
 
+        // Common data cleanup (remove from active set)
         targetBalls.forEach(ball => {
-            if (ball.active && ball.getData('activePowers')?.has(type)) {
-                ball.getData('activePowers').delete(type);
-
-                // Call specific deactivation logic (flags, texture reset)
-                switch (type) {
-                    case POWERUP_TYPES.KUBIRA: this.deactivateKubira([ball]); break;
-                    case POWERUP_TYPES.SHATORA: this.deactivateShatora([ball]); break;
-                    case POWERUP_TYPES.HAILA: this.deactivateHaira([ball]); break;
-                    case POWERUP_TYPES.ANCHIRA: this.deactivateAnchira([ball]); break;
-                    case POWERUP_TYPES.BIKARA: this.deactivateBikara([ball]); break;
-                    case POWERUP_TYPES.SINDARA: this.deactivateSindara([ball]); break;
-                    case POWERUP_TYPES.INDARA: this.deactivateIndaraForBall(ball); break;
-                    case POWERUP_TYPES.ANILA: this.deactivateAnilaForBall(ball); break; // Call Anila deactivation
-                }
-
-                // Re-apply tint if necessary (if another color power remains)
-                // This is handled within the individual deactivate functions now
+            if (ball.active) {
+                ball.getData('activePowers')?.delete(type); // Safely delete
+                // Tint/texture update is handled within individual deactivate functions
             }
         });
-
-         // Update colliders if Bikara/Sindara ended
-         if (type === POWERUP_TYPES.BIKARA || type === POWERUP_TYPES.SINDARA) {
-              this.setColliders();
-          }
-          // Clear marked bricks if Bikara ended
-          if (type === POWERUP_TYPES.BIKARA) {
-               this.bricks.getChildren().forEach(br => {
-                   if (br.getData('isMarkedByBikara')) {
-                       br.setData('isMarkedByBikara', false);
-                       const originalTint = br.getData('originalTint');
-                       if (originalTint !== undefined && originalTint !== null) {
-                          br.setTint(originalTint);
-                       } else { br.clearTint();}
-                   }
-               });
-           }
     }
 
-    // --- Reverted updateBallTint ---
+
      updateBallTint(ball) {
         if (!ball || !ball.active) return;
-        // Only apply tint if the texture is the default ball image
+        // Only tint if it's the base ball image
         if (ball.texture.key !== 'ball_image') {
             ball.clearTint();
             return;
         }
-
         const activePowers = ball.getData('activePowers');
         let targetColor = null;
         if (activePowers && activePowers.size > 0) {
@@ -773,12 +609,11 @@ class GameScene extends Phaser.Scene {
             let powerToUse = lastPower;
             // Check if last power is valid and uses color
             if (!lastPower || !activePowers.has(lastPower) || this.isIconPowerType(lastPower)) {
-                // Find the most recent *color* power among active ones
                 const activePowersArray = Array.from(activePowers);
-                powerToUse = null; // Reset
+                powerToUse = null;
                 for (let i = activePowersArray.length - 1; i >= 0; i--) {
                     const p = activePowersArray[i];
-                    if (!this.isIconPowerType(p)) {
+                    if (!this.isIconPowerType(p)) { // Find the latest non-icon power
                         powerToUse = p;
                         break;
                     }
@@ -788,118 +623,213 @@ class GameScene extends Phaser.Scene {
                  targetColor = POWERUP_COLORS[powerToUse] || null;
             }
         }
-
-        if (targetColor !== null) {
-            ball.setTint(targetColor);
-        } else {
-            ball.clearTint();
-        }
+        if (targetColor !== null) { ball.setTint(targetColor); }
+        else { ball.clearTint(); }
     }
 
-     // --- Reverted isIconPowerType ---
+    // Helper to check if a power type uses an icon texture for the ball
      isIconPowerType(type) {
          return type === POWERUP_TYPES.ANCHIRA ||
                 type === POWERUP_TYPES.BIKARA ||
                 type === POWERUP_TYPES.SINDARA ||
-                type === POWERUP_TYPES.MAKIRA || // Makira drop uses icon
-                type === POWERUP_TYPES.ANILA;   // Anila uses icon
-                // Add other icon types here later
+                type === POWERUP_TYPES.MAKIRA || // Item drop uses icon
+                type === POWERUP_TYPES.ANILA;   // Added Anila
      }
 
-    // --- Individual Power Activation/Deactivation Logic ---
-
-    activateKubira(balls) { balls.forEach(b => b.setData('isPenetrating', true)); /* Tint handled by updateBallTint */ }
-    deactivateKubira(balls) { balls.forEach(b => { if (b.active && !b.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA)) { if (!(b.getData('isBikara') && b.getData('bikaraState') === 'yang') && !(b.getData('isSindara') && b.getData('isPenetrating'))) { b.setData('isPenetrating', false); } } this.updateBallTint(b); }); }
-
+    // --- Individual Power Activation/Deactivation ---
+    activateKubira(balls) { balls.forEach(b => { b.setData('isPenetrating', true); /* Tint handled by activatePower */ }); }
+    deactivateKubira(balls) { balls.forEach(b => { if (b.active) { if (!b.getData('isSindara') || (!b.getData('isAttracting') && !b.getData('isMerging'))) { if (!b.getData('isBikara') || b.getData('bikaraState') !== 'yang') { b.setData('isPenetrating', false); } } this.updateBallTint(b); } }); } // Update tint on deactivate
     applySpeedModifier(ball, type) { if (!ball || !ball.active || !ball.body) return; const modifier = BALL_SPEED_MODIFIERS[type]; if (!modifier) return; const currentVelocity = ball.body.velocity; const direction = currentVelocity.length() > 0 ? currentVelocity.clone().normalize() : new Phaser.Math.Vector2(0, -1); const newSpeed = NORMAL_BALL_SPEED * modifier; ball.setVelocity(direction.x * newSpeed, direction.y * newSpeed); }
     resetBallSpeed(ball) { if (!ball || !ball.active || !ball.body) return; if (ball.getData('isFast')) { this.applySpeedModifier(ball, POWERUP_TYPES.SHATORA); } else if (ball.getData('isSlow')) { this.applySpeedModifier(ball, POWERUP_TYPES.HAILA); } else { const currentVelocity = ball.body.velocity; const direction = currentVelocity.length() > 0 ? currentVelocity.clone().normalize() : new Phaser.Math.Vector2(0, -1); ball.setVelocity(direction.x * NORMAL_BALL_SPEED, direction.y * NORMAL_BALL_SPEED); } }
+    activateShatora(balls) { balls.forEach(b => { b.setData({ isFast: true, isSlow: false }); this.applySpeedModifier(b, POWERUP_TYPES.SHATORA); /* Tint handled by activatePower */ }); }
+    deactivateShatora(balls) { balls.forEach(b => { if (b.active && b.getData('isFast')) { b.setData('isFast', false); this.resetBallSpeed(b); } this.updateBallTint(b); }); } // Update tint on deactivate
+    activateHaira(balls) { balls.forEach(b => { b.setData({ isSlow: true, isFast: false }); this.applySpeedModifier(b, POWERUP_TYPES.HAILA); /* Tint handled by activatePower */ }); }
+    deactivateHaira(balls) { balls.forEach(b => { if (b.active && b.getData('isSlow')) { b.setData('isSlow', false); this.resetBallSpeed(b); } this.updateBallTint(b); }); } // Update tint on deactivate
 
-    activateShatora(balls) { balls.forEach(b => { b.setData({ isFast: true, isSlow: false }); this.applySpeedModifier(b, POWERUP_TYPES.SHATORA); this.updateBallTint(b); }); }
-    deactivateShatora(balls) { balls.forEach(b => { if (b.active && b.getData('isFast')) { b.setData('isFast', false); this.resetBallSpeed(b); } this.updateBallTint(b); }); }
+    activateAnchira(balls) { // Takes array, but expects one ball after keepFurthest
+        if (!balls || balls.length === 0) return;
+        const sourceBall = balls[0]; // Assume the first ball is the target
+        if (!sourceBall || !sourceBall.active) return;
 
-    activateHaira(balls) { balls.forEach(b => { b.setData({ isSlow: true, isFast: false }); this.applySpeedModifier(b, POWERUP_TYPES.HAILA); this.updateBallTint(b); }); }
-    deactivateHaira(balls) { balls.forEach(b => { if (b.active && b.getData('isSlow')) { b.setData('isSlow', false); this.resetBallSpeed(b); } this.updateBallTint(b); }); }
+        sourceBall.setData('isAnchira', true); // Flag set in activatePower already, ensure consistency
+        sourceBall.setTexture('anchira_icon');
+        sourceBall.clearTint();
 
-    activateAnchira(balls) { // Now takes array again, consistent with others
-        balls.forEach(sourceBall => {
-            if (!sourceBall || !sourceBall.active) return;
-            sourceBall.setData('isAnchira', true);
-            sourceBall.setTexture('anchira_icon');
-            sourceBall.clearTint();
-
-            const x = sourceBall.x; const y = sourceBall.y; const numSplits = 3;
-            const ballData = sourceBall.data.getAll();
-
-            for (let i = 0; i < numSplits; i++) {
-                const offsetX = Phaser.Math.Between(-5, 5); const offsetY = Phaser.Math.Between(-5, 5);
-                const vx = Phaser.Math.Between(-150, 150); const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8));
-                this.createAndAddBall(x + offsetX, y + offsetY, vx, vy, ballData);
-            }
-        });
-        this.setColliders();
-    }
-    deactivateAnchira(balls) { balls.forEach(b => { if (b.active && b.getData('isAnchira')) { b.setData('isAnchira', false); b.setTexture('ball_image'); this.updateBallTint(b); } }); }
-
-    activateSindara(balls) { // Takes array
-         balls.forEach(sourceBall => {
-            if (!sourceBall || !sourceBall.active) return;
-            const theBall = sourceBall;
-            theBall.setData('isSindara', true);
-            theBall.setTexture('icon_sindara');
-            theBall.clearTint();
-
-            const x = theBall.x; const y = theBall.y;
-            const ballData = theBall.data.getAll();
-
+        const x = sourceBall.x; const y = sourceBall.y; const numSplits = 3;
+        const ballData = sourceBall.data.getAll(); // Get data AFTER setting texture/tint
+        for (let i = 0; i < numSplits; i++) {
+            const offsetX = Phaser.Math.Between(-5, 5); const offsetY = Phaser.Math.Between(-5, 5);
             const vx = Phaser.Math.Between(-150, 150); const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8));
-            const partnerBall = this.createAndAddBall(x + Phaser.Math.Between(-5, 5), y + Phaser.Math.Between(-5, 5), vx, vy, ballData);
-
-            if (partnerBall) {
-                theBall.setData({ sindaraPartner: partnerBall, isAttracting: false, isMerging: false });
-                partnerBall.setData({ sindaraPartner: theBall, isAttracting: false, isMerging: false });
-                if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove();
-                this.sindaraAttractionTimer = this.time.delayedCall(SINDARA_ATTRACTION_DELAY, () => { this.startSindaraAttraction(theBall, partnerBall); }, [], this);
-            } else {
-                 theBall.setData('isSindara', false); // Revert if partner fails
-                 theBall.setTexture('ball_image');
-                 this.updateBallTint(theBall);
-            }
-        });
+            this.createAndAddBall(x + offsetX, y + offsetY, vx, vy, ballData); // Pass data to new balls
+        }
         this.setColliders();
     }
-    startSindaraAttraction(ball1, ball2) { this.sindaraAttractionTimer = null; if (!ball1 || !ball2 || !ball1.active || !ball2.active || !ball1.getData('isSindara') || !ball2.getData('isSindara')) { this.deactivatePowerByType(POWERUP_TYPES.SINDARA); return; } ball1.setData({ isAttracting: true, isPenetrating: true }); ball2.setData({ isAttracting: true, isPenetrating: true }); this.setColliders(); }
+
+    deactivateAnchira(balls) {
+        balls.forEach(b => {
+            if (b.active && b.getData('isAnchira')) {
+                b.setData('isAnchira', false);
+                // Don't delete from activePowers here, central deactivatePowerByType handles it
+                b.setTexture('ball_image');
+                this.updateBallTint(b); // Apply tint if other powers active
+            }
+        });
+    }
+
+    activateSindara(balls) { // Takes array, expects one ball
+        if (!balls || balls.length === 0) return;
+        const sourceBall = balls[0];
+        if (!sourceBall || !sourceBall.active) return;
+        const theBall = sourceBall;
+
+        theBall.setData('isSindara', true);
+        theBall.setTexture('icon_sindara');
+        theBall.clearTint();
+
+        const x = theBall.x; const y = theBall.y; const ballData = theBall.data.getAll();
+        const vx = Phaser.Math.Between(-150, 150); const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8));
+        const partnerBall = this.createAndAddBall(x + Phaser.Math.Between(-5, 5), y + Phaser.Math.Between(-5, 5), vx, vy, ballData);
+        if (partnerBall) {
+            theBall.setData({ sindaraPartner: partnerBall, isAttracting: false, isMerging: false });
+            partnerBall.setData({ sindaraPartner: theBall, isAttracting: false, isMerging: false });
+            if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove();
+            this.sindaraAttractionTimer = this.time.delayedCall(SINDARA_ATTRACTION_DELAY, () => { this.startSindaraAttraction(theBall, partnerBall); }, [], this);
+            this.setColliders();
+        } else {
+             theBall.setData('isSindara', false); // Revert state
+             theBall.getData('activePowers')?.delete(POWERUP_TYPES.SINDARA); // Remove from set
+             theBall.setTexture('ball_image');
+             this.updateBallTint(theBall); // Re-evaluate tint
+        }
+    }
+    startSindaraAttraction(ball1, ball2) {
+        this.sindaraAttractionTimer = null;
+        if (!ball1 || !ball2 || !ball1.active || !ball2.active || !ball1.getData('isSindara') || !ball2.getData('isSindara')) {
+            const activeSindaraBalls = this.balls.getMatching('active', true).filter(b => b.getData('isSindara'));
+            this.deactivatePowerByType(POWERUP_TYPES.SINDARA); // Central deactivation
+            return;
+        }
+        ball1.setData({ isAttracting: true, isPenetrating: true }); ball2.setData({ isAttracting: true, isPenetrating: true });
+        this.setColliders();
+    }
     updateSindaraAttraction(ball) { const partner = ball.getData('sindaraPartner'); if (partner && partner.active && ball.active && ball.getData('isAttracting') && partner.getData('isAttracting') && !ball.getData('isMerging') && !partner.getData('isMerging')) { this.physics.moveToObject(ball, partner, SINDARA_ATTRACTION_FORCE); } }
     handleBallCollision(ball1, ball2) { if (ball1.active && ball2.active && ball1.getData('sindaraPartner') === ball2 && ball1.getData('isAttracting')) { this.mergeSindaraBalls(ball1, ball2); } }
-    mergeSindaraBalls(ballToKeep, ballToRemove) { /* this.sound.play('voice_sindara_merge'); */ const mergeX = (ballToKeep.x + ballToRemove.x) / 2; const mergeY = (ballToKeep.y + ballToRemove.y) / 2; ballToKeep.setPosition(mergeX, mergeY); ballToRemove.destroy(); ballToKeep.setData({ isMerging: true, isAttracting: false, isPenetrating: true, sindaraPartner: null }); ballToKeep.setTexture('icon_sindara'); ballToKeep.clearTint(); if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraMergeTimer = this.time.delayedCall(SINDARA_MERGE_DURATION, () => { this.finishSindaraMerge(ballToKeep); }, [], this); if (this.sindaraAttractionTimer) { this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; } this.setColliders(); }
-    finishSindaraMerge(mergedBall) { this.sindaraMergeTimer = null; if (!mergedBall || !mergedBall.active) return; mergedBall.setData({ isMerging: false }); mergedBall.setTexture('icon_super_sindara'); mergedBall.clearTint(); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = this.time.delayedCall(SINDARA_POST_MERGE_PENETRATION_DURATION, () => { this.deactivateSindaraPenetration(mergedBall); }, [], this); this.setColliders(); }
-    deactivateSindaraPenetration(ball) { this.sindaraPenetrationTimer = null; if (!ball || !ball.active) return; const shouldPenetrate = ball.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (ball.getData('isBikara') && ball.getData('bikaraState') === 'yang'); if (!shouldPenetrate) { ball.setData('isPenetrating', false); } this.deactivatePowerByType(POWERUP_TYPES.SINDARA); } // Let central deactivate handle flags/texture
-    deactivateSindara(balls) { if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null; balls.forEach(b => { if (b.active && b.getData('isSindara')) { b.setData({ isSindara: false, sindaraPartner: null, isAttracting: false, isMerging: false }); const shouldPenetrate = b.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (b.getData('isBikara') && b.getData('bikaraState') === 'yang'); if (!shouldPenetrate && !b.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA)) { b.setData('isPenetrating', false); } b.setTexture('ball_image'); this.updateBallTint(b); } }); }
+    mergeSindaraBalls(ballToKeep, ballToRemove) {
+        // this.sound.play('voice_sindara_merge');
+        const mergeX = (ballToKeep.x + ballToRemove.x) / 2; const mergeY = (ballToKeep.y + ballToRemove.y) / 2;
+        ballToKeep.setPosition(mergeX, mergeY); ballToRemove.destroy();
+        ballToKeep.setData({ isMerging: true, isAttracting: false, isPenetrating: true, sindaraPartner: null });
+        ballToKeep.setTexture('icon_sindara'); // Still use normal icon during merge visual?
+        ballToKeep.clearTint();
+        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove();
+        this.sindaraMergeTimer = this.time.delayedCall(SINDARA_MERGE_DURATION, () => { this.finishSindaraMerge(ballToKeep); }, [], this);
+        if (this.sindaraAttractionTimer) { this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; }
+        this.setColliders();
+    }
+    finishSindaraMerge(mergedBall) {
+        this.sindaraMergeTimer = null; if (!mergedBall || !mergedBall.active) return;
+        mergedBall.setData({ isMerging: false });
+        mergedBall.setTexture('icon_super_sindara');
+        mergedBall.clearTint();
+        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove();
+        this.sindaraPenetrationTimer = this.time.delayedCall(SINDARA_POST_MERGE_PENETRATION_DURATION, () => { this.deactivateSindaraPenetration(mergedBall); }, [], this);
+        this.setColliders();
+    }
+    deactivateSindaraPenetration(ball) {
+        this.sindaraPenetrationTimer = null; if (!ball || !ball.active) return;
+        // Penetration status handled by deactivateSindara below
+        this.deactivatePowerByType(POWERUP_TYPES.SINDARA); // Let central handle flags/texture
+    }
+    deactivateSindara(balls) {
+        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
+        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
+        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
+        balls.forEach(b => {
+            if (b.active && b.getData('isSindara')) {
+                b.setData({ isSindara: false, sindaraPartner: null, isAttracting: false, isMerging: false });
+                // Check if penetration should remain due to other powers
+                const shouldPenetrate = b.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (b.getData('isBikara') && b.getData('bikaraState') === 'yang');
+                if (!shouldPenetrate) {
+                    b.setData('isPenetrating', false);
+                }
+                // Don't delete from activePowers here, central deactivate handles it
+                b.setTexture('ball_image');
+                this.updateBallTint(b);
+            }
+        });
+        this.setColliders();
+    }
 
-    activateBikara(balls) { balls.forEach(ball => { if (ball.active) { ball.setData({ isBikara: true, bikaraState: 'yin', bikaraYangCount: 0 }); ball.setTexture('icon_bikara_yin'); ball.clearTint(); const shouldPenetrate = ball.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (ball.getData('isSindara') && ball.getData('isPenetrating')); if (!shouldPenetrate) { ball.setData('isPenetrating', false); } } }); this.setColliders();}
-    deactivateBikara(balls) { balls.forEach(ball => { if (ball.active && ball.getData('isBikara')) { ball.setData({ isBikara: false, bikaraState: null, bikaraYangCount: 0 }); const shouldPenetrate = ball.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (ball.getData('isSindara') && ball.getData('isPenetrating')); if (!shouldPenetrate && !ball.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA)) { ball.setData('isPenetrating', false); } ball.setTexture('ball_image'); this.updateBallTint(ball); } }); }
-    switchBikaraState(ball) { if (!ball || !ball.active || !ball.getData('isBikara')) return; const currentState = ball.getData('bikaraState'); const nextState = (currentState === 'yin') ? 'yang' : 'yin'; ball.setData('bikaraState', nextState); if (nextState === 'yang') { ball.setData({ bikaraYangCount: 0, isPenetrating: true }); ball.setTexture('icon_bikara_yang'); /* this.sound.play('voice_bikara_yang'); */ } else { const shouldPenetrate = ball.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (ball.getData('isSindara') && ball.getData('isPenetrating')); if (!shouldPenetrate) { ball.setData('isPenetrating', false); } ball.setTexture('icon_bikara_yin'); /* this.sound.play('voice_bikara_yin'); */ } ball.clearTint(); this.setColliders(); }
+    activateBikara(balls) {
+        balls.forEach(ball => {
+            if (ball.active) {
+                ball.setData({ isBikara: true, bikaraState: 'yin', bikaraYangCount: 0 });
+                ball.setTexture('icon_bikara_yin'); ball.clearTint();
+                // Bikara Yin is not inherently penetrating
+                const shouldPenetrate = ball.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (ball.getData('isSindara') && ball.getData('isPenetrating'));
+                if (!shouldPenetrate) { ball.setData('isPenetrating', false); }
+            }
+        });
+        this.setColliders();
+    }
+
+    deactivateBikara(balls) {
+        balls.forEach(ball => {
+            if (ball.active && ball.getData('isBikara')) {
+                ball.setData({ isBikara: false, bikaraState: null, bikaraYangCount: 0 });
+                // Check penetration based on other powers
+                const shouldPenetrate = ball.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (ball.getData('isSindara') && ball.getData('isPenetrating'));
+                if (!shouldPenetrate) { ball.setData('isPenetrating', false); }
+                // Don't delete from activePowers here
+                ball.setTexture('ball_image');
+                this.updateBallTint(ball);
+            }
+        });
+        // Clear marked bricks only when Bikara is explicitly deactivated
+        this.bricks.getChildren().forEach(br => { if (br.getData('isMarkedByBikara')) { br.setData('isMarkedByBikara', false); const tint = br.getData('originalTint'); if(tint !== undefined && tint !== null) {br.setTint(tint)} else {br.clearTint();} } });
+        this.setColliders();
+    }
+
+    switchBikaraState(ball) {
+        if (!ball || !ball.active || !ball.getData('isBikara')) return;
+        const currentState = ball.getData('bikaraState');
+        const nextState = (currentState === 'yin') ? 'yang' : 'yin';
+        ball.setData('bikaraState', nextState);
+        if (nextState === 'yang') {
+            ball.setData({ bikaraYangCount: 0, isPenetrating: true }); // Yang IS penetrating
+            ball.setTexture('icon_bikara_yang'); /* this.sound.play('voice_bikara_yang'); */
+        } else { // Switching to Yin
+            // Yin is NOT penetrating unless another power grants it
+            const shouldPenetrate = ball.getData('activePowers')?.has(POWERUP_TYPES.KUBIRA) || (ball.getData('isSindara') && ball.getData('isPenetrating'));
+            if (!shouldPenetrate) { ball.setData('isPenetrating', false); }
+            ball.setTexture('icon_bikara_yin'); /* this.sound.play('voice_bikara_yin'); */
+        }
+        ball.clearTint(); this.setColliders();
+    }
+
     markBrickByBikara(brick) { if (!brick || !brick.active || brick.getData('isMarkedByBikara') || brick.getData('maxHits') === -1) return; brick.setData('isMarkedByBikara', true); brick.setTint(BRICK_MARKED_COLOR); }
-
     activateIndara(balls) { balls.forEach(b => { b.setData({ isIndaraActive: true, indaraHomingCount: INDARA_MAX_HOMING_COUNT }); this.updateBallTint(b); }); }
-    deactivateIndaraForBall(ball) { if (!ball || !ball.active || !ball.getData('isIndaraActive')) return; ball.setData({ isIndaraActive: false, indaraHomingCount: 0 }); this.updateBallTint(ball); } // Update tint when deactivated
-    handleWorldBounds(body, up, down, left, right) { const ball = body.gameObject; if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls.contains(ball) || !ball.active) return; if (ball.getData('isIndaraActive') && ball.getData('indaraHomingCount') > 0 && (up || left || right)) { const currentHomingCount = ball.getData('indaraHomingCount'); const targetBricks = this.bricks.getMatching('active', true).filter(b => b.getData('maxHits') !== -1); if (targetBricks.length > 0) { let closestBrick = null; let minDistSq = Infinity; const ballCenter = ball.body.center; targetBricks.forEach(brick => { const distSq = Phaser.Math.Distance.Squared(ballCenter.x, ballCenter.y, brick.body.center.x, brick.body.center.y); if (distSq < minDistSq) { minDistSq = distSq; closestBrick = brick; } }); if (closestBrick) { const currentSpeed = ball.body.velocity.length(); const angle = Phaser.Math.Angle.BetweenPoints(ballCenter, closestBrick.body.center); this.physics.velocityFromAngle(angle, currentSpeed, ball.body.velocity); const newHomingCount = currentHomingCount - 1; ball.setData('indaraHomingCount', newHomingCount); if (newHomingCount <= 0) { this.deactivatePowerByType(POWERUP_TYPES.INDARA); } } } } }
+    deactivateIndaraForBall(ball) { if (!ball || !ball.active || !ball.getData('isIndaraActive')) return; ball.setData({ isIndaraActive: false, indaraHomingCount: 0 }); /* Don't delete from activePowers here */ this.updateBallTint(ball); }
+    handleWorldBounds(body, up, down, left, right) { const ball = body.gameObject; if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls.contains(ball) || !ball.active) return; if (ball.getData('isIndaraActive') && ball.getData('indaraHomingCount') > 0 && (up || left || right)) { const currentHomingCount = ball.getData('indaraHomingCount'); const targetBricks = this.bricks.getMatching('active', true).filter(b => b.getData('maxHits') !== -1); if (targetBricks.length > 0) { let closestBrick = null; let minDistSq = Infinity; const ballCenter = ball.body.center; targetBricks.forEach(brick => { const distSq = Phaser.Math.Distance.Squared(ballCenter.x, ballCenter.y, brick.body.center.x, brick.body.center.y); if (distSq < minDistSq) { minDistSq = distSq; closestBrick = brick; } }); if (closestBrick) { const currentSpeed = ball.body.velocity.length(); const angle = Phaser.Math.Angle.BetweenPoints(ballCenter, closestBrick.body.center); this.physics.velocityFromAngle(angle, currentSpeed, ball.body.velocity); const newHomingCount = currentHomingCount - 1; ball.setData('indaraHomingCount', newHomingCount); if (newHomingCount <= 0) { this.deactivatePowerByType(POWERUP_TYPES.INDARA); } } } } } // Use central deactivation
 
-    // --- Modified Anila Activation ---
+    // --- Modified Anila functions ---
     activateAnila(balls) {
         balls.forEach(b => {
-            if (b.active && !b.getData('isAnilaActive')) {
-                b.setData('isAnilaActive', true);
-                b.setTexture('icon_anila'); // Set texture here
-                b.clearTint();              // Clear tint here
+            if (b.active) { // Check if ball is active
+                 if (!b.getData('isAnilaActive')) {
+                     b.setData('isAnilaActive', true);
+                     b.setTexture('icon_anila'); // Set texture on activation
+                     b.clearTint();
+                 }
             }
         });
     }
-    // --- Modified Anila Deactivation ---
     deactivateAnilaForBall(ball) {
         if (!ball || !ball.active || !ball.getData('isAnilaActive')) return;
         ball.setData('isAnilaActive', false);
-        ball.setTexture('ball_image');     // Reset texture here
-        this.updateBallTint(ball);       // Apply tint if needed here
+        // Don't delete from activePowers here
+        ball.setTexture('ball_image');     // Reset texture on deactivation
+        this.updateBallTint(ball);       // Update tint after resetting texture
     }
     triggerAnilaBounce(ball) { if (!ball || !ball.active || !ball.getData('isAnilaActive')) return; const currentVy = ball.body.velocity.y; const bounceVy = -Math.abs(currentVy > -10 ? BALL_INITIAL_VELOCITY_Y * 0.7 : currentVy * 0.8); ball.setVelocityY(bounceVy); ball.y = this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT; this.deactivatePowerByType(POWERUP_TYPES.ANILA); } // Central deactivate handles texture/tint
 
@@ -907,9 +837,19 @@ class GameScene extends Phaser.Scene {
     increaseVajraGauge() { if (this.isVajraSystemActive && !this.isStageClearing && !this.isGameOver) { this.vajraGauge += VAJRA_GAUGE_INCREMENT; this.vajraGauge = Math.min(this.vajraGauge, VAJRA_GAUGE_MAX); this.events.emit('updateVajraGauge', this.vajraGauge); if (this.vajraGauge >= VAJRA_GAUGE_MAX) { this.triggerVajraDestroy(); } } }
     deactivateVajra() { this.isVajraSystemActive = false; this.vajraGauge = 0; this.events.emit('deactivateVajraUI'); }
 
-    activateMakira() { if (!this.isMakiraActive) { this.isMakiraActive = true; if (this.familiars) this.familiars.clear(true, true); else this.familiars = this.physics.add.group(); this.createFamiliars(); if (this.makiraBeams) this.makiraBeams.clear(true, true); else this.makiraBeams = this.physics.add.group(); if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = this.time.addEvent({ delay: MAKIRA_ATTACK_INTERVAL, callback: this.fireMakiraBeam, callbackScope: this, loop: true }); } const duration = POWERUP_DURATION[POWERUP_TYPES.MAKIRA]; if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = this.time.delayedCall(duration, () => { this.deactivateMakira(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; }, [], this); this.setColliders(); }
-    deactivateMakira() { if (this.isMakiraActive) { this.isMakiraActive = false; if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; } if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) { this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; } if (this.familiars) { this.familiars.clear(true, true); } if (this.makiraBeams) { this.makiraBeams.clear(true, true); } } }
-    createFamiliars() { if (!this.paddle) return; const paddleX = this.paddle.x; const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE; const familiarLeft = this.familiars.create(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun').setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).clearTint(); if (familiarLeft.body) { familiarLeft.body.setAllowGravity(false).setImmovable(true); } else { console.error("Failed to create familiarLeft physics body!"); if(familiarLeft) familiarLeft.destroy(); } const familiarRight = this.familiars.create(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun').setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).clearTint(); if (familiarRight.body) { familiarRight.body.setAllowGravity(false).setImmovable(true); } else { console.error("Failed to create familiarRight physics body!"); if(familiarRight) familiarRight.destroy();} }
+    activateMakira() {
+        if (!this.isMakiraActive) { this.isMakiraActive = true; if (this.familiars) this.familiars.clear(true, true); else this.familiars = this.physics.add.group(); this.createFamiliars(); if (this.makiraBeams) this.makiraBeams.clear(true, true); else this.makiraBeams = this.physics.add.group(); if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = this.time.addEvent({ delay: MAKIRA_ATTACK_INTERVAL, callback: this.fireMakiraBeam, callbackScope: this, loop: true }); } const duration = POWERUP_DURATION[POWERUP_TYPES.MAKIRA]; if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = this.time.delayedCall(duration, () => { this.deactivateMakira(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; }, [], this); this.setColliders();
+    }
+    deactivateMakira() {
+        if (this.isMakiraActive) { this.isMakiraActive = false; if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; } if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) { this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; } if (this.familiars) { this.familiars.clear(true, true); } if (this.makiraBeams) { this.makiraBeams.clear(true, true); } }
+    }
+    createFamiliars() {
+        if (!this.paddle) return; const paddleX = this.paddle.x; const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
+        const familiarLeft = this.familiars.create(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun').setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).clearTint();
+        if (familiarLeft.body) { familiarLeft.body.setAllowGravity(false).setImmovable(true); } else { console.error("Failed to create familiarLeft physics body!"); if(familiarLeft) familiarLeft.destroy(); }
+        const familiarRight = this.familiars.create(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun').setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).clearTint();
+        if (familiarRight.body) { familiarRight.body.setAllowGravity(false).setImmovable(true); } else { console.error("Failed to create familiarRight physics body!"); if(familiarRight) familiarRight.destroy();}
+    }
     fireMakiraBeam() { if (!this.isMakiraActive || !this.familiars || this.familiars.countActive(true) === 0 || this.isStageClearing || this.isGameOver) return; this.familiars.getChildren().forEach(familiar => { if (familiar.active) { const beam = this.makiraBeams.create(familiar.x, familiar.y - MAKIRA_FAMILIAR_SIZE, 'whitePixel').setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT).setTint(MAKIRA_BEAM_COLOR); if (beam && beam.body) { beam.setVelocity(0, -MAKIRA_BEAM_SPEED); beam.body.setAllowGravity(false); } else { console.error("Failed to create Makira beam body!"); if (beam) beam.destroy(); } } }); }
 
     loseLife() {
@@ -921,31 +861,31 @@ class GameScene extends Phaser.Scene {
         if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
         this.lives--; this.events.emit('updateLives', this.lives);
         this.isBallLaunched = false;
-
-        // Reset all balls
         const activeBalls = this.balls.getMatching('active', true);
-        activeBalls.forEach(ball => {
-            if (ball.active) {
-                // Reset all data flags
-                ball.setData({
-                    activePowers: new Set(),
-                    lastActivatedPower: null,
-                    isPenetrating: false,
-                    isFast: false, isSlow: false,
-                    isAnchira: false,
-                    isSindara: false, sindaraPartner: null, isAttracting: false, isMerging: false,
-                    isBikara: false, bikaraState: null, bikaraYangCount: 0,
-                    isIndaraActive: false, indaraHomingCount: 0,
-                    isAnilaActive: false, // Reset Anila
-                    isKubira: false, isShatora: false, isHaila: false, // etc.
-                });
-                // Reset visual state
-                this.resetBallSpeed(ball);
-                ball.setTexture('ball_image'); // Set to default texture
-                ball.clearTint();            // Clear any tint
-            }
-        });
-
+        if (activeBalls.length > 0) {
+             // Reset all balls to default state
+             activeBalls.forEach(ball => {
+                 if (ball.active) {
+                     // Reset all data flags
+                     ball.setData({
+                         activePowers: new Set(),
+                         lastActivatedPower: null,
+                         isPenetrating: false,
+                         isFast: false, isSlow: false,
+                         isAnchira: false,
+                         isSindara: false, sindaraPartner: null, isAttracting: false, isMerging: false,
+                         isBikara: false, bikaraState: null, bikaraYangCount: 0,
+                         isIndaraActive: false, indaraHomingCount: 0,
+                         isAnilaActive: false, // Reset Anila
+                         // Reset other flags as needed
+                     });
+                     // Reset visual state
+                     this.resetBallSpeed(ball);
+                     ball.setTexture('ball_image');
+                     ball.clearTint();
+                 }
+            });
+        }
          // Clear marked bricks
          this.bricks?.getChildren().forEach(br => {
              if (br.getData('isMarkedByBikara')) {
@@ -956,7 +896,6 @@ class GameScene extends Phaser.Scene {
                   } else { br.clearTint(); }
              }
          });
-
         if (this.lives > 0) { this.time.delayedCall(500, this.resetForNewLife, [], this); }
         else { this.time.delayedCall(500, this.gameOver, [], this); }
     }
@@ -966,7 +905,7 @@ class GameScene extends Phaser.Scene {
         if (this.balls) { this.balls.clear(true, true); }
         if (this.paddle) { this.paddle.x = this.scale.width / 2; this.paddle.y = this.scale.height - PADDLE_Y_OFFSET; this.updatePaddleSize(); }
         let newBall = null;
-        if (this.paddle) { newBall = this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS); } // Creates default ball
+        if (this.paddle) { newBall = this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS); }
         else { newBall = this.createAndAddBall(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET - PADDLE_HEIGHT / 2 - BALL_RADIUS); }
         this.isBallLaunched = false;
         this.setColliders();
@@ -994,47 +933,33 @@ class GameScene extends Phaser.Scene {
              if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
              if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
              if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
-
-             // Reset balls
              const activeBalls = this.balls.getMatching('active', true);
-             activeBalls.forEach(ball => {
-                 if (ball.active) {
-                     // Reset all data flags
-                     ball.setData({
-                         activePowers: new Set(),
-                         lastActivatedPower: null,
-                         isPenetrating: false,
-                         isFast: false, isSlow: false,
-                         isAnchira: false,
-                         isSindara: false, sindaraPartner: null, isAttracting: false, isMerging: false,
-                         isBikara: false, bikaraState: null, bikaraYangCount: 0,
-                         isIndaraActive: false, indaraHomingCount: 0,
-                         isAnilaActive: false, // Reset Anila
-                         isKubira: false, isShatora: false, isHaila: false, // etc.
-                     });
-                     // Reset visual state and hide
-                     ball.setVelocity(0, 0);
-                     ball.setTexture('ball_image');
-                     ball.clearTint();
-                     ball.setVisible(false).setActive(false);
-                     if (ball.body) ball.body.enable = false;
-                 }
-             });
-
-              // Clear marked bricks
-             if (this.bricks) {
-                 this.bricks.getChildren().forEach(br => {
-                     if (br.getData('isMarkedByBikara')) {
-                        br.setData('isMarkedByBikara', false);
-                        const originalTint = br.getData('originalTint');
-                        if (originalTint !== undefined && originalTint !== null) {
-                           br.setTint(originalTint);
-                        } else { br.clearTint(); }
+             if (activeBalls.length > 0) {
+                 // Reset all balls to default state
+                 activeBalls.forEach(ball => {
+                     if(ball.active){
+                         ball.setData({
+                             activePowers: new Set(),
+                             lastActivatedPower: null,
+                             isPenetrating: false,
+                             isFast: false, isSlow: false,
+                             isAnchira: false,
+                             isSindara: false, sindaraPartner: null, isAttracting: false, isMerging: false,
+                             isBikara: false, bikaraState: null, bikaraYangCount: 0,
+                             isIndaraActive: false, indaraHomingCount: 0,
+                             isAnilaActive: false, // Reset Anila
+                             // Reset other flags
+                         });
+                         ball.setVelocity(0, 0);
+                         ball.setTexture('ball_image');
+                         ball.clearTint();
+                         ball.setVisible(false).setActive(false);
+                         if (ball.body) ball.body.enable = false;
                      }
                  });
              }
+             if (this.bricks) { this.bricks.getChildren().forEach(br => { if (br.getData('isMarkedByBikara')) { br.setData('isMarkedByBikara', false); const tint = br.getData('originalTint'); if(tint !== undefined && tint !== null) {br.setTint(tint)} else {br.clearTint();} } }); }
              if (this.powerUps) { this.powerUps.clear(true, true); }
-
              this.currentStage++;
              const maxStages = this.currentMode === GAME_MODE.ALL_STARS ? 10 : 12;
              if (this.currentStage > maxStages) { this.gameComplete(); }
@@ -1042,12 +967,7 @@ class GameScene extends Phaser.Scene {
                  this.events.emit('updateStage', this.currentStage);
                  this.time.delayedCall(1000, () => {
                      if (!this.scene || !this.scene.isActive() || this.isGameOver) return;
-                     try {
-                         this.setupStage();
-                         this.resetForNewLife(); // Creates a fresh default ball
-                         this.isStageClearing = false;
-                         this.physics.resume();
-                     }
+                     try { this.setupStage(); this.isStageClearing = false; this.resetForNewLife(); this.physics.resume(); }
                      catch (e) { console.error("Error setting up next stage:", e); this.isStageClearing = false; this.gameOver(); }
                  }, [], this);
              }
@@ -1084,7 +1004,7 @@ class UIScene extends Phaser.Scene {
         }
         dropPoolTypes.forEach((type, index) => {
             let textureKey = 'whitePixel';
-            let tintColor = POWERUP_COLORS[type] || 0x888888;
+            let tintColor = POWERUP_COLORS[type] || 0x888888; // Use color if no icon
 
             switch (type) {
                 case POWERUP_TYPES.ANCHIRA: textureKey = 'anchira_icon'; tintColor = null; break;
@@ -1092,7 +1012,7 @@ class UIScene extends Phaser.Scene {
                 case POWERUP_TYPES.SINDARA: textureKey = 'icon_sindara'; tintColor = null; break;
                 case POWERUP_TYPES.MAKIRA: textureKey = 'icon_makira'; tintColor = null; break;
                 case POWERUP_TYPES.ANILA: textureKey = 'icon_anila'; tintColor = null; break; // Added Anila
-                // Add other icons here
+                // Add other icons here for UI display
             }
 
             const icon = this.add.image(0, 0, textureKey).setDisplaySize(DROP_POOL_UI_ICON_SIZE, DROP_POOL_UI_ICON_SIZE).setOrigin(0, 0.5);
@@ -1115,7 +1035,7 @@ const config = {
     physics: {
         default: 'arcade',
         arcade: {
-            debug: false, // Set to true for physics debugging
+            debug: false, // Set to true for physics debugging if needed
             gravity: { y: 0 }
         }
     },
