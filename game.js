@@ -2,13 +2,13 @@
 const PADDLE_WIDTH_RATIO = 0.2;
 const PADDLE_HEIGHT = 20;
 const PADDLE_Y_OFFSET = 50;
-const BALL_RADIUS = 18; // 見た目のボール画像の半径 (直径36)
-const PHYSICS_BALL_RADIUS = 60; // 当たり判定(緑円)の半径
+const BALL_RADIUS = 18;
+const PHYSICS_BALL_RADIUS = 60;
 const BALL_INITIAL_VELOCITY_Y = -350;
 const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150];
 const BRICK_ROWS = 5;
 const BRICK_COLS = 8;
-const BRICK_WIDTH_RATIO = 0.1;
+const BRICK_WIDTH_RATIO = 0.095; // ★ 0.1 から 0.095 に変更
 const BRICK_HEIGHT = 20;
 const BRICK_SPACING = 4;
 const BRICK_OFFSET_TOP = 100;
@@ -22,11 +22,11 @@ const MAX_STAGE = 12;
 const BRICK_COLORS = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffff00, 0xff00ff, 0x00ffff ];
 const BRICK_MARKED_COLOR = 0x666666;
 
-const BAISRAVA_DROP_RATE = 0.02; // バイシュラは固定
-const POWERUP_SIZE = 40; // アイテムサイズ
+const BAISRAVA_DROP_RATE = 0.02;
+const POWERUP_SIZE = 40;
 const POWERUP_SPEED_Y = 100;
 const POWERUP_TYPES = { KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara', BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra', MAKIRA: 'makira', MAKORA: 'makora' };
-const ALL_POSSIBLE_POWERUPS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ]; // 全ての候補リスト
+const ALL_POSSIBLE_POWERUPS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ];
 const MAKORA_COPYABLE_POWERS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA ];
 const POWERUP_DURATION = { [POWERUP_TYPES.KUBIRA]: 10000, [POWERUP_TYPES.SHATORA]: 3000, [POWERUP_TYPES.HAILA]: 10000, [POWERUP_TYPES.MAKIRA]: 6667 };
 const BIKARA_YANG_COUNT_MAX = 2;
@@ -52,20 +52,11 @@ const DROP_POOL_UI_SPACING = 5;
 const UI_BOTTOM_OFFSET = 30;
 
 const POWERUP_ICON_KEYS = {
-    [POWERUP_TYPES.KUBIRA]: 'icon_kubira',
-    [POWERUP_TYPES.SHATORA]: 'icon_shatora',
-    [POWERUP_TYPES.HAILA]: 'icon_haila',
-    [POWERUP_TYPES.ANCHIRA]: 'icon_anchira',
-    [POWERUP_TYPES.SINDARA]: 'icon_sindara',
-    SINDARA_SUPER: 'icon_super_sindara',
-    [POWERUP_TYPES.BIKARA]: 'icon_bikara_yin',
-    BIKARA_YANG: 'icon_bikara_yang',
-    [POWERUP_TYPES.INDARA]: 'icon_indara',
-    [POWERUP_TYPES.ANILA]: 'icon_anila',
-    [POWERUP_TYPES.BAISRAVA]: 'icon_baisrava',
-    [POWERUP_TYPES.VAJRA]: 'icon_vajra',
-    [POWERUP_TYPES.MAKIRA]: 'icon_makira',
-    [POWERUP_TYPES.MAKORA]: 'icon_makora',
+    [POWERUP_TYPES.KUBIRA]: 'icon_kubira', [POWERUP_TYPES.SHATORA]: 'icon_shatora', [POWERUP_TYPES.HAILA]: 'icon_haila',
+    [POWERUP_TYPES.ANCHIRA]: 'icon_anchira', [POWERUP_TYPES.SINDARA]: 'icon_sindara', SINDARA_SUPER: 'icon_super_sindara',
+    [POWERUP_TYPES.BIKARA]: 'icon_bikara_yin', BIKARA_YANG: 'icon_bikara_yang', [POWERUP_TYPES.INDARA]: 'icon_indara',
+    [POWERUP_TYPES.ANILA]: 'icon_anila', [POWERUP_TYPES.BAISRAVA]: 'icon_baisrava', [POWERUP_TYPES.VAJRA]: 'icon_vajra',
+    [POWERUP_TYPES.MAKIRA]: 'icon_makira', [POWERUP_TYPES.MAKORA]: 'icon_makora',
 };
 
 const SYMBOL_PATTERNS = {
@@ -106,9 +97,9 @@ class BootScene extends Phaser.Scene {
 class TitleScene extends Phaser.Scene {
      constructor() {
          super('TitleScene');
-         this.selectedCount = 4; // 初期値
-         this.selectedRate = 50; // 初期値
-         this.domElements = []; // 作成したDOM要素を追跡
+         this.selectedCount = 4;
+         this.selectedRate = 50;
+         this.domElements = [];
      }
 
     create() {
@@ -116,30 +107,26 @@ class TitleScene extends Phaser.Scene {
         const h = this.scale.height;
         this.cameras.main.setBackgroundColor('#222');
 
-        // タイトルテキスト
         this.add.text(w / 2, h * 0.15, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
         this.add.text(w / 2, h * 0.25, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
 
-        // --- スライダーUIの作成 ---
         const sliderContainer = document.createElement('div');
-        // ★ CSS: Phaser座標で配置するので position 等は不要
-        sliderContainer.style.width = '80%'; // コンテナ幅
-        sliderContainer.style.maxWidth = '400px'; // 最大幅
+        sliderContainer.style.width = '80%';
+        sliderContainer.style.maxWidth = '400px';
         sliderContainer.style.color = 'white';
-        sliderContainer.style.fontSize = '18px'; // 少し小さく
+        sliderContainer.style.fontSize = '18px';
         sliderContainer.style.backgroundColor = 'rgba(0,0,0,0.6)';
-        sliderContainer.style.padding = '15px'; // 少し小さく
+        sliderContainer.style.padding = '15px';
         sliderContainer.style.borderRadius = '8px';
-        sliderContainer.style.textAlign = 'left'; // 左揃えに戻す
+        sliderContainer.style.textAlign = 'left';
 
-        // 抽選数スライダー
         const countDiv = document.createElement('div');
-        countDiv.style.marginBottom = '10px'; // マージン調整
+        countDiv.style.marginBottom = '10px';
         const countLabel = document.createElement('label');
         countLabel.htmlFor = 'count-slider';
         countLabel.textContent = '抽選候補数: ';
-        countLabel.style.display = 'inline-block'; // 幅調整のため
-        countLabel.style.width = '150px'; // ラベル幅固定 (調整してください)
+        countLabel.style.display = 'inline-block';
+        countLabel.style.width = '150px';
 
         const countValueSpan = document.createElement('span');
         countValueSpan.id = 'count-value';
@@ -156,26 +143,25 @@ class TitleScene extends Phaser.Scene {
         countSlider.max = '11';
         countSlider.value = this.selectedCount.toString();
         countSlider.step = '1';
-        countSlider.style.width = 'calc(100% - 190px)'; // 残りの幅 (ラベル幅+値幅+マージンを引く)
+        countSlider.style.width = 'calc(100% - 190px)';
         countSlider.style.verticalAlign = 'middle';
 
         countDiv.appendChild(countLabel);
         countDiv.appendChild(countValueSpan);
         countDiv.appendChild(countSlider);
 
-        // ドロップ率スライダー
         const rateDiv = document.createElement('div');
         const rateLabel = document.createElement('label');
         rateLabel.htmlFor = 'rate-slider';
         rateLabel.textContent = 'ドロップ率: ';
         rateLabel.style.display = 'inline-block';
-        rateLabel.style.width = '150px'; // ラベル幅固定
+        rateLabel.style.width = '150px';
 
         const rateValueSpan = document.createElement('span');
         rateValueSpan.id = 'rate-value';
-        rateValueSpan.textContent = this.selectedRate.toString() + '%'; // % を追加
+        rateValueSpan.textContent = this.selectedRate.toString() + '%';
         rateValueSpan.style.display = 'inline-block';
-        rateValueSpan.style.minWidth = '4em'; // 幅調整 (%含む)
+        rateValueSpan.style.minWidth = '4em';
         rateValueSpan.style.textAlign = 'right';
         rateValueSpan.style.marginRight = '10px';
 
@@ -186,7 +172,7 @@ class TitleScene extends Phaser.Scene {
         rateSlider.max = '100';
         rateSlider.value = this.selectedRate.toString();
         rateSlider.step = '10';
-        rateSlider.style.width = 'calc(100% - 200px)'; // 残りの幅 (ラベル幅+値幅+マージンを引く)
+        rateSlider.style.width = 'calc(100% - 200px)';
         rateSlider.style.verticalAlign = 'middle';
 
         rateDiv.appendChild(rateLabel);
@@ -196,32 +182,26 @@ class TitleScene extends Phaser.Scene {
         sliderContainer.appendChild(countDiv);
         sliderContainer.appendChild(rateDiv);
 
-        // ★ DOM要素をPhaserに追加 (座標とOrigin変更)
-        //    y座標を調整してタイトルとボタンの間に配置
         const domElement = this.add.dom(w / 2, h * 0.5, sliderContainer).setOrigin(0.5);
-        this.domElements.push(domElement); // 管理配列に追加
+        this.domElements.push(domElement);
 
-        // スライダーのイベントリスナーを設定
         countSlider.addEventListener('input', (event) => {
             this.selectedCount = parseInt(event.target.value);
             countValueSpan.textContent = this.selectedCount.toString();
         });
         rateSlider.addEventListener('input', (event) => {
             this.selectedRate = parseInt(event.target.value);
-            rateValueSpan.textContent = this.selectedRate.toString() + '%'; // % を表示に追加
+            rateValueSpan.textContent = this.selectedRate.toString() + '%';
         });
 
-        // --- ゲーム開始ボタン ---
         const buttonStyle = { fontSize: '32px', fill: '#fff', backgroundColor: '#555', padding: { x: 20, y: 10 } };
         const buttonHoverStyle = { fill: '#ff0' };
-        // ★ ボタンのY座標をスライダーの下に調整
         const startButton = this.add.text(w / 2, h * 0.75, 'ゲーム開始', buttonStyle)
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true })
             .on('pointerover', () => { startButton.setStyle(buttonHoverStyle) })
             .on('pointerout', () => { startButton.setStyle(buttonStyle) })
             .on('pointerdown', () => {
-                // 設定値を渡してゲームシーンを開始
                 this.scene.start('GameScene', {
                     chaosSettings: {
                         count: this.selectedCount,
@@ -231,11 +211,9 @@ class TitleScene extends Phaser.Scene {
                 this.scene.launch('UIScene');
             });
 
-        // シーンシャットダウン時にDOM要素を削除するリスナー
         this.events.on('shutdown', this.clearDOM, this);
     }
 
-    // DOM要素をクリアするメソッド
     clearDOM() {
         this.domElements.forEach(element => element.destroy());
         this.domElements = [];
@@ -508,8 +486,19 @@ class GameScene extends Phaser.Scene {
         const isBikaraYin = lastPower === POWERUP_TYPES.BIKARA && ball.getData('bikaraState') === 'yin';
         const isPenetrating = ball.getData('isPenetrating');
         const isSindaraSpecial = lastPower === POWERUP_TYPES.SINDARA && (ball.getData('isAttracting') || ball.getData('isMerging'));
-        if (isBikaraYin) { if (brick.getData('maxHits') !== -1) { this.markBrickByBikara(brick); } }
-        else if (isPenetrating && !isSindaraSpecial) { if (brick.getData('maxHits') !== -1) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); } } }
+
+        if (isBikaraYin) {
+            if (brick.getData('maxHits') !== -1) { this.markBrickByBikara(brick); }
+        }
+        // ★ 貫通時の破壊処理変更
+        else if (isPenetrating && !isSindaraSpecial) {
+             // 破壊不能ブロック(`maxHits === -1`)も破壊対象にする
+             // (ビカラ陰の透過は除く)
+             const destroyed = this.handleBrickHit(brick, Infinity);
+             if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) {
+                 this.time.delayedCall(10, this.stageClear, [], this);
+             }
+        }
     }
     handleBikaraYangDestroy(ball, hitBrick) {
         if (!ball || !ball.active || ball.getData('lastActivatedPower') !== POWERUP_TYPES.BIKARA || ball.getData('bikaraState') !== 'yang') return;
@@ -529,15 +518,23 @@ class GameScene extends Phaser.Scene {
         if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); }
     }
     triggerVajraDestroy() {
-        if (this.isStageClearing || this.isGameOver) return; if (!this.isVajraSystemActive) return;
+        // ★ isVajraSystemActive を false にし、UI非表示イベントを最初に発行
+        if (this.isStageClearing || this.isGameOver) return;
+        if (!this.isVajraSystemActive) return;
         this.isVajraSystemActive = false;
+        this.events.emit('deactivateVajraUI'); // 先にUIを消す
+
         const activeBricks = this.bricks.getMatching('active', true);
-        if (activeBricks.length === 0) { this.deactivateVajra(); return; }
+        if (activeBricks.length === 0) { this.deactivateVajra(); return; } // ゲージリセット等は deactivateVajra で行う
         const countToDestroy = Math.min(activeBricks.length, VAJRA_DESTROY_COUNT);
         const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks); let destroyedCount = 0;
         for (let i = 0; i < countToDestroy; i++) { const brick = shuffledBricks[i]; if (brick && brick.active && brick.getData && brick.getData('maxHits') !== -1) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } }
         console.log(`Vajra destroyed ${destroyedCount} bricks.`);
-        if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } else { this.deactivateVajra(); }
+        if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) {
+            this.stageClear(); // stageClear 内で deactivateVajra が呼ばれる
+        } else {
+            this.deactivateVajra(); // ゲージリセットなどを行う
+        }
     }
     activateBaisrava() {
         if (this.isStageClearing || this.isGameOver) return;
@@ -558,32 +555,20 @@ class GameScene extends Phaser.Scene {
         let textureKey = POWERUP_ICON_KEYS[type] || 'whitePixel';
         let displaySize = POWERUP_SIZE;
         let tintColor = null;
-
-        if (textureKey === 'whitePixel') { // アイコンが見つからなかった場合
+        if (textureKey === 'whitePixel') {
              console.warn(`Powerup icon key not found for type: ${type}, using white pixel.`);
-             tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc; // バイシュラなら金色、他は灰色
+             tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc;
         }
-
         if (!type) { console.warn(`Attempted to drop powerup with no type.`); return; }
-
         let powerUp = null;
         try {
             powerUp = this.powerUps.create(x, y, textureKey);
             if (powerUp) {
                 powerUp.setDisplaySize(displaySize, displaySize).setData('type', type);
-                if (tintColor !== null) {
-                    powerUp.setTint(tintColor);
-                } else {
-                    powerUp.clearTint();
-                }
-                if (powerUp.body) {
-                    powerUp.setVelocity(0, POWERUP_SPEED_Y);
-                    powerUp.body.setCollideWorldBounds(false);
-                    powerUp.body.setAllowGravity(false);
-                } else {
-                    console.error(`No physics body for powerup type: ${type}! Destroying.`);
-                    powerUp.destroy(); powerUp = null;
-                }
+                if (tintColor !== null) { powerUp.setTint(tintColor); }
+                else { powerUp.clearTint(); }
+                if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); }
+                else { console.error(`No physics body for powerup type: ${type}! Destroying.`); powerUp.destroy(); powerUp = null; }
             } else { console.error(`Failed to create powerup object for type: ${type}!`); }
         } catch (error) { console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error); if (powerUp && powerUp.active) { powerUp.destroy(); } }
     }
@@ -722,7 +707,17 @@ class GameScene extends Phaser.Scene {
     }
     increaseVajraGauge() { if (this.isVajraSystemActive && !this.isStageClearing && !this.isGameOver) { this.vajraGauge += VAJRA_GAUGE_INCREMENT; this.vajraGauge = Math.min(this.vajraGauge, VAJRA_GAUGE_MAX); this.events.emit('updateVajraGauge', this.vajraGauge); if (this.vajraGauge >= VAJRA_GAUGE_MAX) { this.triggerVajraDestroy(); } } }
     deactivateVajra() {
-        if (this.isVajraSystemActive) { this.isVajraSystemActive = false; this.vajraGauge = 0; this.events.emit('deactivateVajraUI'); this.balls.getMatching('active', true).forEach(ball => { ball.getData('activePowers').delete(POWERUP_TYPES.VAJRA); if (ball.getData('lastActivatedPower') === POWERUP_TYPES.VAJRA) { const remainingPowers = Array.from(ball.getData('activePowers')); ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null); } this.updateBallAppearance(ball); }); }
+        // ★ ゲージリセットと状態フラグの更新のみを行う (UIイベント発行はtriggerVajraDestroyが担当)
+        if (this.isVajraSystemActive) {
+             this.isVajraSystemActive = false; // フラグは念のためここでも下げる
+             this.vajraGauge = 0;
+             // UIイベント発行は削除 (triggerVajraDestroyで行うため)
+             // this.events.emit('deactivateVajraUI');
+             this.balls.getMatching('active', true).forEach(ball => { ball.getData('activePowers').delete(POWERUP_TYPES.VAJRA); if (ball.getData('lastActivatedPower') === POWERUP_TYPES.VAJRA) { const remainingPowers = Array.from(ball.getData('activePowers')); ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null); } this.updateBallAppearance(ball); });
+        } else {
+             // 既に非アクティブ化されている場合でも念のためゲージをリセット
+             this.vajraGauge = 0;
+        }
     }
     activateMakira() {
         if (!this.isMakiraActive) { this.isMakiraActive = true; if (this.familiars) this.familiars.clear(true, true); else this.familiars = this.physics.add.group(); this.createFamiliars(); if (this.makiraBeams) this.makiraBeams.clear(true, true); else this.makiraBeams = this.physics.add.group(); if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = this.time.addEvent({ delay: MAKIRA_ATTACK_INTERVAL, callback: this.fireMakiraBeam, callbackScope: this, loop: true }); this.balls.getMatching('active', true).forEach(ball => { ball.getData('activePowers').add(POWERUP_TYPES.MAKIRA); ball.setData('lastActivatedPower', POWERUP_TYPES.MAKIRA); this.updateBallAppearance(ball); }); }
@@ -771,11 +766,43 @@ class GameScene extends Phaser.Scene {
      }
 
     gameComplete() { alert(`ゲームクリア！ スコア: ${this.score}`); this.returnToTitle(); }
-    returnToTitle() { if (this.physics.world && !this.physics.world.running) this.physics.resume(); if (this.scene.isActive('UIScene')) { this.scene.stop('UIScene'); } this.time.delayedCall(10, () => { if (this.scene && this.scene.isActive()) { this.scene.start('TitleScene'); } }); }
+    returnToTitle() {
+        // ★ 物理エンジンが止まっていたら再開
+        if (this.physics.world && !this.physics.world.running) {
+             this.physics.resume();
+        }
+        // ★ UIScene と GameScene を明示的に停止
+        if (this.scene.isActive('UIScene')) {
+            this.scene.stop('UIScene');
+        }
+        this.scene.stop(); // 現在の GameScene を停止
+        // ★ 少し遅延させてから TitleScene を開始 (シーン停止処理を確実にするため)
+        this.time.delayedCall(50, () => {
+            this.scene.start('TitleScene');
+        });
+    }
     shutdown() {
-        if (this.scale) this.scale.off('resize', this.handleResize, this); if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this); this.events.removeAllListeners(); if (this.input) this.input.removeAllListeners(); this.isGameOver = false; this.isStageClearing = false; this.deactivateMakira(); this.deactivateVajra(); Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); }); this.powerUpTimers = {}; if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null; if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null; if (this.time) this.time.removeAllEvents();
+        if (this.scale) this.scale.off('resize', this.handleResize, this);
+        if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this);
+        this.events.removeAllListeners();
+        if (this.input) this.input.removeAllListeners();
+        this.isGameOver = false; this.isStageClearing = false;
+        this.deactivateMakira(); this.deactivateVajra();
+        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); }); this.powerUpTimers = {};
+        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null;
+        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null;
+        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null;
+        if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
+        // ★ this.time.removeAllEvents() を削除
+        // if (this.time) this.time.removeAllEvents();
         if (this.bgImage) this.bgImage.destroy(); this.bgImage = null;
-        if (this.balls) this.balls.destroy(true); this.balls = null; if (this.bricks) this.bricks.destroy(true); this.bricks = null; if (this.powerUps) this.powerUps.destroy(true); this.powerUps = null; if (this.paddle) this.paddle.destroy(); this.paddle = null; if (this.familiars) this.familiars.destroy(true); this.familiars = null; if (this.makiraBeams) this.makiraBeams.destroy(true); this.makiraBeams = null; if (this.gameOverText) this.gameOverText.destroy(); this.gameOverText = null;
+        if (this.balls) this.balls.destroy(true); this.balls = null;
+        if (this.bricks) this.bricks.destroy(true); this.bricks = null;
+        if (this.powerUps) this.powerUps.destroy(true); this.powerUps = null;
+        if (this.paddle) this.paddle.destroy(); this.paddle = null;
+        if (this.familiars) this.familiars.destroy(true); this.familiars = null;
+        if (this.makiraBeams) this.makiraBeams.destroy(true); this.makiraBeams = null;
+        if (this.gameOverText) this.gameOverText.destroy(); this.gameOverText = null;
         this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
     }
 } // <-- GameScene クラスの終わり
@@ -811,7 +838,7 @@ class UIScene extends Phaser.Scene {
 const config = {
     type: Phaser.AUTO,
     scale: { mode: Phaser.Scale.FIT, parent: 'phaser-game-container', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
-    dom: { createContainer: true }, // ★ この設定を確認してください
+    dom: { createContainer: true },
     physics: {
         default: 'arcade',
         arcade: {
