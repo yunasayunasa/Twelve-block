@@ -100,7 +100,9 @@ class BootScene extends Phaser.Scene {
 
         // --- その他アセット ---
         this.load.image('joykun', 'assets/joykun.png'); // マキラのファミリア
-        this.load.image('gameBackground', 'assets/gamebackground.jpg'); // ★背景画像ロード追加
+        this.load.image('gameBackground', 'assets/gamebackground.jpg'); // ステージ 1-4
+        this.load.image('gameBackground2', 'assets/gamebackground2.jpg'); // ステージ 5-8
+        this.load.image('gameBackground3', 'assets/gamebackground3.jpg'); // ステージ 9-12
 
         // --- 音声ファイル (コメントアウト) ---
         // this.load.audio('voice_kubira', 'assets/voice_kubira.m4a');
@@ -134,7 +136,7 @@ class GameScene extends Phaser.Scene {
         this.isVajraSystemActive = false; this.vajraGauge = 0;
         this.isMakiraActive = false; this.familiars = null; this.makiraBeams = null; this.makiraAttackTimer = null; this.makiraBeamBrickOverlap = null;
         this.stageDropPool = [];
-        this.bgImage = null; // ★背景画像用プロパティ追加
+        this.bgImage = null;
     }
 
     init(data) {
@@ -145,18 +147,19 @@ class GameScene extends Phaser.Scene {
         this.isVajraSystemActive = false; this.vajraGauge = 0;
         this.isMakiraActive = false; if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = null;
         this.stageDropPool = [];
-        this.bgImage = null; // ★プロパティ初期化追加
+        this.bgImage = null;
     }
 
     preload() { }
 
     create() {
         this.gameWidth = this.scale.width; this.gameHeight = this.scale.height;
-        this.cameras.main.setBackgroundColor('#222'); // 余白の色
+        this.cameras.main.setBackgroundColor('#222');
 
-        // ★背景画像を作成し、中央に配置、最背面に設定
-        this.bgImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground').setOrigin(0.5, 0.5);
-        this.bgImage.setDepth(-1); // 他のゲームオブジェクトより奥に
+        const initialBgKey = this.getBackgroundKeyForStage(this.currentStage);
+        this.bgImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, initialBgKey)
+                         .setOrigin(0.5, 0.5)
+                         .setDepth(-1);
 
         this.time.delayedCall(50, () => { if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } });
         this.physics.world.setBoundsCollision(true, true, true, false); this.physics.world.on('worldbounds', this.handleWorldBounds, this);
@@ -170,48 +173,39 @@ class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.paddle, this.powerUps, this.collectPowerUp, null, this);
         this.input.on('pointermove', (pointer) => { if (!this.isGameOver && this.lives > 0 && this.paddle && !this.isStageClearing) { const targetX = pointer.x; const halfWidth = this.paddle.displayWidth / 2; const clampedX = Phaser.Math.Clamp(targetX, halfWidth, this.scale.width - halfWidth); this.paddle.x = clampedX; if (!this.isBallLaunched) { this.balls.getChildren().forEach(ball => { if (ball.active) ball.x = clampedX; }); } } });
         this.input.on('pointerdown', () => { if (this.isGameOver && this.gameOverText?.visible) { this.returnToTitle(); } else if (this.lives > 0 && !this.isBallLaunched && !this.isStageClearing) { this.launchBall(); } });
-
         this.scale.on('resize', this.handleResize, this);
         this.events.on('shutdown', this.shutdown, this);
-
-        // ★初期表示のために背景サイズ調整
         this.resizeBackground();
     }
 
-     // ★背景画像のサイズと位置を調整する関数
+     getBackgroundKeyForStage(stage) {
+         if (stage >= 9 && stage <= 12) {
+             return 'gameBackground3';
+         } else if (stage >= 5 && stage <= 8) {
+             return 'gameBackground2';
+         } else {
+             return 'gameBackground';
+         }
+     }
+
      resizeBackground() {
          if (!this.bgImage) return;
+         const gameWidth = this.scale.width; const gameHeight = this.scale.height;
+         const texture = this.textures.get(this.bgImage.texture.key);
+         if (!texture || !texture.source || texture.source.length === 0) return;
+         const imageWidth = texture.source[0].width;
+         const imageHeight = texture.source[0].height;
 
-         const gameWidth = this.scale.width;
-         const gameHeight = this.scale.height;
-         const imageWidth = this.bgImage.width;
-         const imageHeight = this.bgImage.height;
-
-         // 画像と画面の幅・高さの比率を計算
-         const scaleX = gameWidth / imageWidth;
-         const scaleY = gameHeight / imageHeight;
-
-         // アスペクト比を保ち、画面内に収まる小さい方のスケールを採用
-         const scale = Math.min(scaleX, scaleY);
-
-         // スケールを適用
-         this.bgImage.setScale(scale);
-
-         // 画面中央に再配置
-         this.bgImage.setPosition(gameWidth / 2, gameHeight / 2);
-         this.bgImage.setAlpha(0.7); // ★背景の透明度を 70% に設定 (値を調整可能)
-      }
-     
+         const scaleX = gameWidth / imageWidth; const scaleY = gameHeight / imageHeight; const scale = Math.min(scaleX, scaleY);
+         this.bgImage.setScale(scale); this.bgImage.setPosition(gameWidth / 2, gameHeight / 2);
+         this.bgImage.setAlpha(0.7); // 透明度を設定
+     }
 
      updatePaddleSize() { if (!this.paddle) return; const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio'); this.paddle.setDisplaySize(newWidth, PADDLE_HEIGHT); this.paddle.refreshBody(); const halfWidth = this.paddle.displayWidth / 2; this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth); }
     handleResize(gameSize, baseSize, displaySize, resolution) {
-        this.gameWidth = gameSize.width;
-        this.gameHeight = gameSize.height;
-        this.updatePaddleSize();
-        this.resizeBackground(); // ★リサイズ時にも背景調整
-        if (this.scene.isActive('UIScene')) {
-            this.events.emit('gameResize');
-        }
+        this.gameWidth = gameSize.width; this.gameHeight = gameSize.height;
+        this.updatePaddleSize(); this.resizeBackground();
+        if (this.scene.isActive('UIScene')) { this.events.emit('gameResize'); }
     }
     setupStage() { if (this.currentMode === GAME_MODE.NORMAL) { const shuffledPool = Phaser.Utils.Array.Shuffle([...NORMAL_MODE_POWERUP_POOL]); this.stageDropPool = shuffledPool.slice(0, 4); this.events.emit('updateDropPoolUI', this.stageDropPool); } else { this.stageDropPool = [...ALLSTARS_MODE_POWERUP_POOL]; this.events.emit('updateDropPoolUI', []); } this.createBricks(); }
 
@@ -219,20 +213,9 @@ class GameScene extends Phaser.Scene {
         if (this.isGameOver || this.isStageClearing || this.lives <= 0) { return; }
         let activeBallCount = 0; let sindaraBalls = [];
         this.balls.getChildren().forEach(ball => { if (ball.active) { activeBallCount++; if (this.isBallLaunched && !this.isStageClearing && ball.y > this.gameHeight + ball.displayHeight) { if (ball.getData('isAnilaActive')) { this.triggerAnilaBounce(ball); } else { ball.setActive(false).setVisible(false); if (ball.body) ball.body.enable = false; } }
-            const lastPower = ball.getData('lastActivatedPower'); // シンダラ判定用に取得
-            if (lastPower === POWERUP_TYPES.SINDARA) {
-                 sindaraBalls.push(ball);
-                 if (ball.getData('isAttracting')) {
-                     this.updateSindaraAttraction(ball);
-                 }
-             }
+            const lastPower = ball.getData('lastActivatedPower'); if (lastPower === POWERUP_TYPES.SINDARA) { sindaraBalls.push(ball); if (ball.getData('isAttracting')) { this.updateSindaraAttraction(ball); } }
              if (ball.body && this.isBallLaunched) { const minSpeed = NORMAL_BALL_SPEED * 0.1; const maxSpeed = NORMAL_BALL_SPEED * 5; const speed = ball.body.velocity.length(); if (speed < minSpeed && speed > 0) { ball.body.velocity.normalize().scale(minSpeed); } else if (speed > maxSpeed) { ball.body.velocity.normalize().scale(maxSpeed); } } } });
-        if (sindaraBalls.length === 1 && this.balls.getTotalUsed() > 1) {
-             const remainingBall = sindaraBalls[0];
-             if (remainingBall.getData('lastActivatedPower') === POWERUP_TYPES.SINDARA) { // 念のため状態確認
-                 this.deactivatePowerByType(POWERUP_TYPES.SINDARA); // シンダラ解除
-             }
-         }
+        if (sindaraBalls.length === 1 && this.balls.getTotalUsed() > 1) { const remainingBall = sindaraBalls[0]; if (remainingBall.getData('lastActivatedPower') === POWERUP_TYPES.SINDARA) { this.deactivatePowerByType(POWERUP_TYPES.SINDARA); } }
         if (activeBallCount === 0 && this.isBallLaunched && !this.isStageClearing && this.lives > 0) { this.loseLife(); return; }
         this.powerUps.children.each(powerUp => { if (powerUp.active && powerUp.y > this.gameHeight + POWERUP_SIZE) { powerUp.destroy(); } });
         if (this.isMakiraActive && this.paddle && this.familiars) { const paddleX = this.paddle.x; const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE; const children = this.familiars.getChildren(); if (children.length >= 1 && children[0].active) children[0].setPosition(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY); if (children.length >= 2 && children[1].active) children[1].setPosition(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY); }
@@ -267,7 +250,6 @@ class GameScene extends Phaser.Scene {
         }, this);
 
         this.ballBallCollider = this.physics.add.collider(this.balls, this.balls, this.handleBallCollision, (ball1, ball2) => {
-             // シンダラ同士の衝突判定
              const lastPower1 = ball1.getData('lastActivatedPower');
              const lastPower2 = ball2.getData('lastActivatedPower');
             return lastPower1 === POWERUP_TYPES.SINDARA && lastPower2 === POWERUP_TYPES.SINDARA &&
@@ -324,119 +306,85 @@ class GameScene extends Phaser.Scene {
         console.log(`Generating Bricks (Stage ${this.currentStage})`);
         if (this.bricks) { this.bricks.clear(true, true); this.bricks.destroy(); }
         this.bricks = this.physics.add.staticGroup();
-        const stage = this.currentStage;
-        const maxStage = MAX_STAGE;
-        const rows = BRICK_ROWS + Math.floor(stage / 3);
-        const cols = BRICK_COLS + Math.floor(stage / 4);
-        const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2;
-        const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4)));
-        const actualCols = Math.min(cols, BRICK_COLS + 4);
-        let durableRatio = 0;
-        let indestructibleRatio = 0;
-        let progress = 0;
-        if (stage >= 3) {
-            progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1);
-            durableRatio = progress * 0.5;
-            indestructibleRatio = progress * 0.15;
-        }
-        const bW = this.scale.width * BRICK_WIDTH_RATIO;
-        const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING;
-        const oX = (this.scale.width - totalBrickWidth) / 2;
+        const stage = this.currentStage; const maxStage = MAX_STAGE; const rows = BRICK_ROWS + Math.floor(stage / 3); const cols = BRICK_COLS + Math.floor(stage / 4); const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2; const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4))); const actualCols = Math.min(cols, BRICK_COLS + 4);
+        let durableRatio = 0; let indestructibleRatio = 0; let progress = 0; if (stage >= 3) { progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1); durableRatio = progress * 0.5; indestructibleRatio = progress * 0.15; } const bW = this.scale.width * BRICK_WIDTH_RATIO; const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING; const oX = (this.scale.width - totalBrickWidth) / 2;
+        let specialLayoutType = null; const stageString = stage.toString(); if (stage > 2 && stage % 8 === 0) { specialLayoutType = 's_shape'; } else if (stage > 2 && stage % 4 === 0) { specialLayoutType = 'wall'; } else if (stage > 4 && stage % 6 === 0) { specialLayoutType = 'center_hollow'; } else if (stage >= 3 && SYMBOL_PATTERNS[stageString]) { specialLayoutType = 'symbol'; }
+        let density; if (stage <= 3) { density = 0.4; } else { density = 0.4 + 0.5 * progress; }
 
-        let specialLayoutType = null;
-        const stageString = stage.toString();
-        if (stage > 2 && stage % 8 === 0) { specialLayoutType = 's_shape'; }
-        else if (stage > 2 && stage % 4 === 0) { specialLayoutType = 'wall'; }
-        else if (stage > 4 && stage % 6 === 0) { specialLayoutType = 'center_hollow'; }
-        else if (stage >= 3 && SYMBOL_PATTERNS[stageString]) {
-             specialLayoutType = 'symbol';
-        }
-
-        let density;
-        if (stage <= 3) { density = 0.4; }
-        else { density = 0.4 + 0.5 * progress; }
-
-        // --- Brick generation logic (変更なし) ---
         if (specialLayoutType === 'wall') {
             console.log(`Generating Special Layout: Wall (Stage ${stage}, Density: ${density.toFixed(3)})`);
             const exitColTop = Math.floor(actualCols / 2); const exitColBottom = Math.floor(actualCols / 2);
-            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; let generateBrick = true; let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; const isOuterWall = (i === 0 || i === actualRows - 1 || j === 0 || j === actualCols - 1); const isExit = (i === 0 && j === exitColTop) || (i === actualRows - 1 && j === exitColBottom); if (isOuterWall && !isExit) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; isDurable = false; } else { if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else { if (isExit) { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } else { const rand = Phaser.Math.FloatBetween(0, 1); if (stage >= 3 && rand < durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } } } } if (generateBrick) { const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; } } }
+            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; let generateBrick = true; let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; const isOuterWall = (i === 0 || i === actualRows - 1 || j === 0 || j === actualCols - 1); const isExit = (i === 0 && j === exitColTop) || (i === actualRows - 1 && j === exitColBottom); if (isOuterWall && !isExit) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else { if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else { if (isExit) { /* Normal */ } else { const rand = Phaser.Math.FloatBetween(0, 1); if (stage >= 3 && rand < durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { /* Normal */ } } } } if (generateBrick) { const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; } } }
             if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Wall layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
-
         } else if (specialLayoutType === 's_shape') {
-            console.log(`Generating Special Layout: S-Shape (Stage ${stage}, Density: ${density.toFixed(3)})`);
-            const wallRow1 = Math.floor(actualRows / 3); const wallRow2 = Math.floor(actualRows * 2 / 3); const wallLengthCols = Math.floor(actualCols * 2 / 3); let generatedDestroyableCount = 0;
-            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; let generateBrick = true; let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; const isWallPart = (i === wallRow1 && j >= actualCols - wallLengthCols) || (i === wallRow2 && j < wallLengthCols); if (isWallPart) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; isDurable = false; } else { if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else { const rand = Phaser.Math.FloatBetween(0, 1); if (stage >= 3 && rand < durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } } } if (generateBrick) { const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; if (maxHits !== -1) generatedDestroyableCount++; } } }
-            if (generatedDestroyableCount < 5 && stage > 1) { console.warn(`S-Shape generated only ${generatedDestroyableCount} destroyable bricks, retrying...`); this.time.delayedCall(10, this.createBricks, [], this); return; }
-
+             console.log(`Generating Special Layout: S-Shape (Stage ${stage}, Density: ${density.toFixed(3)})`);
+             const wallRow1 = Math.floor(actualRows / 3); const wallRow2 = Math.floor(actualRows * 2 / 3); const wallLengthCols = Math.floor(actualCols * 2 / 3); let generatedDestroyableCount = 0;
+             for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; let generateBrick = true; let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; const isWallPart = (i === wallRow1 && j >= actualCols - wallLengthCols) || (i === wallRow2 && j < wallLengthCols); if (isWallPart) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else { if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else { const rand = Phaser.Math.FloatBetween(0, 1); if (stage >= 3 && rand < durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { /* Normal */ } } } if (generateBrick) { const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; if (maxHits !== -1) generatedDestroyableCount++; } } }
+             if (generatedDestroyableCount < 5 && stage > 1) { console.warn(`S-Shape generated only ${generatedDestroyableCount} destroyable bricks, retrying...`); this.time.delayedCall(10, this.createBricks, [], this); return; }
         } else if (specialLayoutType === 'center_hollow') {
             console.log(`Generating Special Layout: Center Hollow (Stage ${stage}, Density: ${density.toFixed(3)})`);
             let generatedCount = 0; const hollowRowStart = Math.floor(actualRows / 4); const hollowRowEnd = Math.floor(actualRows * 3 / 4); const hollowColStart = Math.floor(actualCols / 4); const hollowColEnd = Math.floor(actualCols * 3 / 4);
-            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; const isInHollowArea = (i >= hollowRowStart && i < hollowRowEnd && j >= hollowColStart && j < hollowColEnd); if (isInHollowArea) { continue; } if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
+            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; const isInHollowArea = (i >= hollowRowStart && i < hollowRowEnd && j >= hollowColStart && j < hollowColEnd); if (isInHollowArea) { continue; } if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { /* Normal */ } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
             if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Center Hollow layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
-
         } else if (specialLayoutType === 'symbol') {
             console.log(`Generating Special Layout: Symbol '${stageString}' (Stage ${stage})`);
-            const pattern = SYMBOL_PATTERNS[stageString];
-            let generatedCount = 0;
-
-            if (pattern && pattern.length > 0 && pattern[0].length > 0) {
-                const patternRows = pattern.length;
-                const patternCols = pattern[0].length;
-                const patternTotalHeight = patternRows * BRICK_HEIGHT + (patternRows - 1) * BRICK_SPACING;
-                const patternTotalWidth = patternCols * bW + (patternCols - 1) * BRICK_SPACING;
-                const startY = BRICK_OFFSET_TOP + Math.max(0, (this.scale.height * 0.4 - patternTotalHeight) / 2);
-                const startX = (this.scale.width - patternTotalWidth) / 2;
-
-                for (let i = 0; i < patternRows; i++) {
-                    for (let j = 0; j < patternCols; j++) {
-                        if (pattern[i][j] === 1) {
-                            const bX = startX + j * (bW + BRICK_SPACING) + bW / 2;
-                            const bY = startY + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2;
-                            const brickType = 'normal';
-                            const brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS);
-                            const maxHits = 1;
-                            const isDurable = false;
-                            const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor);
-                            brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType });
-                            brick.refreshBody();
-                            generatedCount++;
-                        }
-                    }
-                }
-                 if (generatedCount < 3 && stage > 1) {
-                     console.warn(`Symbol layout '${stageString}' generated only ${generatedCount} bricks, retrying as normal...`);
-                     this.time.delayedCall(10, () => { this.createBricksFallbackToNormal(); }, [], this);
-                     return;
-                 }
-            } else {
-                console.warn(`Symbol pattern for stage ${stage} not found or invalid. Falling back to normal layout.`);
-                this.createBricksFallbackToNormal();
-                return;
-            }
-
+            const pattern = SYMBOL_PATTERNS[stageString]; let generatedCount = 0;
+            if (pattern && pattern.length > 0 && pattern[0].length > 0) { const patternRows = pattern.length; const patternCols = pattern[0].length; const patternTotalHeight = patternRows * BRICK_HEIGHT + (patternRows - 1) * BRICK_SPACING; const patternTotalWidth = patternCols * bW + (patternCols - 1) * BRICK_SPACING; const startY = BRICK_OFFSET_TOP + Math.max(0, (this.scale.height * 0.4 - patternTotalHeight) / 2); const startX = (this.scale.width - patternTotalWidth) / 2;
+                for (let i = 0; i < patternRows; i++) { for (let j = 0; j < patternCols; j++) { if (pattern[i][j] === 1) { const bX = startX + j * (bW + BRICK_SPACING) + bW / 2; const bY = startY + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; const brickType = 'normal'; const brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); const maxHits = 1; const isDurable = false; const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); generatedCount++; } } }
+                 if (generatedCount < 3 && stage > 1) { console.warn(`Symbol layout '${stageString}' generated only ${generatedCount} bricks, retrying as normal...`); this.time.delayedCall(10, () => { this.createBricksFallbackToNormal(); }, [], this); return; }
+            } else { console.warn(`Symbol pattern for stage ${stage} not found or invalid. Falling back to normal layout.`); this.createBricksFallbackToNormal(); return; }
         } else { // 通常配置
-            console.log(`Generating Normal Layout (Stage ${stage}, Density: ${density.toFixed(3)})`);
-            let generatedCount = 0;
-            for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
-            if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Normal layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
-        }
+             console.log(`Generating Normal Layout (Stage ${stage}, Density: ${density.toFixed(3)})`);
+             let generatedCount = 0;
+             for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; }
+                 const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor);
+                 brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType });
+                 brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true;
+                 generatedCount++;
+             } }
+             if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Normal layout generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
+         }
         console.log(`Bricks generated: ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
         this.setColliders();
     }
 
     createBricksFallbackToNormal() {
         console.log("Falling back to Normal Layout generation...");
+        if (this.bricks) { this.bricks.clear(true, true); this.bricks.destroy(); } // Ensure clean slate
+        this.bricks = this.physics.add.staticGroup();
         const stage = this.currentStage; const maxStage = MAX_STAGE; const rows = BRICK_ROWS + Math.floor(stage / 3); const cols = BRICK_COLS + Math.floor(stage / 4); const maxTotalBricks = Math.floor((this.scale.height * 0.5) / (BRICK_HEIGHT + BRICK_SPACING)) * (BRICK_COLS + 4) * 1.2; const actualRows = Math.min(rows, Math.floor(maxTotalBricks / (BRICK_COLS + 4))); const actualCols = Math.min(cols, BRICK_COLS + 4); let durableRatio = 0; let indestructibleRatio = 0; let progress = 0; if (stage >= 3) { progress = Phaser.Math.Clamp((stage - 3) / (maxStage - 3), 0, 1); durableRatio = progress * 0.5; indestructibleRatio = progress * 0.15; } const bW = this.scale.width * BRICK_WIDTH_RATIO; const totalBrickWidth = actualCols * bW + (actualCols - 1) * BRICK_SPACING; const oX = (this.scale.width - totalBrickWidth) / 2; let density; if (stage <= 3) { density = 0.4; } else { density = 0.4 + 0.5 * progress; }
         let generatedCount = 0;
-        for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; } const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor); brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType }); brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true; generatedCount++; } }
+        for (let i = 0; i < actualRows; i++) { for (let j = 0; j < actualCols; j++) { const bX = oX + j * (bW + BRICK_SPACING) + bW / 2; const bY = BRICK_OFFSET_TOP + i * (BRICK_HEIGHT + BRICK_SPACING) + BRICK_HEIGHT / 2; if (Phaser.Math.FloatBetween(0, 1) > density && generatedCount > 5) { continue; } const rand = Phaser.Math.FloatBetween(0, 1); let brickType = 'normal'; let brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); let maxHits = 1; let isDurable = false; if (stage >= 3 && rand < indestructibleRatio) { brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1; } else if (stage >= 3 && rand < indestructibleRatio + durableRatio) { brickType = 'durable'; brickColor = DURABLE_BRICK_COLOR; maxHits = Phaser.Math.Between(2, MAX_DURABLE_HITS); isDurable = true; } else { brickType = 'normal'; brickColor = Phaser.Utils.Array.GetRandom(BRICK_COLORS); maxHits = 1; isDurable = false; }
+             const brick = this.bricks.create(bX, bY, 'whitePixel').setDisplaySize(bW, BRICK_HEIGHT).setTint(brickColor);
+             brick.setData({ originalTint: brickColor, isMarkedByBikara: false, maxHits: maxHits, currentHits: maxHits, isDurable: isDurable, type: brickType });
+             brick.refreshBody(); if (maxHits === -1) brick.body.immovable = true;
+             generatedCount++;
+         } }
         if (this.getDestroyableBrickCount() === 0 && stage > 1) { console.warn("Normal layout (fallback) generated no destroyable bricks, retrying..."); this.time.delayedCall(10, this.createBricks, [], this); return; }
         console.log(`Bricks generated (fallback): ${this.bricks.getLength()}, Destroyable: ${this.getDestroyableBrickCount()}`);
         this.setColliders();
     }
-    // --- handleBrickHit, handleBrickDestruction (変更なし) ---
-    handleBrickHit(brick, damage = 1) { if (!brick || !brick.active || !brick.getData) return false; const maxHits = brick.getData('maxHits'); if (maxHits === -1 && damage !== Infinity) { return false; } let currentHits = brick.getData('currentHits'); const isDurable = brick.getData('isDurable'); if (damage === Infinity) { currentHits = 0; } else { currentHits -= damage; } brick.setData('currentHits', currentHits); if (currentHits <= 0) { this.handleBrickDestruction(brick); return true; } else if (isDurable) { const darknessFactor = (maxHits - currentHits) * DURABLE_BRICK_HIT_DARKEN; const originalColor = Phaser.Display.Color.ValueToColor(DURABLE_BRICK_COLOR); const newColor = originalColor.darken(darknessFactor); brick.setTint(newColor.color); return false; } else { return false; } }
-    handleBrickDestruction(brick) { if (!brick || !brick.active) return false; const brickX = brick.x; const brickY = brick.y; brick.disableBody(true, true); this.score += 10; this.events.emit('updateScore', this.score); this.increaseVajraGauge(); if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) { this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA); return true; } if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) { this.dropPowerUp(brickX, brickY); } return false; }
+
+    handleBrickHit(brick, damage = 1) {
+        if (!brick || !brick.active || !brick.getData) return false;
+        const maxHits = brick.getData('maxHits'); if (maxHits === -1 && damage !== Infinity) { return false; }
+        let currentHits = brick.getData('currentHits'); const isDurable = brick.getData('isDurable');
+        if (damage === Infinity) { currentHits = 0; } else { currentHits -= damage; }
+        brick.setData('currentHits', currentHits);
+        if (currentHits <= 0) { this.handleBrickDestruction(brick); return true; }
+        else if (isDurable) { const darknessFactor = (maxHits - currentHits) * DURABLE_BRICK_HIT_DARKEN; const originalColor = Phaser.Display.Color.ValueToColor(DURABLE_BRICK_COLOR); const newColor = originalColor.darken(darknessFactor); brick.setTint(newColor.color); return false; }
+        else { return false; }
+    }
+
+    handleBrickDestruction(brick) {
+        if (!brick || !brick.active) return false;
+        const brickX = brick.x; const brickY = brick.y;
+        brick.disableBody(true, true);
+        this.score += 10; this.events.emit('updateScore', this.score); this.increaseVajraGauge();
+        if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) { this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA); return true; }
+        if (Phaser.Math.FloatBetween(0, 1) < POWERUP_DROP_RATE) { this.dropPowerUp(brickX, brickY); }
+        return false;
+    }
 
     hitBrick(brick, ball) {
         if (!brick || !ball || !brick.active || !ball.active || this.isStageClearing) return;
@@ -457,15 +405,46 @@ class GameScene extends Phaser.Scene {
     }
     handleBikaraYangDestroy(ball, hitBrick) {
         if (!ball || !ball.active || ball.getData('lastActivatedPower') !== POWERUP_TYPES.BIKARA || ball.getData('bikaraState') !== 'yang') return;
-        let destroyedCount = 0; const markedToDestroy = []; if (hitBrick.active && hitBrick.getData('maxHits') !== -1) { markedToDestroy.push(hitBrick); hitBrick.setData('isMarkedByBikara', false); } this.bricks.getChildren().forEach(br => { if (br.active && br.getData('isMarkedByBikara') && !markedToDestroy.includes(br)) { markedToDestroy.push(br); br.setData('isMarkedByBikara', false); } }); markedToDestroy.forEach(br => { if (br.active) { const destroyed = this.handleBrickHit(br, Infinity); if (destroyed) destroyedCount++; } }); let currentYangCount = ball.getData('bikaraYangCount') || 0; currentYangCount++; ball.setData('bikaraYangCount', currentYangCount); if (destroyedCount > 0) { console.log(`Bikara Yang destroyed ${destroyedCount} bricks.`); } if (currentYangCount >= BIKARA_YANG_COUNT_MAX) { this.deactivatePowerByType(POWERUP_TYPES.BIKARA); }
+        let destroyedCount = 0; const markedToDestroy = [];
+        if (hitBrick.active && hitBrick.getData('maxHits') !== -1) { markedToDestroy.push(hitBrick); hitBrick.setData('isMarkedByBikara', false); }
+        this.bricks.getChildren().forEach(br => { if (br.active && br.getData && br.getData('isMarkedByBikara') && !markedToDestroy.includes(br)) { markedToDestroy.push(br); br.setData('isMarkedByBikara', false); } });
+        markedToDestroy.forEach(br => { if (br.active) { const destroyed = this.handleBrickDestruction(br); if (destroyed) destroyedCount++; } });
+        let currentYangCount = ball.getData('bikaraYangCount') || 0; currentYangCount++; ball.setData('bikaraYangCount', currentYangCount);
+        if (destroyedCount > 0) { console.log(`Bikara Yang destroyed ${destroyedCount} bricks.`); }
+        if (currentYangCount >= BIKARA_YANG_COUNT_MAX) { this.deactivatePowerByType(POWERUP_TYPES.BIKARA); }
     }
-    // --- hitBrickWithMakiraBeam, triggerVajraDestroy, activateBaisrava, getDestroyableBrickCount (変更なし) ---
-    hitBrickWithMakiraBeam(beam, brick) { if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver) return; if (brick.getData('maxHits') === -1) { beam.destroy(); return; } try { beam.destroy(); } catch (error) { console.error("Error destroying Makira beam:", error); if (beam && beam.active) { beam.setActive(false).setVisible(false); if (beam.body) beam.body.enable = false; } } const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); } }
-    triggerVajraDestroy() { if (this.isStageClearing || this.isGameOver) return; if (!this.isVajraSystemActive) return; this.isVajraSystemActive = false; const activeBricks = this.bricks.getMatching('active', true); if (activeBricks.length === 0) { this.deactivateVajra(); return; } const countToDestroy = Math.min(activeBricks.length, VAJRA_DESTROY_COUNT); const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks); let destroyedCount = 0; for (let i = 0; i < countToDestroy; i++) { const brick = shuffledBricks[i]; if (brick && brick.active) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } } console.log(`Vajra destroyed ${destroyedCount} bricks.`); if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } else { this.deactivateVajra(); } }
-    activateBaisrava() { if (this.isStageClearing || this.isGameOver) return; const activeBricks = this.bricks.getMatching('active', true); let destroyedCount = 0; activeBricks.forEach(brick => { if (brick && brick.active) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } }); if (destroyedCount > 0) { console.log(`Baisrava destroyed ${destroyedCount} bricks.`); } this.stageClear(); }
-    getDestroyableBrickCount() { if (!this.bricks) return 0; return this.bricks.getMatching('active', true).filter(brick => brick.getData('maxHits') !== -1).length; }
-
-    // --- dropSpecificPowerUp, dropPowerUp (変更なし) ---
+    hitBrickWithMakiraBeam(beam, brick) {
+        if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver || !brick.getData) return;
+        if (brick.getData('maxHits') === -1) { beam.destroy(); return; }
+        try { beam.destroy(); } catch (error) { console.error("Error destroying Makira beam:", error); if (beam && beam.active) { beam.setActive(false).setVisible(false); if (beam.body) beam.body.enable = false; } }
+        const destroyed = this.handleBrickHit(brick, 1);
+        if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); }
+    }
+    triggerVajraDestroy() {
+        if (this.isStageClearing || this.isGameOver) return; if (!this.isVajraSystemActive) return;
+        this.isVajraSystemActive = false;
+        const activeBricks = this.bricks.getMatching('active', true);
+        if (activeBricks.length === 0) { this.deactivateVajra(); return; }
+        const countToDestroy = Math.min(activeBricks.length, VAJRA_DESTROY_COUNT);
+        const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks); let destroyedCount = 0;
+        for (let i = 0; i < countToDestroy; i++) { const brick = shuffledBricks[i]; if (brick && brick.active && brick.getData && brick.getData('maxHits') !== -1) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } }
+        console.log(`Vajra destroyed ${destroyedCount} bricks.`);
+        if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.stageClear(); } else { this.deactivateVajra(); }
+    }
+    activateBaisrava() {
+        if (this.isStageClearing || this.isGameOver) return;
+        const activeBricks = this.bricks.getMatching('active', true);
+        let destroyedCount = 0;
+        activeBricks.forEach(brick => { if (brick && brick.active && brick.getData && brick.getData('maxHits') !== -1) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } });
+        if (destroyedCount > 0) { console.log(`Baisrava destroyed ${destroyedCount} bricks.`); }
+        this.stageClear();
+    }
+    getDestroyableBrickCount() {
+        if (!this.bricks) return 0;
+        return this.bricks.getMatching('active', true)
+                 .filter(brick => brick.getData && brick.getData('maxHits') !== -1)
+                 .length;
+    }
     dropSpecificPowerUp(x, y, type) {
         let textureKey = POWERUP_ICON_KEYS[type] || 'whitePixel';
         let displaySize = POWERUP_SIZE; let tintColor = null;
@@ -476,15 +455,12 @@ class GameScene extends Phaser.Scene {
         let powerUp = null; try { powerUp = this.powerUps.create(x, y, textureKey); if (powerUp) { powerUp.setDisplaySize(displaySize, displaySize).setData('type', type); if (tintColor !== null) { powerUp.setTint(tintColor); } else { powerUp.clearTint(); } if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); } else { console.error(`No physics body for powerup type: ${type}! Destroying.`); powerUp.destroy(); powerUp = null; } } else { console.error(`Failed to create powerup object for type: ${type}!`); } } catch (error) { console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error); if (powerUp && powerUp.active) { powerUp.destroy(); } }
     }
     dropPowerUp(x, y) { let availableTypes = []; if (this.currentMode === GAME_MODE.NORMAL) { availableTypes = this.stageDropPool; } else { availableTypes = ALLSTARS_MODE_POWERUP_POOL; } if (availableTypes.length === 0) return; const type = Phaser.Utils.Array.GetRandom(availableTypes); this.dropSpecificPowerUp(x, y, type); }
-
-    // --- hitPaddle (変更なし) ---
     hitPaddle(paddle, ball) {
         if (!paddle || !ball || !ball.active || !ball.body) return;
         let diff = ball.x - paddle.x; const maxDiff = paddle.displayWidth / 2; let influence = diff / maxDiff; influence = Phaser.Math.Clamp(influence, -1, 1); const maxVx = NORMAL_BALL_SPEED * 0.8; let newVx = maxVx * influence; const minVy = NORMAL_BALL_SPEED * 0.5; let currentVy = ball.body.velocity.y; let newVy = -Math.abs(currentVy); if (Math.abs(newVy) < minVy) newVy = -minVy; let speedMultiplier = 1.0; if (ball.getData('isFast')) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.SHATORA]; else if (ball.getData('isSlow')) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.HAILA]; const targetSpeed = NORMAL_BALL_SPEED * speedMultiplier; const newVelocity = new Phaser.Math.Vector2(newVx, newVy).normalize().scale(targetSpeed); ball.setVelocity(newVelocity.x, newVelocity.y);
         if (ball.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA) { this.switchBikaraState(ball); }
         if (ball.getData('isIndaraActive')) { this.deactivateIndaraForBall(ball); this.updateBallAppearance(ball); }
     }
-    // --- collectPowerUp, activateMakora, keepFurthestBall (変更なし) ---
     collectPowerUp(paddle, powerUp) {
         if (!powerUp || !powerUp.active || this.isStageClearing) return; const type = powerUp.getData('type'); if (!type) { console.warn("Collected powerup with no type data!"); powerUp.destroy(); return; } powerUp.destroy();
         if (type === POWERUP_TYPES.BAISRAVA) { this.activateBaisrava(); return; } if (type === POWERUP_TYPES.VAJRA) { this.activateVajra(); return; } if (type === POWERUP_TYPES.MAKIRA) { this.activateMakira(); return; } if (type === POWERUP_TYPES.MAKORA) { this.activateMakora(); return; }
@@ -504,8 +480,6 @@ class GameScene extends Phaser.Scene {
         }, [], this);
     }
     keepFurthestBall() { const activeBalls = this.balls.getMatching('active', true); if (activeBalls.length <= 1) return; let furthestBall = null; let maxDistSq = -1; const paddlePos = new Phaser.Math.Vector2(this.paddle.x, this.paddle.y); activeBalls.forEach(ball => { const distSq = Phaser.Math.Distance.Squared(paddlePos.x, paddlePos.y, ball.x, ball.y); if (distSq > maxDistSq) { maxDistSq = distSq; furthestBall = ball; } }); activeBalls.forEach(ball => { if (ball !== furthestBall) { ball.destroy(); } }); }
-
-    // --- activatePower, deactivatePowerByType (変更なし) ---
     activatePower(type) {
         const targetBalls = this.balls.getMatching('active', true); if (targetBalls.length === 0) return;
         if (POWERUP_DURATION[type]) { if (this.powerUpTimers[type]) { this.powerUpTimers[type].remove(); } }
@@ -527,11 +501,8 @@ class GameScene extends Phaser.Scene {
             case POWERUP_TYPES.INDARA: targetBalls.forEach(b => this.deactivateIndaraForBall(b)); break; case POWERUP_TYPES.ANILA: targetBalls.forEach(b => this.deactivateAnilaForBall(b)); break;
         }
         targetBalls.forEach(ball => { if (ball.active) { ball.getData('activePowers').delete(type); if (ball.getData('lastActivatedPower') === type) { const remainingPowers = Array.from(ball.getData('activePowers')); ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null); } this.updateBallAppearance(ball); } });
-        // deactivateSindara や deactivateBikara の後に collider を更新する方が安全かもしれない
         this.setColliders();
     }
-
-    // --- updateBallAppearance (変更なし) ---
     updateBallAppearance(ball) {
         if (!ball || !ball.active) return; const activePowers = ball.getData('activePowers'); const lastPower = ball.getData('lastActivatedPower'); let textureKey = 'ball_image';
         if (activePowers && activePowers.size > 0 && lastPower) {
@@ -541,8 +512,6 @@ class GameScene extends Phaser.Scene {
         }
         if (ball.texture.key !== textureKey) { ball.setTexture(textureKey); } ball.clearTint();
     }
-
-    // --- 個別パワーアップ効果 ( activate/deactivate 系は変更なし) ---
     activateKubira(balls) { balls.forEach(b => b.setData('isPenetrating', true)); }
     deactivateKubira(balls) { balls.forEach(b => { const lastPower = b.getData('lastActivatedPower'); const isSindaraActive = lastPower === POWERUP_TYPES.SINDARA && (b.getData('isAttracting') || b.getData('isMerging')); const isBikaraYangActive = lastPower === POWERUP_TYPES.BIKARA && b.getData('bikaraState') === 'yang'; const kubiraIsActive = b.getData('activePowers').has(POWERUP_TYPES.KUBIRA); if (kubiraIsActive && !isSindaraActive && !isBikaraYangActive) { b.setData('isPenetrating', false); } }); }
     applySpeedModifier(ball, type) { if (!ball || !ball.active || !ball.body) return; const modifier = BALL_SPEED_MODIFIERS[type]; if (!modifier) return; const currentVelocity = ball.body.velocity; const direction = currentVelocity.length() > 0 ? currentVelocity.clone().normalize() : new Phaser.Math.Vector2(0, -1); const newSpeed = NORMAL_BALL_SPEED * modifier; ball.setVelocity(direction.x * newSpeed, direction.y * newSpeed); }
@@ -555,7 +524,7 @@ class GameScene extends Phaser.Scene {
         if (!sourceBall || !sourceBall.active) return; this.updateBallAppearance(sourceBall); const x = sourceBall.x; const y = sourceBall.y; const numSplits = 3; const ballData = sourceBall.data.getAll(); ballData.lastActivatedPower = POWERUP_TYPES.ANCHIRA; if (!ballData.activePowers) ballData.activePowers = new Set(); ballData.activePowers.add(POWERUP_TYPES.ANCHIRA);
         for (let i = 0; i < numSplits; i++) { const offsetX = Phaser.Math.Between(-5, 5); const offsetY = Phaser.Math.Between(-5, 5); const vx = Phaser.Math.Between(-150, 150); const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8)); this.createAndAddBall(x + offsetX, y + offsetY, vx, vy, ballData); } this.setColliders();
     }
-    deactivateAnchira(balls) { /* No specific action needed here, handled by deactivatePowerByType */ }
+    deactivateAnchira(balls) { /* Handled by deactivatePowerByType */ }
     activateSindara(sourceBall) {
         if (!sourceBall || !sourceBall.active) return; const theBall = sourceBall; this.updateBallAppearance(theBall); const x = theBall.x; const y = theBall.y; const ballData = theBall.data.getAll(); ballData.lastActivatedPower = POWERUP_TYPES.SINDARA; if (!ballData.activePowers) ballData.activePowers = new Set(); ballData.activePowers.add(POWERUP_TYPES.SINDARA); ballData.isAttracting = false; ballData.isMerging = false;
         const vx = Phaser.Math.Between(-150, 150); const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8)); const partnerBall = this.createAndAddBall(x + Phaser.Math.Between(-5, 5), y + Phaser.Math.Between(-5, 5), vx, vy, ballData);
@@ -578,30 +547,34 @@ class GameScene extends Phaser.Scene {
     }
     deactivateSindaraPenetration(ball) {
         this.sindaraPenetrationTimer = null; if (!ball || !ball.active) return; if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { const isBikaraYang = ball.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA && ball.getData('bikaraState') === 'yang'; if (!isBikaraYang) { ball.setData('isPenetrating', false); } }
-        this.deactivatePowerByType(POWERUP_TYPES.SINDARA); /* setColliders は deactivatePowerByType が行う */
+        this.deactivatePowerByType(POWERUP_TYPES.SINDARA);
     }
     deactivateSindara(balls) {
         if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
         balls.forEach(b => { if (b.active) { b.setData({ sindaraPartner: null, isAttracting: false, isMerging: false }); if (!b.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { const isBikaraYang = b.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA && b.getData('bikaraState') === 'yang'; if (!isBikaraYang) { b.setData('isPenetrating', false); } } } });
-        /* 見た目更新と setColliders は deactivatePowerByType で */
     }
     activateBikara(balls) {
         balls.forEach(ball => { if (ball.active) { ball.setData({ bikaraState: 'yin', bikaraYangCount: 0 }); if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { const isSindaraActive = ball.getData('lastActivatedPower') === POWERUP_TYPES.SINDARA && (ball.getData('isAttracting') || ball.getData('isMerging')); if (!isSindaraActive) { ball.setData('isPenetrating', false); } } this.updateBallAppearance(ball); } }); this.setColliders();
     }
     deactivateBikara(balls) {
         balls.forEach(ball => { if (ball.active) { ball.setData({ bikaraState: null, bikaraYangCount: 0 }); if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { const isSindaraActive = ball.getData('lastActivatedPower') === POWERUP_TYPES.SINDARA && (ball.getData('isAttracting') || ball.getData('isMerging')); if (!isSindaraActive) { ball.setData('isPenetrating', false); } } } });
-        this.bricks.getChildren().forEach(br => { if (br.getData('isMarkedByBikara')) { br.setData('isMarkedByBikara', false); br.setTint(br.getData('originalTint') || 0xffffff); } });
-        /* 見た目更新と setColliders は deactivatePowerByType で */
+        this.bricks.getChildren().forEach(br => { if (br.getData && br.getData('isMarkedByBikara')) { br.setData('isMarkedByBikara', false); br.setTint(br.getData('originalTint') || 0xffffff); } });
     }
     switchBikaraState(ball) {
         if (!ball || !ball.active || ball.getData('lastActivatedPower') !== POWERUP_TYPES.BIKARA) return; const currentState = ball.getData('bikaraState'); const nextState = (currentState === 'yin') ? 'yang' : 'yin'; ball.setData('bikaraState', nextState); if (nextState === 'yang') { ball.setData('bikaraYangCount', 0); } this.updateBallAppearance(ball); this.setColliders();
     }
-    markBrickByBikara(brick) { if (!brick || !brick.active || brick.getData('isMarkedByBikara') || brick.getData('maxHits') === -1) return; brick.setData('isMarkedByBikara', true); brick.setTint(BRICK_MARKED_COLOR); }
+    markBrickByBikara(brick) {
+        if (!brick || !brick.active || !brick.getData || brick.getData('isMarkedByBikara') || brick.getData('maxHits') === -1) return;
+        brick.setData('isMarkedByBikara', true); brick.setTint(BRICK_MARKED_COLOR);
+    }
     activateIndara(balls) { balls.forEach(b => b.setData({ isIndaraActive: true, indaraHomingCount: INDARA_MAX_HOMING_COUNT })); }
-    deactivateIndaraForBall(ball) { if (!ball || !ball.active || !ball.getData('isIndaraActive')) return; ball.setData({ isIndaraActive: false, indaraHomingCount: 0 }); /* activePowers etc handled by deactivatePowerByType */ }
-    handleWorldBounds(body, up, down, left, right) { const ball = body.gameObject; if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls.contains(ball) || !ball.active) return; if (ball.getData('isIndaraActive') && ball.getData('indaraHomingCount') > 0 && (up || left || right)) { const currentHomingCount = ball.getData('indaraHomingCount'); const targetBricks = this.bricks.getMatching('active', true).filter(b => b.getData('maxHits') !== -1); if (targetBricks.length > 0) { let closestBrick = null; let minDistSq = Infinity; const ballCenter = ball.body.center; targetBricks.forEach(brick => { const distSq = Phaser.Math.Distance.Squared(ballCenter.x, ballCenter.y, brick.body.center.x, brick.body.center.y); if (distSq < minDistSq) { minDistSq = distSq; closestBrick = brick; } }); if (closestBrick) { const currentSpeed = ball.body.velocity.length(); const angle = Phaser.Math.Angle.BetweenPoints(ballCenter, closestBrick.body.center); this.physics.velocityFromAngle(angle, currentSpeed, ball.body.velocity); const newHomingCount = currentHomingCount - 1; ball.setData('indaraHomingCount', newHomingCount); if (newHomingCount <= 0) { this.deactivateIndaraForBall(ball); this.deactivatePowerByType(POWERUP_TYPES.INDARA); } } } } }
+    deactivateIndaraForBall(ball) { if (!ball || !ball.active || !ball.getData('isIndaraActive')) return; ball.setData({ isIndaraActive: false, indaraHomingCount: 0 }); }
+    handleWorldBounds(body, up, down, left, right) {
+        const ball = body.gameObject; if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls.contains(ball) || !ball.active) return;
+        if (ball.getData('isIndaraActive') && ball.getData('indaraHomingCount') > 0 && (up || left || right)) { const currentHomingCount = ball.getData('indaraHomingCount'); const targetBricks = this.bricks.getMatching('active', true).filter(b => b.getData && b.getData('maxHits') !== -1); if (targetBricks.length > 0) { let closestBrick = null; let minDistSq = Infinity; const ballCenter = ball.body.center; targetBricks.forEach(brick => { const distSq = Phaser.Math.Distance.Squared(ballCenter.x, ballCenter.y, brick.body.center.x, brick.body.center.y); if (distSq < minDistSq) { minDistSq = distSq; closestBrick = brick; } }); if (closestBrick) { const currentSpeed = ball.body.velocity.length(); const angle = Phaser.Math.Angle.BetweenPoints(ballCenter, closestBrick.body.center); this.physics.velocityFromAngle(angle, currentSpeed, ball.body.velocity); const newHomingCount = currentHomingCount - 1; ball.setData('indaraHomingCount', newHomingCount); if (newHomingCount <= 0) { this.deactivateIndaraForBall(ball); this.deactivatePowerByType(POWERUP_TYPES.INDARA); } } } }
+    }
     activateAnila(balls) { balls.forEach(b => { if (!b.getData('isAnilaActive')) { b.setData('isAnilaActive', true); } }); }
-    deactivateAnilaForBall(ball) { if (!ball || !ball.active || !ball.getData('isAnilaActive')) return; ball.setData('isAnilaActive', false); /* activePowers etc handled by deactivatePowerByType */ }
+    deactivateAnilaForBall(ball) { if (!ball || !ball.active || !ball.getData('isAnilaActive')) return; ball.setData('isAnilaActive', false); }
     triggerAnilaBounce(ball) { if (!ball || !ball.active || !ball.getData('isAnilaActive')) return; const currentVy = ball.body.velocity.y; const bounceVy = -Math.abs(currentVy > -10 ? BALL_INITIAL_VELOCITY_Y * 0.7 : currentVy * 0.8); ball.setVelocityY(bounceVy); ball.y = this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT; this.deactivateAnilaForBall(ball); this.deactivatePowerByType(POWERUP_TYPES.ANILA); }
     activateVajra() {
         if (!this.isVajraSystemActive) { this.isVajraSystemActive = true; this.vajraGauge = 0; this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); this.balls.getMatching('active', true).forEach(ball => { ball.getData('activePowers').add(POWERUP_TYPES.VAJRA); ball.setData('lastActivatedPower', POWERUP_TYPES.VAJRA); this.updateBallAppearance(ball); }); }
@@ -621,8 +594,6 @@ class GameScene extends Phaser.Scene {
         if (!this.paddle) return; const paddleX = this.paddle.x; const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE; const familiarLeft = this.familiars.create(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun').setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).clearTint(); if (familiarLeft.body) { familiarLeft.body.setAllowGravity(false).setImmovable(true); } else { console.error("Failed to create familiarLeft physics body!"); if(familiarLeft) familiarLeft.destroy(); } const familiarRight = this.familiars.create(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun').setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).clearTint(); if (familiarRight.body) { familiarRight.body.setAllowGravity(false).setImmovable(true); } else { console.error("Failed to create familiarRight physics body!"); if(familiarRight) familiarRight.destroy();}
     }
     fireMakiraBeam() { if (!this.isMakiraActive || !this.familiars || this.familiars.countActive(true) === 0 || this.isStageClearing || this.isGameOver) return; this.familiars.getChildren().forEach(familiar => { if (familiar.active) { const beam = this.makiraBeams.create(familiar.x, familiar.y - MAKIRA_FAMILIAR_SIZE, 'whitePixel').setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT).setTint(MAKIRA_BEAM_COLOR); if (beam && beam.body) { beam.setVelocity(0, -MAKIRA_BEAM_SPEED); beam.body.setAllowGravity(false); } else { console.error("Failed to create Makira beam body!"); if (beam) beam.destroy(); } } }); }
-
-    // --- loseLife, resetForNewLife, gameOver, stageClear (変更なし) ---
     loseLife() {
         if (this.isStageClearing || this.isGameOver || this.lives <= 0) return; this.deactivateMakira(); this.deactivateVajra();
         Object.keys(this.powerUpTimers).forEach(key => { if (this.powerUpTimers[key]) { this.powerUpTimers[key].remove(); this.powerUpTimers[key] = null; } }); if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
@@ -637,45 +608,53 @@ class GameScene extends Phaser.Scene {
         if (this.isGameOver) return; this.isGameOver = true; this.deactivateMakira(); this.deactivateVajra(); if (this.gameOverText) this.gameOverText.setVisible(true); this.physics.pause(); if (this.balls) { this.balls.getChildren().forEach(ball => { if (ball.active) { ball.setVelocity(0, 0); if (ball.body) ball.body.enable = false; } }); } Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(); }); this.powerUpTimers = {}; if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null; if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = null;
     }
     stageClear() {
-         if (this.isStageClearing || this.isGameOver) return; this.isStageClearing = true; this.deactivateMakira(); this.deactivateVajra();
+         if (this.isStageClearing || this.isGameOver) return;
+         this.isStageClearing = true; this.deactivateMakira(); this.deactivateVajra();
          try {
-             this.physics.pause(); Object.keys(this.powerUpTimers).forEach(key => { if (this.powerUpTimers[key]) { this.powerUpTimers[key].remove(); this.powerUpTimers[key] = null; } }); if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
+             this.physics.pause();
+             Object.keys(this.powerUpTimers).forEach(key => { if (this.powerUpTimers[key]) { this.powerUpTimers[key].remove(); this.powerUpTimers[key] = null; } }); if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
              const activeBalls = this.balls.getMatching('active', true); if (activeBalls.length > 0) { activeBalls.forEach(ball => { if(ball.active){ ball.setData('activePowers', new Set()); ball.setData('lastActivatedPower', null); ball.setData({ isPenetrating: false, isFast: false, isSlow: false, sindaraPartner: null, isAttracting: false, isMerging: false, bikaraState: null, bikaraYangCount: 0, isIndaraActive: false, indaraHomingCount: 0, isAnilaActive: false }); this.updateBallAppearance(ball); } }); }
-             if (this.balls) { this.balls.getChildren().forEach(ball => { if (ball.active) { ball.setVelocity(0, 0).setVisible(false).setActive(false); if (ball.body) ball.body.enable = false; } }); } if (this.bricks) { this.bricks.getChildren().forEach(br => { if (br.getData('isMarkedByBikara')) br.setData('isMarkedByBikara', false); }); } if (this.powerUps) { this.powerUps.clear(true, true); }
-             this.currentStage++; const maxStages = this.currentMode === GAME_MODE.ALL_STARS ? 10 : 12;
+             if (this.balls) { this.balls.getChildren().forEach(ball => { if (ball.active) { ball.setVelocity(0, 0).setVisible(false).setActive(false); if (ball.body) ball.body.enable = false; } }); }
+             if (this.bricks) { this.bricks.getChildren().forEach(br => { if (br.getData && br.getData('isMarkedByBikara')) br.setData('isMarkedByBikara', false); }); }
+             if (this.powerUps) { this.powerUps.clear(true, true); }
+
+             this.currentStage++;
+             const maxStages = this.currentMode === GAME_MODE.ALL_STARS ? 10 : 12;
              if (this.currentStage > maxStages) { this.gameComplete(); }
-             else { this.events.emit('updateStage', this.currentStage); this.time.delayedCall(1000, () => { if (!this.scene || !this.scene.isActive() || this.isGameOver) return; try { this.setupStage(); this.isStageClearing = false; this.resetForNewLife(); this.physics.resume(); } catch (e) { console.error("Error setting up next stage:", e); this.isStageClearing = false; this.gameOver(); } }, [], this); }
+             else {
+                 this.events.emit('updateStage', this.currentStage);
+
+                 const nextBgKey = this.getBackgroundKeyForStage(this.currentStage);
+                 if (this.bgImage && this.bgImage.texture.key !== nextBgKey) {
+                     this.bgImage.setTexture(nextBgKey);
+                     this.resizeBackground(); // リサイズとアルファ再設定
+                 }
+
+                 this.time.delayedCall(1000, () => {
+                     if (!this.scene || !this.scene.isActive() || this.isGameOver) return;
+                     try { this.setupStage(); this.isStageClearing = false; this.resetForNewLife(); this.physics.resume(); }
+                     catch (e) { console.error("Error setting up next stage:", e); this.isStageClearing = false; this.gameOver(); }
+                 }, [], this);
+             }
          } catch (e) { console.error("Error during stage clear process:", e); this.isStageClearing = false; this.gameOver(); }
      }
 
     gameComplete() { alert(`ゲームクリア！ スコア: ${this.score}`); this.returnToTitle(); }
     returnToTitle() { if (this.physics.world && !this.physics.world.running) this.physics.resume(); if (this.scene.isActive('UIScene')) { this.scene.stop('UIScene'); } this.time.delayedCall(10, () => { if (this.scene && this.scene.isActive()) { this.scene.start('TitleScene'); } }); }
     shutdown() {
-        if (this.scale) this.scale.off('resize', this.handleResize, this);
-        if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this);
-        this.events.removeAllListeners();
-        if (this.input) this.input.removeAllListeners();
-        this.isGameOver = false; this.isStageClearing = false;
-        this.deactivateMakira(); this.deactivateVajra();
-        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); }); this.powerUpTimers = {};
-        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null;
-        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null;
-        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null;
-        if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
-        if (this.time) this.time.removeAllEvents();
-        // ★背景画像を破棄
+        if (this.scale) this.scale.off('resize', this.handleResize, this); if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this); this.events.removeAllListeners(); if (this.input) this.input.removeAllListeners(); this.isGameOver = false; this.isStageClearing = false; this.deactivateMakira(); this.deactivateVajra(); Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); }); this.powerUpTimers = {}; if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null; if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null; if (this.time) this.time.removeAllEvents();
         if (this.bgImage) this.bgImage.destroy(); this.bgImage = null;
-        // 他のオブジェクト破棄 (変更なし)
         if (this.balls) this.balls.destroy(true); this.balls = null; if (this.bricks) this.bricks.destroy(true); this.bricks = null; if (this.powerUps) this.powerUps.destroy(true); this.powerUps = null; if (this.paddle) this.paddle.destroy(); this.paddle = null; if (this.familiars) this.familiars.destroy(true); this.familiars = null; if (this.makiraBeams) this.makiraBeams.destroy(true); this.makiraBeams = null; if (this.gameOverText) this.gameOverText.destroy(); this.gameOverText = null;
         this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
     }
 } // <-- GameScene クラスの終わり
 
-// --- UIScene (変更なし) ---
+// --- UIScene ---
 class UIScene extends Phaser.Scene {
      constructor() { super({ key: 'UIScene', active: false }); this.livesText = null; this.scoreText = null; this.stageText = null; this.vajraGaugeText = null; this.dropPoolIconsGroup = null; this.gameSceneListenerAttached = false; this.gameScene = null; }
     create() {
-        console.log("UIScene create started"); this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; const textStyle = { fontSize: '24px', fill: '#fff' };
+        console.log("UIScene create started");
+        this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; const textStyle = { fontSize: '24px', fill: '#fff' };
         this.livesText = this.add.text(16, 16, 'ライフ: ', textStyle); this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ', textStyle).setOrigin(0.5, 0); this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: ', textStyle).setOrigin(1, 0); this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff' }).setOrigin(0, 1).setVisible(false); this.dropPoolIconsGroup = this.add.group(); this.updateDropPoolDisplay([]); this.gameScene = this.scene.get('GameScene'); if (this.gameScene) { this.gameScene.events.on('gameResize', this.onGameResize, this); } try { const gameScene = this.scene.get('GameScene'); if (gameScene && gameScene.scene.settings.status === Phaser.Scenes.RUNNING) { this.registerGameEventListeners(gameScene); } else { this.scene.get('GameScene').events.once('create', this.registerGameEventListeners, this); } } catch (e) { console.error("Error setting up UIScene listeners:", e); } this.events.on('shutdown', () => { this.unregisterGameEventListeners(); if (this.gameScene && this.gameScene.events) { this.gameScene.events.off('gameResize', this.onGameResize, this); } });
          console.log("UIScene create finished");
     }
@@ -693,17 +672,23 @@ class UIScene extends Phaser.Scene {
     updateDropPoolPosition() { if (!this.dropPoolIconsGroup || !this.vajraGaugeText) return; const startX = this.vajraGaugeText.visible ? this.vajraGaugeText.x + this.vajraGaugeText.width + 15 : 16; const startY = this.gameHeight - UI_BOTTOM_OFFSET; let currentX = startX; this.dropPoolIconsGroup.getChildren().forEach(icon => { icon.x = currentX; icon.y = startY; currentX += DROP_POOL_UI_ICON_SIZE + DROP_POOL_UI_SPACING; }); }
 } // <-- UIScene クラスの終わり
 
-// --- Phaserゲーム設定 (変更なし) ---
+// --- Phaserゲーム設定 ---
 const config = {
     type: Phaser.AUTO,
     scale: { mode: Phaser.Scale.FIT, parent: 'phaser-game-container', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
-    physics: { default: 'arcade', arcade: { debug: false, gravity: { y: 0 } } },
+    physics: {
+        default: 'arcade',
+        arcade: {
+            debug: false,
+            gravity: { y: 0 }
+        }
+    },
     scene: [BootScene, TitleScene, GameScene, UIScene],
     input: { activePointers: 3, },
     render: { pixelArt: false, antialias: true, }
 };
 
-// --- ゲーム開始 (変更なし) ---
+// --- ゲーム開始 ---
 window.onload = () => {
     const game = new Phaser.Game(config);
 };
