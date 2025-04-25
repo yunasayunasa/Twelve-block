@@ -80,8 +80,6 @@ class BootScene extends Phaser.Scene {
     preload() {
         this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
         this.load.image('ball_image', 'assets/ball.png');
-
-        // --- アイコン読み込み ---
         this.load.image(POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA], 'assets/icon_kubira.png');
         this.load.image(POWERUP_ICON_KEYS[POWERUP_TYPES.SHATORA], 'assets/icon_shatora.png');
         this.load.image(POWERUP_ICON_KEYS[POWERUP_TYPES.HAILA], 'assets/icon_haila.png');
@@ -96,16 +94,10 @@ class BootScene extends Phaser.Scene {
         this.load.image(POWERUP_ICON_KEYS[POWERUP_TYPES.VAJRA], 'assets/icon_vajra.png');
         this.load.image(POWERUP_ICON_KEYS[POWERUP_TYPES.MAKIRA], 'assets/icon_makira.png');
         this.load.image(POWERUP_ICON_KEYS[POWERUP_TYPES.MAKORA], 'assets/icon_makora.png');
-
-        // --- その他アセット ---
         this.load.image('joykun', 'assets/joykun.png');
         this.load.image('gameBackground', 'assets/gamebackground.jpg');
         this.load.image('gameBackground2', 'assets/gamebackground2.jpg');
         this.load.image('gameBackground3', 'assets/gamebackground3.jpg');
-
-        // --- 音声ファイル (コメントアウト) ---
-        // this.load.audio('voice_kubira', 'assets/voice_kubira.m4a');
-        // ... (他の音声も同様)
     }
     create() { this.scene.start('TitleScene'); }
 }
@@ -114,9 +106,9 @@ class BootScene extends Phaser.Scene {
 class TitleScene extends Phaser.Scene {
      constructor() {
          super('TitleScene');
-         this.selectedCount = 4;
-         this.selectedRate = 50;
-         this.domElements = [];
+         this.selectedCount = 4; // 初期値
+         this.selectedRate = 50; // 初期値
+         this.domElements = []; // 作成したDOM要素を追跡
      }
 
     create() {
@@ -124,28 +116,39 @@ class TitleScene extends Phaser.Scene {
         const h = this.scale.height;
         this.cameras.main.setBackgroundColor('#222');
 
-        this.add.text(w / 2, h * 0.2, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        this.add.text(w / 2, h * 0.3, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
+        // タイトルテキスト
+        this.add.text(w / 2, h * 0.15, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+        this.add.text(w / 2, h * 0.25, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
 
+        // --- スライダーUIの作成 ---
         const sliderContainer = document.createElement('div');
-        sliderContainer.style.width = '80%';
-        sliderContainer.style.maxWidth = '400px';
-        sliderContainer.style.position = 'absolute';
-        sliderContainer.style.left = '50%';
-        sliderContainer.style.top = '55%';
-        sliderContainer.style.transform = 'translate(-50%, -50%)';
+        // ★ CSS: Phaser座標で配置するので position 等は不要
+        sliderContainer.style.width = '80%'; // コンテナ幅
+        sliderContainer.style.maxWidth = '400px'; // 最大幅
         sliderContainer.style.color = 'white';
-        sliderContainer.style.fontSize = '20px';
+        sliderContainer.style.fontSize = '18px'; // 少し小さく
         sliderContainer.style.backgroundColor = 'rgba(0,0,0,0.6)';
-        sliderContainer.style.padding = '20px';
-        sliderContainer.style.borderRadius = '10px';
-        sliderContainer.style.textAlign = 'center';
+        sliderContainer.style.padding = '15px'; // 少し小さく
+        sliderContainer.style.borderRadius = '8px';
+        sliderContainer.style.textAlign = 'left'; // 左揃えに戻す
 
+        // 抽選数スライダー
         const countDiv = document.createElement('div');
-        countDiv.style.marginBottom = '15px';
+        countDiv.style.marginBottom = '10px'; // マージン調整
         const countLabel = document.createElement('label');
         countLabel.htmlFor = 'count-slider';
-        countLabel.textContent = '抽選候補数 (種類): ';
+        countLabel.textContent = '抽選候補数: ';
+        countLabel.style.display = 'inline-block'; // 幅調整のため
+        countLabel.style.width = '150px'; // ラベル幅固定 (調整してください)
+
+        const countValueSpan = document.createElement('span');
+        countValueSpan.id = 'count-value';
+        countValueSpan.textContent = this.selectedCount.toString();
+        countValueSpan.style.display = 'inline-block';
+        countValueSpan.style.minWidth = '2em';
+        countValueSpan.style.textAlign = 'right';
+        countValueSpan.style.marginRight = '10px';
+
         const countSlider = document.createElement('input');
         countSlider.type = 'range';
         countSlider.id = 'count-slider';
@@ -153,25 +156,29 @@ class TitleScene extends Phaser.Scene {
         countSlider.max = '11';
         countSlider.value = this.selectedCount.toString();
         countSlider.step = '1';
-        countSlider.style.width = '60%';
+        countSlider.style.width = 'calc(100% - 190px)'; // 残りの幅 (ラベル幅+値幅+マージンを引く)
         countSlider.style.verticalAlign = 'middle';
-        const countValueSpan = document.createElement('span');
-        countValueSpan.id = 'count-value';
-        countValueSpan.textContent = this.selectedCount.toString();
-        countValueSpan.style.display = 'inline-block';
-        countValueSpan.style.minWidth = '2em';
-        countValueSpan.style.textAlign = 'right';
-        countValueSpan.style.marginLeft = '10px';
 
         countDiv.appendChild(countLabel);
         countDiv.appendChild(countValueSpan);
         countDiv.appendChild(countSlider);
 
+        // ドロップ率スライダー
         const rateDiv = document.createElement('div');
-        rateDiv.style.marginBottom = '20px';
         const rateLabel = document.createElement('label');
         rateLabel.htmlFor = 'rate-slider';
-        rateLabel.textContent = 'ドロップ率 (%): ';
+        rateLabel.textContent = 'ドロップ率: ';
+        rateLabel.style.display = 'inline-block';
+        rateLabel.style.width = '150px'; // ラベル幅固定
+
+        const rateValueSpan = document.createElement('span');
+        rateValueSpan.id = 'rate-value';
+        rateValueSpan.textContent = this.selectedRate.toString() + '%'; // % を追加
+        rateValueSpan.style.display = 'inline-block';
+        rateValueSpan.style.minWidth = '4em'; // 幅調整 (%含む)
+        rateValueSpan.style.textAlign = 'right';
+        rateValueSpan.style.marginRight = '10px';
+
         const rateSlider = document.createElement('input');
         rateSlider.type = 'range';
         rateSlider.id = 'rate-slider';
@@ -179,15 +186,8 @@ class TitleScene extends Phaser.Scene {
         rateSlider.max = '100';
         rateSlider.value = this.selectedRate.toString();
         rateSlider.step = '10';
-        rateSlider.style.width = '60%';
+        rateSlider.style.width = 'calc(100% - 200px)'; // 残りの幅 (ラベル幅+値幅+マージンを引く)
         rateSlider.style.verticalAlign = 'middle';
-        const rateValueSpan = document.createElement('span');
-        rateValueSpan.id = 'rate-value';
-        rateValueSpan.textContent = this.selectedRate.toString();
-        rateValueSpan.style.display = 'inline-block';
-        rateValueSpan.style.minWidth = '3em';
-        rateValueSpan.style.textAlign = 'right';
-        rateValueSpan.style.marginLeft = '10px';
 
         rateDiv.appendChild(rateLabel);
         rateDiv.appendChild(rateValueSpan);
@@ -196,27 +196,32 @@ class TitleScene extends Phaser.Scene {
         sliderContainer.appendChild(countDiv);
         sliderContainer.appendChild(rateDiv);
 
-        const domElement = this.add.dom(0, 0, sliderContainer).setOrigin(0); // CSSで中央揃えするのでOriginは0,0
-        domElement.setPosition(w / 2, h * 0.55);
-        this.domElements.push(domElement);
+        // ★ DOM要素をPhaserに追加 (座標とOrigin変更)
+        //    y座標を調整してタイトルとボタンの間に配置
+        const domElement = this.add.dom(w / 2, h * 0.5, sliderContainer).setOrigin(0.5);
+        this.domElements.push(domElement); // 管理配列に追加
 
+        // スライダーのイベントリスナーを設定
         countSlider.addEventListener('input', (event) => {
             this.selectedCount = parseInt(event.target.value);
             countValueSpan.textContent = this.selectedCount.toString();
         });
         rateSlider.addEventListener('input', (event) => {
             this.selectedRate = parseInt(event.target.value);
-            rateValueSpan.textContent = this.selectedRate.toString();
+            rateValueSpan.textContent = this.selectedRate.toString() + '%'; // % を表示に追加
         });
 
+        // --- ゲーム開始ボタン ---
         const buttonStyle = { fontSize: '32px', fill: '#fff', backgroundColor: '#555', padding: { x: 20, y: 10 } };
         const buttonHoverStyle = { fill: '#ff0' };
-        const startButton = this.add.text(w / 2, h * 0.8, 'ゲーム開始', buttonStyle)
+        // ★ ボタンのY座標をスライダーの下に調整
+        const startButton = this.add.text(w / 2, h * 0.75, 'ゲーム開始', buttonStyle)
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true })
             .on('pointerover', () => { startButton.setStyle(buttonHoverStyle) })
             .on('pointerout', () => { startButton.setStyle(buttonStyle) })
             .on('pointerdown', () => {
+                // 設定値を渡してゲームシーンを開始
                 this.scene.start('GameScene', {
                     chaosSettings: {
                         count: this.selectedCount,
@@ -226,9 +231,11 @@ class TitleScene extends Phaser.Scene {
                 this.scene.launch('UIScene');
             });
 
+        // シーンシャットダウン時にDOM要素を削除するリスナー
         this.events.on('shutdown', this.clearDOM, this);
     }
 
+    // DOM要素をクリアするメソッド
     clearDOM() {
         this.domElements.forEach(element => element.destroy());
         this.domElements = [];
@@ -552,17 +559,10 @@ class GameScene extends Phaser.Scene {
         let displaySize = POWERUP_SIZE;
         let tintColor = null;
 
-        if (textureKey === 'whitePixel' && type !== POWERUP_TYPES.BAISRAVA) { // バイシュラ以外でアイコンがない場合
-            console.warn(`Powerup icon key not found for type: ${type}, using white pixel.`);
-            tintColor = 0xcccccc;
-        } else if (type === POWERUP_TYPES.BAISRAVA) { // バイシュラは常にアイコンを使う
-             // No tint needed for Baisrava icon
-             if (textureKey === 'whitePixel') { // もしバイシュラアイコンが見つからなかったら警告＆代替色
-                console.warn(`Baisrava icon key not found, using white pixel.`);
-                tintColor = 0xffd700; // 金色
-             }
+        if (textureKey === 'whitePixel') { // アイコンが見つからなかった場合
+             console.warn(`Powerup icon key not found for type: ${type}, using white pixel.`);
+             tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc; // バイシュラなら金色、他は灰色
         }
-
 
         if (!type) { console.warn(`Attempted to drop powerup with no type.`); return; }
 
@@ -799,9 +799,7 @@ class UIScene extends Phaser.Scene {
     updateDropPoolDisplay(dropPoolTypes) {
         if (!this.dropPoolIconsGroup) return; this.dropPoolIconsGroup.clear(true, true); if (!dropPoolTypes || dropPoolTypes.length === 0) { this.updateDropPoolPosition(); return; }
         dropPoolTypes.forEach((type, index) => { let iconKey = POWERUP_ICON_KEYS[type] || 'whitePixel'; let tintColor = null;
-            if (iconKey === 'whitePixel') { // アイコンがない場合 (バイシュラ含む)
-                tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc;
-            }
+            if (iconKey === 'whitePixel') { tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc; }
             const icon = this.add.image(0, 0, iconKey).setDisplaySize(DROP_POOL_UI_ICON_SIZE, DROP_POOL_UI_ICON_SIZE).setOrigin(0, 0.5);
             if (tintColor !== null) { icon.setTint(tintColor); } else { icon.clearTint(); }
             this.dropPoolIconsGroup.add(icon); }); this.updateDropPoolPosition();
@@ -813,7 +811,7 @@ class UIScene extends Phaser.Scene {
 const config = {
     type: Phaser.AUTO,
     scale: { mode: Phaser.Scale.FIT, parent: 'phaser-game-container', autoCenter: Phaser.Scale.CENTER_BOTH, width: '100%', height: '100%' },
-    dom: { createContainer: true },
+    dom: { createContainer: true }, // ★ この設定を確認してください
     physics: {
         default: 'arcade',
         arcade: {
