@@ -199,7 +199,9 @@ class GameScene extends Phaser.Scene {
 
          // 画面中央に再配置
          this.bgImage.setPosition(gameWidth / 2, gameHeight / 2);
-     }
+         this.bgImage.setAlpha(0.7); // ★背景の透明度を 70% に設定 (値を調整可能)
+      }
+     
 
      updatePaddleSize() { if (!this.paddle) return; const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio'); this.paddle.setDisplaySize(newWidth, PADDLE_HEIGHT); this.paddle.refreshBody(); const halfWidth = this.paddle.displayWidth / 2; this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth); }
     handleResize(gameSize, baseSize, displaySize, resolution) {
