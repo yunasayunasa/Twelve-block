@@ -18,22 +18,24 @@ export default class TitleScene extends Phaser.Scene {
             const w = this.scale.width;
             const h = this.scale.height;
 
-            console.log("Adding background image..."); // ログ追加
-            this.add.image(w / 2, h / 2, 'titleBg')
-               .setOrigin(0.5, 0.5)
-               .setDisplaySize(w, h);
-            console.log("Background image added."); // ログ追加
+             // --- ▼ 背景表示をシンプル化 ▼ ---
+        console.log("Adding SIMPLE background (white pixel)...");
+        this.add.image(w / 2, h / 2, 'whitePixel').setDisplaySize(w,h).setTint(0x333333); // 白ピクセルで代用
+        console.log("SIMPLE background added.");
+        // --- ▲ 背景表示をシンプル化 ▲ ---
 
             /////
             //console.log("Attempting to play title BGM..."); // ログ追加
             //this.playTitleBgm(); // BGM再生呼び出し
             //console.log("Title BGM play called (or attempted)."); // ログ追加
 ///
-            console.log("Adding title logo..."); // ログ追加
-            this.titleLogo = this.add.image(w / 2, -200, 'titleLogo')
-                .setOrigin(0.5, 0.5);
-            console.log("Title logo added."); // ログ追加
-            // this.titleLogo.setScale(0.8);
+             // --- ▼ ロゴ表示をシンプル化 ▼ ---
+        console.log("Adding SIMPLE logo (white pixel)...");
+        this.titleLogo = this.add.image(w / 2, h * 0.2, 'whitePixel') // 画面内に表示
+                           .setDisplaySize(200, 50) // 適当なサイズ
+                           .setTint(0xff0000); // 赤色で目立たせる
+        console.log("SIMPLE logo added.");
+        // --- ▲ ロゴ表示をシンプル化 ▲ ---
 
             console.log("Creating DOM elements..."); // ログ追加
             const sliderContainer = document.createElement('div');
