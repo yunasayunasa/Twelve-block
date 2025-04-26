@@ -39,9 +39,12 @@ const config = {
 // --- ゲーム開始 ---
 window.onload = () => {
     console.log("Window loaded. Creating Phaser game.");
+    console.log("main.js loaded and window ready."); // ← これを追加
+    console.log("Attempting to create Phaser game.");
     try {
         // Phaserゲームインスタンスを作成
         const game = new Phaser.Game(config);
+        console.log("Phaser game instance created (or attempted).");
     } catch (e) {
         // 致命的なエラー発生時のフォールバック表示
         console.error("CRITICAL: Failed to initialize Phaser game:", e);
