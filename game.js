@@ -1,147 +1,17 @@
 // --- 定数 ---
-const PADDLE_WIDTH_RATIO = 0.2;
-const PADDLE_HEIGHT = 20;
-const PADDLE_Y_OFFSET = 50;
-const BALL_RADIUS = 18;
-const PHYSICS_BALL_RADIUS = 60;
-const BALL_INITIAL_VELOCITY_Y = -350;
-const BALL_INITIAL_VELOCITY_X_RANGE = [-150, 150];
-const BRICK_ROWS = 5;
-const BRICK_COLS = 8;
-const BRICK_WIDTH_RATIO = 0.095; // 見切れ対策
-const BRICK_HEIGHT = 20;
-const BRICK_SPACING = 4;
-const BRICK_OFFSET_TOP = 100;
-const DURABLE_BRICK_CHANCE = 0.2;
-const MAX_DURABLE_HITS = 3;
-const DURABLE_BRICK_COLOR = 0xaaaaaa;
-const DURABLE_BRICK_HIT_DARKEN = 40;
-const INDESTRUCTIBLE_BRICK_COLOR = 0x333333;
-const MAX_STAGE = 12;
-
-const BRICK_COLORS = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffff00, 0xff00ff, 0x00ffff ];
-const BRICK_MARKED_COLOR = 0x666666;
-
-const BAISRAVA_DROP_RATE = 0.02;
-const POWERUP_SIZE = 40;
-const POWERUP_SPEED_Y = 100;
-const POWERUP_TYPES = { KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara', BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra', MAKIRA: 'makira', MAKORA: 'makora' };
-const ALL_POSSIBLE_POWERUPS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA, POWERUP_TYPES.MAKORA ];
-const MAKORA_COPYABLE_POWERS = [ POWERUP_TYPES.KUBIRA, POWERUP_TYPES.SHATORA, POWERUP_TYPES.HAILA, POWERUP_TYPES.ANCHIRA, POWERUP_TYPES.SINDARA, POWERUP_TYPES.BIKARA, POWERUP_TYPES.INDARA, POWERUP_TYPES.ANILA, POWERUP_TYPES.VAJRA, POWERUP_TYPES.MAKIRA ];
-const POWERUP_DURATION = { [POWERUP_TYPES.KUBIRA]: 10000, [POWERUP_TYPES.SHATORA]: 3000, [POWERUP_TYPES.HAILA]: 10000, [POWERUP_TYPES.MAKIRA]: 6667 };
-const BIKARA_YANG_COUNT_MAX = 2;
-const INDARA_MAX_HOMING_COUNT = 3;
-const NORMAL_BALL_SPEED = Math.abs(BALL_INITIAL_VELOCITY_Y);
-const BALL_SPEED_MODIFIERS = { [POWERUP_TYPES.SHATORA]: 3.0, [POWERUP_TYPES.HAILA]: 0.3 };
-const SINDARA_ATTRACTION_DELAY = 3000;
-const SINDARA_ATTRACTION_FORCE = 400;
-const SINDARA_MERGE_DURATION = 500;
-const SINDARA_POST_MERGE_PENETRATION_DURATION = 2000;
-const VAJRA_GAUGE_MAX = 100;
-const VAJRA_GAUGE_INCREMENT = 10;
-const VAJRA_DESTROY_COUNT = 5;
-const MAKIRA_ATTACK_INTERVAL = 1000;
-const MAKIRA_BEAM_SPEED = 400;
-const MAKIRA_BEAM_WIDTH = 10;
-const MAKIRA_BEAM_HEIGHT = 15;
-const MAKIRA_BEAM_COLOR = 0xff0000;
-const MAKIRA_FAMILIAR_OFFSET = 40;
-const MAKIRA_FAMILIAR_SIZE = 10;
-const DROP_POOL_UI_ICON_SIZE = 18;
-const DROP_POOL_UI_SPACING = 5;
-const UI_BOTTOM_OFFSET = 30;
-
-const POWERUP_ICON_KEYS = {
-    [POWERUP_TYPES.KUBIRA]: 'icon_kubira', [POWERUP_TYPES.SHATORA]: 'icon_shatora', [POWERUP_TYPES.HAILA]: 'icon_haila',
-    [POWERUP_TYPES.ANCHIRA]: 'icon_anchira', [POWERUP_TYPES.SINDARA]: 'icon_sindara', SINDARA_SUPER: 'icon_super_sindara',
-    [POWERUP_TYPES.BIKARA]: 'icon_bikara_yin', BIKARA_YANG: 'icon_bikara_yang', [POWERUP_TYPES.INDARA]: 'icon_indara',
-    [POWERUP_TYPES.ANILA]: 'icon_anila', [POWERUP_TYPES.BAISRAVA]: 'icon_baisrava', [POWERUP_TYPES.VAJRA]: 'icon_vajra',
-    [POWERUP_TYPES.MAKIRA]: 'icon_makira', [POWERUP_TYPES.MAKORA]: 'icon_makora',
-};
-
-// 音声ファイルキー定義 (ファイル名と合わせる必要あり)
-const AUDIO_KEYS = {
-    BGM1: 'bgm1', BGM2: 'bgm2',
-    SE_START: 'se_start', SE_LAUNCH: 'se_launch', SE_REFLECT: 'se_reflect', // パドルヒット音
-    SE_DESTROY: 'se_destroy', SE_STAGE_CLEAR: 'se_stage_clear', SE_GAME_OVER: 'se_game_over', // ブロック破壊音, ステージクリア音
-    SE_SINDARA_MERGE: 'se_sindara_merge', // シンダラ合体SE
-    SE_BIKARA_CHANGE: 'se_bikara_change', SE_VAJRA_TRIGGER: 'se_vajra_trigger', // ビカラ切替SE, ヴァジラ奥義SE
-    VOICE_KUBIRA: 'voice_kubira', VOICE_SHATORA: 'voice_shatora', VOICE_HAILA: 'voice_haila',
-    VOICE_ANCHIRA: 'voice_anchira', VOICE_SINDARA: 'voice_sindara', VOICE_SINDARA_MERGE: 'voice_sindara_merge', // シンダラ合体ボイス
-    VOICE_BIKARA_YIN: 'voice_bikara_yin', VOICE_BIKARA_YANG: 'voice_bikara_yang', // ビカラ陰陽ボイス
-    VOICE_INDARA: 'voice_indara', VOICE_ANILA: 'voice_anila',
-    VOICE_BAISRAVA: 'voice_baisrava', // ファイル名は baisyura.mp3 の可能性
-    VOICE_VAJRA_GET: 'voice_vajra_get', // ファイル名は voice_vajra.mp3 の可能性
-    VOICE_VAJRA_TRIGGER: 'voice_vajra_trigger', VOICE_MAKIRA: 'voice_makira', VOICE_MAKORA: 'voice_makora'
-};
-
-const SYMBOL_PATTERNS = {
-    '3': [[1,1,1,1,1],[0,0,0,0,1],[0,1,1,1,1],[0,0,0,0,1],[1,1,1,1,1]],
-    '9': [[1,1,1,1,1],[1,0,0,0,1],[1,1,1,1,1],[0,0,0,0,1],[1,1,1,1,1]],
-    '11': [[0,1,1,1,0,0,0,0,1,0,0],[0,1,1,1,0,0,0,0,1,0,0],[1,1,1,1,1,0,1,1,1,1,0],[0,0,1,0,0,0,0,1,0,1,1],[0,0,1,0,0,0,0,1,0,0,1],[0,0,1,0,0,0,0,1,0,0,1],[0,0,1,0,0,0,1,0,0,1,0]],
-};
+// ... (省略) ...
 
 // --- BootScene ---
-class BootScene extends Phaser.Scene {
-    constructor() { super('BootScene'); }
-    preload() {
-        console.log("BootScene Preload Start");
-        this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
-        this.load.image('ball_image', 'assets/ball.png');
-        Object.values(POWERUP_ICON_KEYS).forEach(key => {
-             if (key && typeof key === 'string') this.load.image(key, `assets/${key}.png`);
-        });
-        this.load.image('joykun', 'assets/joykun.png');
-        this.load.image('gameBackground', 'assets/gamebackground.jpg');
-        this.load.image('gameBackground2', 'assets/gamebackground2.jpg');
-        this.load.image('gameBackground3', 'assets/gamebackground3.jpg');
-
-        console.log("Loading audio files...");
-        // ★★★ 注意: ファイル名/形式がコードと一致しているか確認してください ★★★
-        this.load.audio(AUDIO_KEYS.BGM1, 'assets/stage_bgm1.mp3');
-        this.load.audio(AUDIO_KEYS.BGM2, 'assets/stage_bgm2.mp3');
-        this.load.audio(AUDIO_KEYS.SE_START, 'assets/se_start.mp3');
-        this.load.audio(AUDIO_KEYS.SE_LAUNCH, 'assets/se_launch.mp3');
-        this.load.audio(AUDIO_KEYS.SE_REFLECT, 'assets/se_reflect.mp3');
-        this.load.audio(AUDIO_KEYS.SE_DESTROY, 'assets/se_destroy.mp3');
-        this.load.audio(AUDIO_KEYS.SE_STAGE_CLEAR, 'assets/se_stage_clear.mp3');
-        this.load.audio(AUDIO_KEYS.SE_GAME_OVER, 'assets/se_game_over.mp3');
-        this.load.audio(AUDIO_KEYS.SE_SINDARA_MERGE, 'assets/se_sindara_merge.mp3'); // ★
-        this.load.audio(AUDIO_KEYS.SE_BIKARA_CHANGE, 'assets/se_bikara_change.mp3');
-        this.load.audio(AUDIO_KEYS.SE_VAJRA_TRIGGER, 'assets/se_vajra_trigger.mp3');
-        this.load.audio(AUDIO_KEYS.VOICE_KUBIRA, 'assets/voice_kubira.mp3');
-        this.load.audio(AUDIO_KEYS.VOICE_SHATORA, 'assets/voice_shatora.mp3');
-        this.load.audio(AUDIO_KEYS.VOICE_HAILA, 'assets/voice_haila.mp3');
-        this.load.audio(AUDIO_KEYS.VOICE_ANCHIRA, 'assets/voice_anchira.mp3'); // .m4a?
-        this.load.audio(AUDIO_KEYS.VOICE_SINDARA, 'assets/voice_sindara.mp3'); // .m4a?
-        this.load.audio(AUDIO_KEYS.VOICE_SINDARA_MERGE, 'assets/voice_sindara_merge.mp3'); // .m4a? ★
-        this.load.audio(AUDIO_KEYS.VOICE_BIKARA_YIN, 'assets/voice_bikara_yin.mp3'); // .m4a? ★
-        this.load.audio(AUDIO_KEYS.VOICE_BIKARA_YANG, 'assets/voice_bikara_yang.mp3'); // .m4a? ★
-        this.load.audio(AUDIO_KEYS.VOICE_INDARA, 'assets/voice_indara.mp3');
-        this.load.audio(AUDIO_KEYS.VOICE_ANILA, 'assets/voice_anila.mp3');
-        this.load.audio(AUDIO_KEYS.VOICE_BAISRAVA, 'assets/voice_baisrava.mp3'); // baisyura?
-        this.load.audio(AUDIO_KEYS.VOICE_VAJRA_GET, 'assets/voice_vajra_get.mp3'); // vajra?
-        this.load.audio(AUDIO_KEYS.VOICE_VAJRA_TRIGGER, 'assets/voice_vajra_trigger.mp3');
-        this.load.audio(AUDIO_KEYS.VOICE_MAKIRA, 'assets/voice_makira.mp3');
-        this.load.audio(AUDIO_KEYS.VOICE_MAKORA, 'assets/voice_makora.mp3');
-        console.log("Finished loading audio files setup.");
-    }
-    create() { console.log("BootScene Create Start"); this.scene.start('TitleScene'); console.log("BootScene Create End"); }
-}
+// ... (省略) ...
+// ★★★ preload 内の this.load.audio() のファイル名と拡張子を要再確認 ★★★
 
 // --- TitleScene ---
-class TitleScene extends Phaser.Scene {
-     constructor() { super('TitleScene'); this.selectedCount = 4; this.selectedRate = 50; this.domElements = []; this.currentBgm = null; }
-    create() { console.log("TitleScene Create Start"); const w = this.scale.width; const h = this.scale.height; this.cameras.main.setBackgroundColor('#222'); this.playTitleBgm(); this.add.text(w / 2, h * 0.15, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5); this.add.text(w / 2, h * 0.25, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5); const sliderContainer = document.createElement('div'); sliderContainer.style.width = '80%'; sliderContainer.style.maxWidth = '400px'; sliderContainer.style.color = 'white'; sliderContainer.style.fontSize = '18px'; sliderContainer.style.backgroundColor = 'rgba(0,0,0,0.6)'; sliderContainer.style.padding = '15px'; sliderContainer.style.borderRadius = '8px'; sliderContainer.style.textAlign = 'left'; const countDiv = document.createElement('div'); countDiv.style.marginBottom = '10px'; const countLabel = document.createElement('label'); countLabel.htmlFor = 'count-slider'; countLabel.textContent = '抽選候補数: '; countLabel.style.display = 'inline-block'; countLabel.style.width = '150px'; const countValueSpan = document.createElement('span'); countValueSpan.id = 'count-value'; countValueSpan.textContent = this.selectedCount.toString(); countValueSpan.style.display = 'inline-block'; countValueSpan.style.minWidth = '2em'; countValueSpan.style.textAlign = 'right'; countValueSpan.style.marginRight = '10px'; const countSlider = document.createElement('input'); countSlider.type = 'range'; countSlider.id = 'count-slider'; countSlider.min = '0'; countSlider.max = '11'; countSlider.value = this.selectedCount.toString(); countSlider.step = '1'; countSlider.style.width = 'calc(100% - 190px)'; countSlider.style.verticalAlign = 'middle'; countDiv.appendChild(countLabel); countDiv.appendChild(countValueSpan); countDiv.appendChild(countSlider); const rateDiv = document.createElement('div'); const rateLabel = document.createElement('label'); rateLabel.htmlFor = 'rate-slider'; rateLabel.textContent = 'ドロップ率: '; rateLabel.style.display = 'inline-block'; rateLabel.style.width = '150px'; const rateValueSpan = document.createElement('span'); rateValueSpan.id = 'rate-value'; rateValueSpan.textContent = this.selectedRate.toString() + '%'; rateValueSpan.style.display = 'inline-block'; rateValueSpan.style.minWidth = '4em'; rateValueSpan.style.textAlign = 'right'; rateValueSpan.style.marginRight = '10px'; const rateSlider = document.createElement('input'); rateSlider.type = 'range'; rateSlider.id = 'rate-slider'; rateSlider.min = '0'; rateSlider.max = '100'; rateSlider.value = this.selectedRate.toString(); rateSlider.step = '10'; rateSlider.style.width = 'calc(100% - 200px)'; rateSlider.style.verticalAlign = 'middle'; rateDiv.appendChild(rateLabel); rateDiv.appendChild(rateValueSpan); rateDiv.appendChild(rateSlider); sliderContainer.appendChild(countDiv); sliderContainer.appendChild(rateDiv); const domElement = this.add.dom(w / 2, h * 0.5, sliderContainer).setOrigin(0.5); this.domElements.push(domElement); countSlider.addEventListener('input', (event) => { this.selectedCount = parseInt(event.target.value); countValueSpan.textContent = this.selectedCount.toString(); }); rateSlider.addEventListener('input', (event) => { this.selectedRate = parseInt(event.target.value); rateValueSpan.textContent = this.selectedRate.toString() + '%'; }); const buttonStyle = { fontSize: '32px', fill: '#fff', backgroundColor: '#555', padding: { x: 20, y: 10 } }; const buttonHoverStyle = { fill: '#ff0' }; const startButton = this.add.text(w / 2, h * 0.75, 'ゲーム開始', buttonStyle).setOrigin(0.5).setInteractive({ useHandCursor: true }).on('pointerover', () => { startButton.setStyle(buttonHoverStyle) }).on('pointerout', () => { startButton.setStyle(buttonStyle) }).on('pointerdown', () => { console.log("Start button clicked."); this.sound.play(AUDIO_KEYS.SE_START); this.stopTitleBgm(); this.scene.start('GameScene', { chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } }); this.scene.launch('UIScene'); }); this.events.on('shutdown', this.shutdownScene, this); console.log("TitleScene Create End"); }
-    playTitleBgm() { this.stopTitleBgm(); console.log("Playing Title BGM (BGM2)"); this.currentBgm = this.sound.add(AUDIO_KEYS.BGM2, { loop: true, volume: 0.5 }); this.currentBgm.play(); }
-    stopTitleBgm() { if (this.currentBgm) { console.log("Stopping Title BGM"); this.currentBgm.stop(); this.sound.remove(this.currentBgm); this.currentBgm = null; } }
-    shutdownScene() { console.log("TitleScene shutdown initiated."); this.clearDOM(); this.stopTitleBgm(); this.events.off('shutdown', this.shutdownScene, this); console.log("TitleScene shutdown complete."); }
-    clearDOM() { console.log("Clearing DOM elements."); this.domElements.forEach(element => element.destroy()); this.domElements = []; }
-}
+// ... (省略) ...
 
 // --- GameScene ---
 class GameScene extends Phaser.Scene {
-     constructor() { super('GameScene'); this.paddle = null; this.balls = null; this.bricks = null; this.powerUps = null; this.lives = 0; this.gameOverText = null; this.isBallLaunched = false; this.gameWidth = 0; this.gameHeight = 0; this.currentStage = 1; this.score = 0; this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.powerUpTimers = {}; this.sindaraAttractionTimer = null; this.sindaraMergeTimer = null; this.sindaraPenetrationTimer = null; this.isStageClearing = false; this.isGameOver = false; this.isVajraSystemActive = false; this.vajraGauge = 0; this.isMakiraActive = false; this.familiars = null; this.makiraBeams = null; this.makiraAttackTimer = null; this.makiraBeamBrickOverlap = null; this.stageDropPool = []; this.bgImage = null; this.chaosSettings = { count: 4, rate: 0.5 }; this.currentBgm = null; this.lastPlayedVoiceTime = {}; this.voiceThrottleTime = 500; }
+    // ... (省略：constructor から handleBrickDestruction まで変更なし) ...
+    constructor() { super('GameScene'); this.paddle = null; this.balls = null; this.bricks = null; this.powerUps = null; this.lives = 0; this.gameOverText = null; this.isBallLaunched = false; this.gameWidth = 0; this.gameHeight = 0; this.currentStage = 1; this.score = 0; this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.powerUpTimers = {}; this.sindaraAttractionTimer = null; this.sindaraMergeTimer = null; this.sindaraPenetrationTimer = null; this.isStageClearing = false; this.isGameOver = false; this.isVajraSystemActive = false; this.vajraGauge = 0; this.isMakiraActive = false; this.familiars = null; this.makiraBeams = null; this.makiraAttackTimer = null; this.makiraBeamBrickOverlap = null; this.stageDropPool = []; this.bgImage = null; this.chaosSettings = { count: 4, rate: 0.5 }; this.currentBgm = null; this.lastPlayedVoiceTime = {}; this.voiceThrottleTime = 500; }
     init(data) { console.log("GameScene Init Start"); if (data && data.chaosSettings) { this.chaosSettings.count = data.chaosSettings.count; this.chaosSettings.rate = data.chaosSettings.ratePercent / 100; console.log('Chaos Settings Received:', this.chaosSettings); } else { console.log('No Chaos Settings received, using defaults:', this.chaosSettings); } this.lives = 3; this.isBallLaunched = false; this.currentStage = 1; this.score = 0; Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(); }); this.powerUpTimers = {}; if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null; this.isStageClearing = false; this.isGameOver = false; this.isVajraSystemActive = false; this.vajraGauge = 0; this.isMakiraActive = false; if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; this.stageDropPool = []; this.bgImage = null; this.currentBgm = null; this.lastPlayedVoiceTime = {}; console.log("GameScene Init End"); }
     preload() { console.log("GameScene Preload (nothing to load here usually)");}
     create() { console.log("GameScene Create Start"); this.gameWidth = this.scale.width; this.gameHeight = this.scale.height; this.cameras.main.setBackgroundColor('#222'); const initialBgKey = this.getBackgroundKeyForStage(this.currentStage); this.bgImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, initialBgKey).setOrigin(0.5, 0.5).setDepth(-1); this.updateBgm(); this.time.delayedCall(50, () => { console.log("Delayed call: Updating initial UI."); if (this.scene.isActive('UIScene')) { this.events.emit('updateLives', this.lives); this.events.emit('updateScore', this.score); this.events.emit('updateStage', this.currentStage); if (this.isVajraSystemActive) { this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX); } else { this.events.emit('deactivateVajraUI'); } this.events.emit('updateDropPoolUI', this.stageDropPool); } }); this.physics.world.setBoundsCollision(true, true, true, false); this.physics.world.on('worldbounds', this.handleWorldBounds, this); this.paddle = this.physics.add.image(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET, 'whitePixel').setTint(0xffff00).setImmovable(true).setData('originalWidthRatio', PADDLE_WIDTH_RATIO); this.updatePaddleSize(); this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true }); this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS); this.setupStage(); this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'GAME OVER\nTap to Restart', { fontSize: '48px', fill: '#f00', align: 'center' }).setOrigin(0.5).setVisible(false).setDepth(1); this.powerUps = this.physics.add.group(); this.familiars = this.physics.add.group(); this.makiraBeams = this.physics.add.group(); this.setColliders(); this.physics.add.overlap(this.paddle, this.powerUps, this.collectPowerUp, null, this); this.input.on('pointermove', (pointer) => { if (!this.isGameOver && this.lives > 0 && this.paddle && !this.isStageClearing) { const targetX = pointer.x; const halfWidth = this.paddle.displayWidth / 2; const clampedX = Phaser.Math.Clamp(targetX, halfWidth, this.scale.width - halfWidth); this.paddle.x = clampedX; if (!this.isBallLaunched) { this.balls.getChildren().forEach(ball => { if (ball.active) ball.x = clampedX; }); } } }); this.input.on('pointerdown', () => { console.log("Pointer down event."); if (this.isGameOver && this.gameOverText?.visible) { this.returnToTitle(); } else if (this.lives > 0 && !this.isBallLaunched && !this.isStageClearing) { this.launchBall(); } }); this.scale.on('resize', this.handleResize, this); this.events.on('shutdown', this.shutdownScene, this); this.resizeBackground(); console.log("GameScene Create End"); }
@@ -166,8 +36,59 @@ class GameScene extends Phaser.Scene {
     handleBallBrickOverlap(ball, brick) { if (!ball || !brick || !ball.active || !brick.active || this.isStageClearing) return; const lastPower = ball.getData('lastActivatedPower'); const isBikaraYin = lastPower === POWERUP_TYPES.BIKARA && ball.getData('bikaraState') === 'yin'; const isPenetrating = ball.getData('isPenetrating'); const isSindaraSpecial = lastPower === POWERUP_TYPES.SINDARA && (ball.getData('isAttracting') || ball.getData('isMerging')); if (isBikaraYin) { if (brick.getData('maxHits') !== -1) { this.markBrickByBikara(brick); } } else if (isPenetrating && !isSindaraSpecial) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); } } }
     handleBikaraYangDestroy(ball, hitBrick) { if (!ball || !ball.active || ball.getData('lastActivatedPower') !== POWERUP_TYPES.BIKARA || ball.getData('bikaraState') !== 'yang') return; let destroyedCount = 0; const markedToDestroy = []; if (hitBrick.active && hitBrick.getData('maxHits') !== -1) { markedToDestroy.push(hitBrick); hitBrick.setData('isMarkedByBikara', false); } this.bricks.getChildren().forEach(br => { if (br.active && br.getData && br.getData('isMarkedByBikara') && !markedToDestroy.includes(br)) { markedToDestroy.push(br); br.setData('isMarkedByBikara', false); } }); markedToDestroy.forEach(br => { if (br.active) { const destroyed = this.handleBrickDestruction(br); if (destroyed) destroyedCount++; } }); let currentYangCount = ball.getData('bikaraYangCount') || 0; currentYangCount++; ball.setData('bikaraYangCount', currentYangCount); if (destroyedCount > 0) { console.log(`Bikara Yang destroyed ${destroyedCount} bricks.`); } if (currentYangCount >= BIKARA_YANG_COUNT_MAX) { this.deactivatePowerByType(POWERUP_TYPES.BIKARA); } }
     hitBrickWithMakiraBeam(beam, brick) { if (!beam || !brick || !beam.active || !brick.active || this.isStageClearing || this.isGameOver || !brick.getData) return; if (brick.getData('maxHits') === -1) { beam.destroy(); return; } try { beam.destroy(); } catch (error) { console.error("Error destroying Makira beam:", error); if (beam && beam.active) { beam.setActive(false).setVisible(false); if (beam.body) beam.body.enable = false; } } const destroyed = this.handleBrickHit(brick, 1); if (destroyed && !this.isStageClearing && this.getDestroyableBrickCount() === 0) { this.time.delayedCall(10, this.stageClear, [], this); } }
-    triggerVajraDestroy() { if (this.isStageClearing || this.isGameOver) return; if (!this.isVajraSystemActive) return; this.isVajraSystemActive = false; this.events.emit('deactivateVajraUI'); console.log("Triggering Vajra destroy."); this.sound.play(AUDIO_KEYS.VOICE_VAJRA_TRIGGER); this.sound.play(AUDIO_KEYS.SE_VAJRA_TRIGGER); const activeBricks = this.bricks.getMatching('active', true); if (activeBricks.length === 0) { console.log("No active bricks for Vajra to destroy."); this.deactivateVajra(); return; } const countToDestroy = Math.min(activeBricks.length, VAJRA_DESTROY_COUNT); const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks); let destroyedCount = 0; for (let i = 0; i < countToDestroy; i++) { const brick = shuffledBricks[i]; if (brick && brick.active && brick.getData && brick.getData('maxHits') !== -1) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } } console.log(`Vajra destroyed ${destroyedCount} bricks.`); if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) { console.log("Vajra cleared the stage."); this.stageClear(); } else { this.deactivateVajra(); } }
-    activateBaisrava() { if (this.isStageClearing || this.isGameOver) return; console.log("Activating Baisrava."); this.sound.play(AUDIO_KEYS.VOICE_BAISRAVA); const activeBricks = this.bricks.getMatching('active', true); let destroyedCount = 0; activeBricks.forEach(brick => { if (brick && brick.active && brick.getData && brick.getData('maxHits') !== -1) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } }); if (destroyedCount > 0) { console.log(`Baisrava destroyed ${destroyedCount} bricks.`); } this.stageClear(); }
+
+    // ★★★ triggerVajraDestroy 修正 (音声再生デバッグ) ★★★
+    triggerVajraDestroy() {
+        if (this.isStageClearing || this.isGameOver) return;
+        if (!this.isVajraSystemActive) return;
+        this.isVajraSystemActive = false;
+        this.events.emit('deactivateVajraUI');
+        console.log("Triggering Vajra destroy.");
+
+        // --- 音声再生デバッグ ---
+        console.log("[Debug] Attempting to play VOICE_VAJRA_TRIGGER...");
+        try {
+            this.sound.play(AUDIO_KEYS.VOICE_VAJRA_TRIGGER); // ★ デバッグ対象
+            console.log("[Debug] this.sound.play(AUDIO_KEYS.VOICE_VAJRA_TRIGGER) called.");
+        } catch (error) {
+             console.error("[Debug] Error occurred directly when trying to play VOICE_VAJRA_TRIGGER:", error);
+        }
+         console.log("[Debug] Attempting to play SE_VAJRA_TRIGGER...");
+         try {
+            this.sound.play(AUDIO_KEYS.SE_VAJRA_TRIGGER); // ★ デバッグ対象
+             console.log("[Debug] this.sound.play(AUDIO_KEYS.SE_VAJRA_TRIGGER) called.");
+        } catch (error) {
+             console.error("[Debug] Error occurred directly when trying to play SE_VAJRA_TRIGGER:", error);
+        }
+        // --- デバッグここまで ---
+
+        const activeBricks = this.bricks.getMatching('active', true);
+        if (activeBricks.length === 0) {
+            console.log("No active bricks for Vajra to destroy.");
+            this.deactivateVajra();
+            return;
+        }
+        const countToDestroy = Math.min(activeBricks.length, VAJRA_DESTROY_COUNT);
+        const shuffledBricks = Phaser.Utils.Array.Shuffle(activeBricks);
+        let destroyedCount = 0;
+        for (let i = 0; i < countToDestroy; i++) {
+            const brick = shuffledBricks[i];
+            if (brick && brick.active && brick.getData && brick.getData('maxHits') !== -1) {
+                const destroyed = this.handleBrickHit(brick, Infinity);
+                if (destroyed) destroyedCount++;
+            }
+        }
+        console.log(`Vajra destroyed ${destroyedCount} bricks.`);
+        if (!this.isStageClearing && this.getDestroyableBrickCount() === 0) {
+            console.log("Vajra cleared the stage.");
+            this.stageClear();
+        } else {
+            this.deactivateVajra();
+        }
+    }
+    // ★★★ triggerVajraDestroy 修正ここまで ★★★
+
+    activateBaisrava() { if (this.isStageClearing || this.isGameOver) return; console.log("Activating Baisrava."); try { this.sound.play(AUDIO_KEYS.VOICE_BAISRAVA); console.log("[Debug] this.sound.play(AUDIO_KEYS.VOICE_BAISRAVA) called."); } catch (e) { console.error(`Error playing voice ${AUDIO_KEYS.VOICE_BAISRAVA} for type BAISRAVA:`, e); } const activeBricks = this.bricks.getMatching('active', true); let destroyedCount = 0; activeBricks.forEach(brick => { if (brick && brick.active && brick.getData && brick.getData('maxHits') !== -1) { const destroyed = this.handleBrickHit(brick, Infinity); if (destroyed) destroyedCount++; } }); if (destroyedCount > 0) { console.log(`Baisrava destroyed ${destroyedCount} bricks.`); } this.stageClear(); }
     getDestroyableBrickCount() { if (!this.bricks) return 0; return this.bricks.getMatching('active', true).filter(brick => brick.getData && brick.getData('maxHits') !== -1).length; }
     dropSpecificPowerUp(x, y, type) { let textureKey = POWERUP_ICON_KEYS[type] || 'whitePixel'; let displaySize = POWERUP_SIZE; let tintColor = null; if (textureKey === 'whitePixel') { console.warn(`Powerup icon key not found for type: ${type}, using white pixel.`); tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc; } if (!type) { console.warn(`Attempted to drop powerup with no type.`); return; } let powerUp = null; try { powerUp = this.powerUps.create(x, y, textureKey); if (powerUp) { powerUp.setDisplaySize(displaySize, displaySize).setData('type', type); if (tintColor !== null) { powerUp.setTint(tintColor); } else { powerUp.clearTint(); } if (powerUp.body) { powerUp.setVelocity(0, POWERUP_SPEED_Y); powerUp.body.setCollideWorldBounds(false); powerUp.body.setAllowGravity(false); } else { console.error(`No physics body for powerup type: ${type}! Destroying.`); powerUp.destroy(); powerUp = null; } } else { console.error(`Failed to create powerup object for type: ${type}!`); } } catch (error) { console.error(`CRITICAL ERROR in dropSpecificPowerUp (${type}):`, error); if (powerUp && powerUp.active) { powerUp.destroy(); } } }
     dropPowerUp(x, y) { if (this.stageDropPool.length === 0) return; const type = Phaser.Utils.Array.GetRandom(this.stageDropPool); this.dropSpecificPowerUp(x, y, type); }
@@ -192,63 +113,13 @@ class GameScene extends Phaser.Scene {
     startSindaraAttraction(ball1, ball2) { this.sindaraAttractionTimer = null; if (!ball1 || !ball2 || !ball1.active || !ball2.active || ball1.getData('lastActivatedPower') !== POWERUP_TYPES.SINDARA || ball2.getData('lastActivatedPower') !== POWERUP_TYPES.SINDARA) { console.warn("Sindara attraction aborted: balls missing or lost power."); const activeSindaraBalls = this.balls.getMatching('lastActivatedPower', POWERUP_TYPES.SINDARA); if (activeSindaraBalls.length > 0) { this.deactivatePowerByType(POWERUP_TYPES.SINDARA); } return; } console.log("Starting Sindara attraction."); ball1.setData({ isAttracting: true, isPenetrating: true }); ball2.setData({ isAttracting: true, isPenetrating: true }); this.updateBallAppearance(ball1); this.updateBallAppearance(ball2); this.setColliders(); }
     updateSindaraAttraction(ball) { const partner = ball.getData('sindaraPartner'); if (partner && partner.active && ball.active && ball.getData('isAttracting') && partner.getData('isAttracting') && !ball.getData('isMerging') && !partner.getData('isMerging')) { this.physics.moveToObject(ball, partner, SINDARA_ATTRACTION_FORCE); } }
     handleBallCollision(ball1, ball2) { if (ball1.active && ball2.active && ball1.getData('sindaraPartner') === ball2 && ball1.getData('isAttracting')) { console.log("Sindara balls collided, merging."); this.mergeSindaraBalls(ball1, ball2); } }
-    mergeSindaraBalls(ballToKeep, ballToRemove) {
-        console.log("[Debug] mergeSindaraBalls called.");
-        console.log("[Debug] Attempting to play VOICE_SINDARA_MERGE...");
-        try {
-            this.sound.play(AUDIO_KEYS.VOICE_SINDARA_MERGE); // ★ デバッグ対象
-            console.log("[Debug] this.sound.play(AUDIO_KEYS.VOICE_SINDARA_MERGE) called.");
-        } catch (error) {
-            console.error("[Debug] Error occurred directly when trying to play VOICE_SINDARA_MERGE:", error);
-        }
-        console.log("[Debug] Attempting to play SE_SINDARA_MERGE...");
-        try {
-            this.sound.play(AUDIO_KEYS.SE_SINDARA_MERGE); // ★ デバッグ対象
-             console.log("[Debug] this.sound.play(AUDIO_KEYS.SE_SINDARA_MERGE) called.");
-        } catch (error) {
-            console.error("[Debug] Error occurred directly when trying to play SE_SINDARA_MERGE:", error);
-        }
-        const mergeX = (ballToKeep.x + ballToRemove.x) / 2; const mergeY = (ballToKeep.y + ballToRemove.y) / 2; ballToKeep.setPosition(mergeX, mergeY); ballToRemove.destroy(); ballToKeep.setData({ isMerging: true, isAttracting: false, isPenetrating: true, sindaraPartner: null }); this.updateBallAppearance(ballToKeep); if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); console.log("Scheduling Sindara merge finish."); this.sindaraMergeTimer = this.time.delayedCall(SINDARA_MERGE_DURATION, () => { this.finishSindaraMerge(ballToKeep); }, [], this); if (this.sindaraAttractionTimer) { this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; } this.setColliders();
-    }
+    mergeSindaraBalls(ballToKeep, ballToRemove) { console.log("[Debug] mergeSindaraBalls called."); console.log("[Debug] Attempting to play VOICE_SINDARA_MERGE..."); try { this.sound.play(AUDIO_KEYS.VOICE_SINDARA_MERGE); console.log("[Debug] this.sound.play(AUDIO_KEYS.VOICE_SINDARA_MERGE) called."); } catch (error) { console.error("[Debug] Error occurred directly when trying to play VOICE_SINDARA_MERGE:", error); } console.log("[Debug] Attempting to play SE_SINDARA_MERGE..."); try { this.sound.play(AUDIO_KEYS.SE_SINDARA_MERGE); console.log("[Debug] this.sound.play(AUDIO_KEYS.SE_SINDARA_MERGE) called."); } catch (error) { console.error("[Debug] Error occurred directly when trying to play SE_SINDARA_MERGE:", error); } const mergeX = (ballToKeep.x + ballToRemove.x) / 2; const mergeY = (ballToKeep.y + ballToRemove.y) / 2; ballToKeep.setPosition(mergeX, mergeY); ballToRemove.destroy(); ballToKeep.setData({ isMerging: true, isAttracting: false, isPenetrating: true, sindaraPartner: null }); this.updateBallAppearance(ballToKeep); if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); console.log("Scheduling Sindara merge finish."); this.sindaraMergeTimer = this.time.delayedCall(SINDARA_MERGE_DURATION, () => { this.finishSindaraMerge(ballToKeep); }, [], this); if (this.sindaraAttractionTimer) { this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; } this.setColliders(); }
     finishSindaraMerge(mergedBall) { this.sindaraMergeTimer = null; if (!mergedBall || !mergedBall.active) return; console.log("Finishing Sindara merge."); mergedBall.setData({ isMerging: false }); this.updateBallAppearance(mergedBall); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); console.log("Scheduling Sindara post-merge penetration deactivation."); this.sindaraPenetrationTimer = this.time.delayedCall(SINDARA_POST_MERGE_PENETRATION_DURATION, () => { this.deactivateSindaraPenetration(mergedBall); }, [], this); this.setColliders(); }
     deactivateSindaraPenetration(ball) { this.sindaraPenetrationTimer = null; if (!ball || !ball.active) return; console.log("Deactivating Sindara post-merge penetration."); if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { const isBikaraYang = ball.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA && ball.getData('bikaraState') === 'yang'; if (!isBikaraYang) { ball.setData('isPenetrating', false); } } this.deactivatePowerByType(POWERUP_TYPES.SINDARA); }
     deactivateSindara(balls) { console.log("Deactivating Sindara power completely."); if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null; if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null; balls.forEach(b => { if (b.active) { b.setData({ sindaraPartner: null, isAttracting: false, isMerging: false }); if (!b.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { const isBikaraYang = b.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA && b.getData('bikaraState') === 'yang'; if (!isBikaraYang) { b.setData('isPenetrating', false); } } } }); }
     activateBikara(balls) { balls.forEach(ball => { if (ball.active) { ball.setData({ bikaraState: 'yin', bikaraYangCount: 0 }); if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { const isSindaraActive = ball.getData('lastActivatedPower') === POWERUP_TYPES.SINDARA && (ball.getData('isAttracting') || ball.getData('isMerging')); if (!isSindaraActive) { ball.setData('isPenetrating', false); } } this.updateBallAppearance(ball); } }); }
     deactivateBikara(balls) { balls.forEach(ball => { if (ball.active) { ball.setData({ bikaraState: null, bikaraYangCount: 0 }); if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) { const isSindaraActive = ball.getData('lastActivatedPower') === POWERUP_TYPES.SINDARA && (ball.getData('isAttracting') || ball.getData('isMerging')); if (!isSindaraActive) { ball.setData('isPenetrating', false); } } } }); this.bricks.getChildren().forEach(br => { if (br.getData && br.getData('isMarkedByBikara')) { br.setData('isMarkedByBikara', false); br.setTint(br.getData('originalTint') || 0xffffff); } }); }
-    switchBikaraState(ball) {
-        if (!ball || !ball.active || ball.getData('lastActivatedPower') !== POWERUP_TYPES.BIKARA) return;
-        const currentState = ball.getData('bikaraState');
-        const nextState = (currentState === 'yin') ? 'yang' : 'yin';
-        console.log(`Switching Bikara state from ${currentState} to ${nextState}`);
-        ball.setData('bikaraState', nextState);
-        console.log("[Debug] Attempting to play SE_BIKARA_CHANGE...");
-        try {
-            this.sound.play(AUDIO_KEYS.SE_BIKARA_CHANGE);
-            console.log("[Debug] this.sound.play(AUDIO_KEYS.SE_BIKARA_CHANGE) called.");
-        } catch (error) {
-            console.error("[Debug] Error occurred directly when trying to play SE_BIKARA_CHANGE:", error);
-        }
-        if (nextState === 'yang') {
-            ball.setData('bikaraYangCount', 0);
-            console.log("[Debug] Attempting to play VOICE_BIKARA_YANG...");
-            try {
-                this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YANG); // ★ デバッグ対象
-                console.log("[Debug] this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YANG) called.");
-            } catch (error) {
-                console.error("[Debug] Error occurred directly when trying to play VOICE_BIKARA_YANG:", error);
-            }
-        } else {
-            console.log("[Debug] Attempting to play VOICE_BIKARA_YIN...");
-             try {
-                this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YIN); // ★ デバッグ対象
-                console.log("[Debug] this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YIN) called.");
-            } catch (error) {
-                 console.error("[Debug] Error occurred directly when trying to play VOICE_BIKARA_YIN:", error);
-            }
-        }
-        this.updateBallAppearance(ball);
-        this.setColliders();
-    }
+    switchBikaraState(ball) { if (!ball || !ball.active || ball.getData('lastActivatedPower') !== POWERUP_TYPES.BIKARA) return; const currentState = ball.getData('bikaraState'); const nextState = (currentState === 'yin') ? 'yang' : 'yin'; console.log(`Switching Bikara state from ${currentState} to ${nextState}`); ball.setData('bikaraState', nextState); console.log("[Debug] Attempting to play SE_BIKARA_CHANGE..."); try { this.sound.play(AUDIO_KEYS.SE_BIKARA_CHANGE); console.log("[Debug] this.sound.play(AUDIO_KEYS.SE_BIKARA_CHANGE) called."); } catch (error) { console.error("[Debug] Error occurred directly when trying to play SE_BIKARA_CHANGE:", error); } if (nextState === 'yang') { ball.setData('bikaraYangCount', 0); console.log("[Debug] Attempting to play VOICE_BIKARA_YANG..."); try { this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YANG); console.log("[Debug] this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YANG) called."); } catch (error) { console.error("[Debug] Error occurred directly when trying to play VOICE_BIKARA_YANG:", error); } } else { console.log("[Debug] Attempting to play VOICE_BIKARA_YIN..."); try { this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YIN); console.log("[Debug] this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YIN) called."); } catch (error) { console.error("[Debug] Error occurred directly when trying to play VOICE_BIKARA_YIN:", error); } } this.updateBallAppearance(ball); this.setColliders(); }
     markBrickByBikara(brick) { if (!brick || !brick.active || !brick.getData || brick.getData('isMarkedByBikara') || brick.getData('maxHits') === -1) return; brick.setData('isMarkedByBikara', true); brick.setTint(BRICK_MARKED_COLOR); }
     activateIndara(balls) { balls.forEach(b => b.setData({ isIndaraActive: true, indaraHomingCount: INDARA_MAX_HOMING_COUNT })); }
     deactivateIndaraForBall(ball) { if (!ball || !ball.active || !ball.getData('isIndaraActive')) return; console.log("Deactivating Indara for ball."); ball.setData({ isIndaraActive: false, indaraHomingCount: 0 }); }
