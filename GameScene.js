@@ -1,3 +1,5 @@
+// GameScene.js (完全なコード - hitPaddleとhandleWorldBoundsを修正)
+
 // 定数と型をインポート
 import {
     PADDLE_WIDTH_RATIO, PADDLE_HEIGHT, PADDLE_Y_OFFSET, BALL_RADIUS, PHYSICS_BALL_RADIUS,
@@ -17,8 +19,8 @@ import {
 } from './constants.js';
 
 export default class GameScene extends Phaser.Scene {
-    constructor() {
-       super('GameScene');
+     constructor() {
+        super('GameScene');
         // --- プロパティ初期化 ---
         this.paddle = null;
         this.balls = null; // Phaser.Physics.Arcade.Group
@@ -954,51 +956,42 @@ export default class GameScene extends Phaser.Scene {
         const brickY = brick.y;
         const brickColor = brick.getData('originalTint') || 0xffffff; // ブロックの色を取得
 
-        // --- ▼ デバッグ用エフェクト生成処理 ▼ ---
+        // --- ▼ 調整後のエフェクト生成処理 ▼ ---
         try {
-            console.log(`[Debug Effect] Creating particles at (${brickX}, ${brickY}) with color ${brickColor.toString(16)}`); // ★座標と色を確認
-
-            // パーティクルエミッタを作成 (デバッグ用にパラメータを調整)
+            // パーティクルエミッタを作成
             const particles = this.add.particles(0, 0, 'whitePixel', {
-                frame: 0,
-                x: brickX,
-                y: brickY,
-                lifespan: 2000, // ★生存時間を長くする
-                speed: { min: 30, max: 80 }, // ★速度を少し遅くする
-                angle: { min: 0, max: 360 },
-                gravityY: 0, // ★重力をなくす
-                scale: { start: 1, end: 0.7 }, // ★少し大きめに表示し、最後まで見えるようにする
-                quantity: 15, // ★量を少し増やす
-                blendMode: 'NORMAL',
-                emitting: false
+                // エミッタの設定
+                frame: 0, // whitePixelは単一フレーム
+                x: brickX, // 発生源 X座標
+                y: brickY, // 発生源 Y座標
+                lifespan: 500, // パーティクルの生存時間
+                speed: { min: 80, max: 150 }, // パーティクルの速度範囲
+                angle: { min: 0, max: 360 },   // パーティクルの放出角度 (全方位)
+                gravityY: 100,                 // 少し重力をかける
+                scale: { start: 0.7, end: 0 }, // 開始時のスケール (少し大きめ)
+                quantity: 12, // 一度に放出するパーティクルの数
+                blendMode: 'NORMAL', // ブレンドモード
+                emitting: false // すぐには放出しない
             });
 
-            // ★強制的に目立つ色（赤）にしてみる
-            particles.setParticleTint(0xff0000);
-            console.log("[Debug Effect] Particles tint set to red.");
-
-            // ★Depthを最前面に設定してみる
-            particles.setDepth(10); // 他のオブジェクトより手前に来るように大きな値を設定
-            console.log("[Debug Effect] Particles depth set to 10.");
-
+            // パーティクルにブロックの色を適用
+            particles.setParticleTint(brickColor);
 
             // 一度だけパーティクルを放出する
-            particles.explode(15); // quantityと合わせる
-            console.log("[Debug Effect] Particles exploded.");
+            particles.explode(12);
 
             // エミッタ自体を少し遅れて破棄する
-            this.time.delayedCall(2100, () => { // lifespanより少し長く
-                 if (particles && particles.scene) { // オブジェクトが存在するか確認
-                    console.log("[Debug Effect] Destroying particles emitter.");
+            this.time.delayedCall(600, () => { // lifespanより少し長く
+                // particlesオブジェクトがまだ存在するか確認してからdestroyを呼ぶ
+                if (particles && particles.scene) {
                     particles.destroy();
                 }
             });
 
         } catch (error) {
-            console.error("Error creating particle effect:", error); // エラーが出たら表示されるはず
+            console.error("Error creating particle effect:", error);
         }
-        // --- ▲ デバッグ用エフェクト生成処理 ▲ ---
-
+        // --- ▲ 調整後のエフェクト生成処理 ▲ ---
 
         // ブロック本体の無効化（エフェクト生成後に行う）
         brick.disableBody(true, true);
@@ -1018,10 +1011,8 @@ export default class GameScene extends Phaser.Scene {
 
         // アイテムドロップ判定
         if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) {
-            // 低確率でバイシュラヴァが直接ドロップ
             this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA);
         } else if (this.stageDropPool.length > 0 && Phaser.Math.FloatBetween(0, 1) < this.chaosSettings.rate) {
-             // 設定された確率で、現在のステージプールからランダムにドロップ
             this.dropPowerUp(brickX, brickY);
         }
 
@@ -1051,6 +1042,9 @@ export default class GameScene extends Phaser.Scene {
              // 破壊されて、かつ破壊可能ブロックが0になったらステージクリア
             this.time.delayedCall(50, this.stageClear, [], this); // 少し遅延してクリア処理へ
         }
+         // ★★★ ここにブロック衝突エフェクトを追加することも可能 ★★★
+         // ただし、破壊エフェクトと被るので、別の見た目（軽い火花など）が良いか？
+         // if (!destroyed) { /* 破壊されなかった場合のエフェクト */ }
     }
 
     // ボールがブロックとオーバーラップした時 (貫通、ビカラ陰など)
@@ -1065,6 +1059,7 @@ export default class GameScene extends Phaser.Scene {
             // ビカラ陰状態: ブロックをマークする（無敵ブロックは除く）
             if (brick.getData('maxHits') !== -1) {
                 this.markBrickByBikara(brick);
+                 // ★★★ ここにマークエフェクトを追加することも可能 ★★★
             }
         } else if (isPenetrating && !isSindaraSpecial) {
             // 貫通状態 (シンデレラ特殊状態を除く): ブロックを即破壊
@@ -1074,6 +1069,7 @@ export default class GameScene extends Phaser.Scene {
                  // 破壊されて、かつ破壊可能ブロックが0になったらステージクリア
                  this.time.delayedCall(50, this.stageClear, [], this); // 少し遅延してクリア処理へ
             }
+             // ★★★ ここに貫通エフェクトを追加することも可能 ★★★
         }
         // シンデレラ特殊状態のoverlapは何もしない（衝突判定を無効化するためだけ）
     }
@@ -1114,6 +1110,7 @@ export default class GameScene extends Phaser.Scene {
 
         if (destroyedCount > 0) {
             console.log(`Bikara Yang destroyed ${destroyedCount} bricks.`);
+             // ★★★ ここにビカラ陽破壊エフェクト（全体的な）を追加することも可能 ★★★
         }
 
         // 規定回数破壊したらビカラ能力を解除
@@ -1128,12 +1125,14 @@ export default class GameScene extends Phaser.Scene {
 
         // 無敵ブロックにはビームも効かず、ビームが消える
         if (brick.getData('maxHits') === -1) {
+             // ★★★ ここにビームがブロックに弾かれるエフェクトを追加可能 ★★★
             beam.destroy();
             return;
         }
 
         // ビームはヒットしたら消える
         try {
+             // ★★★ ここにビームヒットエフェクトを追加可能 ★★★
             beam.destroy();
         } catch (error) {
             console.error("Error destroying Makira beam:", error);
@@ -1160,6 +1159,7 @@ export default class GameScene extends Phaser.Scene {
         this.isVajraSystemActive = false; // 発動したらゲージシステムは一旦終了
         this.events.emit('deactivateVajraUI'); // UIにも通知
         console.log("Triggering Vajra destroy.");
+        // ★★★ ここにヴァジラ奥義発動の全体エフェクトを追加可能 ★★★
 
         // ボイス・SE再生 (エラーハンドリング付き)
         console.log("[Debug] Attempting to play VOICE_VAJRA_TRIGGER...");
@@ -1209,6 +1209,7 @@ export default class GameScene extends Phaser.Scene {
     activateBaisrava() {
         if (this.isStageClearing || this.isGameOver) return;
         console.log("Activating Baisrava.");
+        // ★★★ ここにバイシュラヴァ発動の全体エフェクトを追加可能 ★★★
 
         // ボイス再生
         try { this.sound.play(AUDIO_KEYS.VOICE_BAISRAVA); } catch (e) { console.error(`Error playing voice ${AUDIO_KEYS.VOICE_BAISRAVA}:`, e); }
@@ -1299,46 +1300,64 @@ export default class GameScene extends Phaser.Scene {
         console.log("[Debug] hitPaddle called.");
 
         // --- 反射角度の計算 ---
-        // パドルの中心からの距離に応じて反射角度を変える
         let diff = ball.x - paddle.x;
         const maxDiff = paddle.displayWidth / 2;
-        let influence = diff / maxDiff; // -1.0 (左端) ~ 1.0 (右端)
-        influence = Phaser.Math.Clamp(influence, -1, 1); // 範囲内に収める
-
-        // X方向の最大速度
+        let influence = diff / maxDiff;
+        influence = Phaser.Math.Clamp(influence, -1, 1);
         const maxVx = NORMAL_BALL_SPEED * 0.8;
         let newVx = maxVx * influence;
-
-        // Y方向の最低速度（遅くなりすぎないように）
         const minVy = NORMAL_BALL_SPEED * 0.5;
         let currentVy = ball.body.velocity.y;
-        let newVy = -Math.abs(currentVy); // 必ず上向きに
-        if (Math.abs(newVy) < minVy) newVy = -minVy; // 最低速度を下回らないように
+        let newVy = -Math.abs(currentVy);
+        if (Math.abs(newVy) < minVy) newVy = -minVy;
 
         // --- 速度の再計算 ---
-        // パワーアップによる速度補正
         let speedMultiplier = 1.0;
         if (ball.getData('isFast')) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.SHATORA];
         else if (ball.getData('isSlow')) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.HAILA];
         const targetSpeed = NORMAL_BALL_SPEED * speedMultiplier;
-
-        // 新しい速度ベクトルを計算し、正規化して目標速度を適用
         const newVelocity = new Phaser.Math.Vector2(newVx, newVy).normalize().scale(targetSpeed);
         ball.setVelocity(newVelocity.x, newVelocity.y);
+
+        // --- パドルヒットエフェクト ---
+        try {
+            const impactPointY = ball.y + BALL_RADIUS * 0.8; // ボールの少し下あたり
+            const impactPointX = ball.x;
+            const particles = this.add.particles(0, 0, 'whitePixel', {
+                x: impactPointX,
+                y: impactPointY,
+                lifespan: 150,       // 短い寿命
+                speed: { min: 100, max: 200 }, // 速度
+                angle: { min: 240, max: 300 }, // 上向きに広がる
+                gravityY: 300,       // 少し重力で下に落ちる
+                scale: { start: 0.4, end: 0 }, // 小さな粒子
+                quantity: 5,        // 少量
+                blendMode: 'ADD',   // 加算合成で明るく光る
+                emitting: false
+            });
+            particles.setParticleTint(0xffffcc); // やや黄色みがかった白
+            particles.explode(5); // 放出
+            // 短時間後にエミッタを破棄
+            this.time.delayedCall(200, () => {
+                if (particles && particles.scene) particles.destroy();
+            });
+        } catch (error) {
+            console.error("Error creating paddle hit particle effect:", error);
+        }
+        // --- エフェクト終了 ---
+
 
         // 反射音 (コメントアウト中)
         console.log("[Debug] Attempting to play SE_REFLECT...");
         try { /* this.sound.play(AUDIO_KEYS.SE_REFLECT); */ console.log("[Temporary] SE_REFLECT playback disabled due to errors."); } catch (error) { /* console.error("[Debug] Error playing SE_REFLECT:", error); */ }
 
         // --- パワーアップ関連の処理 ---
-        // ビカラ: パドルヒットで陰陽転換
         if (ball.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA) {
             this.switchBikaraState(ball);
         }
-        // インダラ: パドルヒットでホーミング解除
         if (ball.getData('isIndaraActive')) {
             this.deactivateIndaraForBall(ball);
-            this.updateBallAppearance(ball); // 見た目も戻す
+            this.updateBallAppearance(ball);
         }
     }
 
@@ -1355,107 +1374,62 @@ export default class GameScene extends Phaser.Scene {
 
         // アイテムを消す
         powerUp.destroy();
+         // ★★★ ここにアイテム取得エフェクトを追加可能 ★★★
 
         // --- ボイス再生 (スロットリング付き) ---
         const voiceKeyBase = `voice_${type}`;
         const upperCaseKey = voiceKeyBase.toUpperCase();
         let actualAudioKey = AUDIO_KEYS[upperCaseKey];
-        // 特殊なキー名の場合 (Vajra取得時)
         if (type === POWERUP_TYPES.VAJRA) { actualAudioKey = AUDIO_KEYS.VOICE_VAJRA_GET; }
 
         const now = this.time.now;
         const lastPlayed = this.lastPlayedVoiceTime[upperCaseKey] || 0;
         if (actualAudioKey && (now - lastPlayed > this.voiceThrottleTime)) {
-             // キーが存在し、最後に再生してから一定時間経過していれば再生
             console.log(`Playing voice: ${actualAudioKey}`);
             try {
                 this.sound.play(actualAudioKey);
-                this.lastPlayedVoiceTime[upperCaseKey] = now; // 最終再生時間を記録
+                this.lastPlayedVoiceTime[upperCaseKey] = now;
             } catch (e) {
                 console.error(`Error playing voice ${actualAudioKey} for type ${type}:`, e);
             }
-        } else if (!actualAudioKey) {
-            // console.warn(`Voice key ${upperCaseKey} (for type ${type}) not found in AUDIO_KEYS.`);
-        } else {
-             // 再生間隔が短すぎる場合
-            console.log(`Voice ${upperCaseKey} (for type ${type}) throttled.`);
-        }
+        } else if (!actualAudioKey) { /* console.warn(`Voice key ${upperCaseKey} not found.`); */ }
+        else { console.log(`Voice ${upperCaseKey} throttled.`); }
 
         // --- パワーアップ効果発動 ---
-        if (type === POWERUP_TYPES.BAISRAVA) {
-            // バイシュラヴァ: 即時全破壊＆ステージクリア
-            this.activateBaisrava();
-            return; // 以降の処理は不要
-        }
-        if (type === POWERUP_TYPES.VAJRA) {
-            // ヴァジラ: ゲージシステム起動
-            this.activateVajra();
-            return;
-        }
-        if (type === POWERUP_TYPES.MAKIRA) {
-            // マキラ: ファミリア召喚＆ビーム発射開始
-            this.activateMakira();
-            return;
-        }
-        if (type === POWERUP_TYPES.MAKORA) {
-            // マコラ: 他の能力をランダムでコピー発動
-            this.activateMakora();
-            return;
-        }
+        if (type === POWERUP_TYPES.BAISRAVA) { this.activateBaisrava(); return; }
+        if (type === POWERUP_TYPES.VAJRA) { this.activateVajra(); return; }
+        if (type === POWERUP_TYPES.MAKIRA) { this.activateMakira(); return; }
+        if (type === POWERUP_TYPES.MAKORA) { this.activateMakora(); return; }
 
-        // アンチラ、シンダラ (ボール分裂系): 発動前にボールが複数あれば一番遠いもの以外を消す
         if (type === POWERUP_TYPES.ANCHIRA || type === POWERUP_TYPES.SINDARA) {
-            if (this.balls.countActive(true) > 1) {
-                this.keepFurthestBall();
-            }
+            if (this.balls.countActive(true) > 1) { this.keepFurthestBall(); }
         }
-
-        // 上記以外の通常のパワーアップを発動
         this.activatePower(type);
     }
 
     // マコラ能力発動
     activateMakora() {
-        // コピー可能な能力リストからランダムに選択
         const copyablePowerType = Phaser.Utils.Array.GetRandom(MAKORA_COPYABLE_POWERS);
         console.log(`Makora copied: ${copyablePowerType}`);
+         // ★★★ ここにマコラエフェクト（コピー演出）を追加可能 ★★★
 
-        // 現在のボールに一時的にマコラのアイコンを付与（見た目だけ）
         this.balls.getMatching('active', true).forEach(ball => {
-            ball.getData('activePowers').add(POWERUP_TYPES.MAKORA); // 一応セットに追加
+            ball.getData('activePowers').add(POWERUP_TYPES.MAKORA);
             ball.setData('lastActivatedPower', POWERUP_TYPES.MAKORA);
             this.updateBallAppearance(ball);
         });
 
-        // 少し遅れてコピーした能力を発動
         this.time.delayedCall(100, () => {
-            // コピー対象に応じて適切な関数を呼ぶ
             switch(copyablePowerType) {
-                case POWERUP_TYPES.KUBIRA:
-                case POWERUP_TYPES.SHATORA:
-                case POWERUP_TYPES.HAILA:
-                case POWERUP_TYPES.BIKARA:
-                case POWERUP_TYPES.INDARA:
-                case POWERUP_TYPES.ANILA:
-                    this.activatePower(copyablePowerType); // 通常のactivatePower呼び出し
-                    break;
-                case POWERUP_TYPES.ANCHIRA:
-                case POWERUP_TYPES.SINDARA:
-                     // 分裂系はボール数をチェック
-                    if (this.balls.countActive(true) > 1) { this.keepFurthestBall(); }
-                    this.activatePower(copyablePowerType);
-                    break;
-                case POWERUP_TYPES.VAJRA:
-                    this.activateVajra(); // 専用関数呼び出し
-                    break;
-                case POWERUP_TYPES.MAKIRA:
-                    this.activateMakira(); // 専用関数呼び出し
-                    break;
+                case POWERUP_TYPES.KUBIRA: case POWERUP_TYPES.SHATORA: case POWERUP_TYPES.HAILA: case POWERUP_TYPES.BIKARA: case POWERUP_TYPES.INDARA: case POWERUP_TYPES.ANILA:
+                    this.activatePower(copyablePowerType); break;
+                case POWERUP_TYPES.ANCHIRA: case POWERUP_TYPES.SINDARA:
+                    if (this.balls.countActive(true) > 1) { this.keepFurthestBall(); } this.activatePower(copyablePowerType); break;
+                case POWERUP_TYPES.VAJRA: this.activateVajra(); break;
+                case POWERUP_TYPES.MAKIRA: this.activateMakira(); break;
             }
-             // 発動後、ボールからマコラの状態を削除
              this.balls.getMatching('active', true).forEach(ball => {
                  ball.getData('activePowers').delete(POWERUP_TYPES.MAKORA);
-                 // lastActivatedPower はコピー先のものに上書きされているはず
              });
         }, [], this);
     }
@@ -1471,7 +1445,6 @@ export default class GameScene extends Phaser.Scene {
         let maxDistSq = -1;
         const paddlePos = new Phaser.Math.Vector2(this.paddle.x, this.paddle.y);
 
-        // パドルからの距離が最大のボールを見つける
         activeBalls.forEach(ball => {
             const distSq = Phaser.Math.Distance.Squared(paddlePos.x, paddlePos.y, ball.x, ball.y);
             if (distSq > maxDistSq) {
@@ -1480,11 +1453,11 @@ export default class GameScene extends Phaser.Scene {
             }
         });
 
-        // furthestBall 以外のアクティブなボールを削除
         activeBalls.forEach(ball => {
             if (ball !== furthestBall) {
                 console.log("Destroying closer ball.");
-                ball.destroy(); // destroy() は group からも削除する
+                 // ★★★ ここに消えるボールのエフェクトを追加可能 ★★★
+                ball.destroy();
             }
         });
     }
@@ -1498,20 +1471,18 @@ export default class GameScene extends Phaser.Scene {
             console.warn(`No active balls to activate power ${type} on.`);
             return;
         }
+         // ★★★ ここにパワーアップ取得時のボールエフェクト（オーラなど）を追加可能 ★★★
 
         // --- タイマー管理 ---
-        // 効果時間があるパワーアップの場合、既存のタイマーがあれば解除
         if (POWERUP_DURATION[type]) {
-            if (this.powerUpTimers[type]) {
-                this.powerUpTimers[type].remove();
-            }
+            if (this.powerUpTimers[type]) { this.powerUpTimers[type].remove(); }
         }
 
         // --- ボールへの効果適用 ---
         targetBalls.forEach(ball => {
             if (ball.active) {
-                ball.getData('activePowers').add(type); // 有効なパワーリストに追加
-                ball.setData('lastActivatedPower', type); // 最後に発動したパワーを記録 (見た目等に影響)
+                ball.getData('activePowers').add(type);
+                ball.setData('lastActivatedPower', type);
             }
         });
 
@@ -1520,19 +1491,16 @@ export default class GameScene extends Phaser.Scene {
             case POWERUP_TYPES.KUBIRA: this.activateKubira(targetBalls); break;
             case POWERUP_TYPES.SHATORA: this.activateShatora(targetBalls); break;
             case POWERUP_TYPES.HAILA: this.activateHaira(targetBalls); break;
-            case POWERUP_TYPES.ANCHIRA: if (targetBalls.length === 1) this.activateAnchira(targetBalls[0]); break; // 分裂はボール1つの時のみ
-            case POWERUP_TYPES.SINDARA: if (targetBalls.length === 1) this.activateSindara(targetBalls[0]); break; // 分裂はボール1つの時のみ
+            case POWERUP_TYPES.ANCHIRA: if (targetBalls.length === 1) this.activateAnchira(targetBalls[0]); break;
+            case POWERUP_TYPES.SINDARA: if (targetBalls.length === 1) this.activateSindara(targetBalls[0]); break;
             case POWERUP_TYPES.BIKARA: this.activateBikara(targetBalls); break;
             case POWERUP_TYPES.INDARA: this.activateIndara(targetBalls); break;
             case POWERUP_TYPES.ANILA: this.activateAnila(targetBalls); break;
-            // VAJRA, MAKIRA, MAKORA, BAISRAVA は collectPowerUp で個別処理済み
         }
 
         // 見た目更新 (分裂系とビカラは個別処理内で更新するので除外)
         if (type !== POWERUP_TYPES.ANCHIRA && type !== POWERUP_TYPES.SINDARA && type !== POWERUP_TYPES.BIKARA) {
-            targetBalls.forEach(ball => {
-                if (ball.active) { this.updateBallAppearance(ball); }
-            });
+            targetBalls.forEach(ball => { if (ball.active) { this.updateBallAppearance(ball); } });
         }
 
         // --- 効果時間タイマー設定 ---
@@ -1540,12 +1508,11 @@ export default class GameScene extends Phaser.Scene {
         if (duration) {
             this.powerUpTimers[type] = this.time.delayedCall(duration, () => {
                 console.log(`Deactivating power ${type} due to duration.`);
+                 // ★★★ ここにパワーアップ時間切れエフェクトを追加可能 ★★★
                 this.deactivatePowerByType(type); // 時間切れで解除
-                this.powerUpTimers[type] = null; // タイマー参照をクリア
+                this.powerUpTimers[type] = null;
             }, [], this);
         }
-
-        // コライダー再設定 (貫通状態などが変わる可能性があるため)
         this.setColliders();
     }
 
@@ -1554,8 +1521,6 @@ export default class GameScene extends Phaser.Scene {
         console.log(`Deactivating power: ${type}`);
         const targetBalls = this.balls.getMatching('active', true);
         if (targetBalls.length === 0) return;
-
-        // 特殊系パワーアップは対象外 (個別管理)
         if (type === POWERUP_TYPES.VAJRA || type === POWERUP_TYPES.MAKIRA || type === POWERUP_TYPES.MAKORA || type === POWERUP_TYPES.BAISRAVA) return;
 
         // --- タイプごとの個別解除処理 ---
@@ -1563,28 +1528,24 @@ export default class GameScene extends Phaser.Scene {
             case POWERUP_TYPES.KUBIRA: this.deactivateKubira(targetBalls); break;
             case POWERUP_TYPES.SHATORA: this.deactivateShatora(targetBalls); break;
             case POWERUP_TYPES.HAILA: this.deactivateHaira(targetBalls); break;
-            case POWERUP_TYPES.ANCHIRA: this.deactivateAnchira(targetBalls); break; // 主に状態リセット
+            case POWERUP_TYPES.ANCHIRA: this.deactivateAnchira(targetBalls); break;
             case POWERUP_TYPES.BIKARA: this.deactivateBikara(targetBalls); break;
-            case POWERUP_TYPES.SINDARA: this.deactivateSindara(targetBalls); break; // タイマーなども解除
-            case POWERUP_TYPES.INDARA: targetBalls.forEach(b => this.deactivateIndaraForBall(b)); break; // 個別解除
-            case POWERUP_TYPES.ANILA: targetBalls.forEach(b => this.deactivateAnilaForBall(b)); break; // 個別解除
+            case POWERUP_TYPES.SINDARA: this.deactivateSindara(targetBalls); break;
+            case POWERUP_TYPES.INDARA: targetBalls.forEach(b => this.deactivateIndaraForBall(b)); break;
+            case POWERUP_TYPES.ANILA: targetBalls.forEach(b => this.deactivateAnilaForBall(b)); break;
         }
 
         // --- ボール共通の解除処理 ---
         targetBalls.forEach(ball => {
             if (ball.active) {
-                ball.getData('activePowers').delete(type); // 有効リストから削除
-                // lastActivatedPower を更新 (他のパワーが残っていればそれを適用)
+                ball.getData('activePowers').delete(type);
                 if (ball.getData('lastActivatedPower') === type) {
                     const remainingPowers = Array.from(ball.getData('activePowers'));
-                    // 残っているパワーの最後のものを lastActivatedPower に設定
                     ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null);
                 }
-                this.updateBallAppearance(ball); // 見た目を更新
+                this.updateBallAppearance(ball);
             }
         });
-
-        // コライダー再設定 (貫通状態などが変わる可能性があるため)
         this.setColliders();
     }
 
@@ -1595,686 +1556,463 @@ export default class GameScene extends Phaser.Scene {
         const lastPower = ball.getData('lastActivatedPower');
         let textureKey = 'ball_image'; // デフォルト
 
-        // 有効なパワーがあれば、lastActivatedPower に基づいてテクスチャを選択
         if (activePowers && activePowers.size > 0 && lastPower) {
             if (lastPower === POWERUP_TYPES.BIKARA) {
-                 // ビカラは陰陽状態でテクスチャが変わる
                 textureKey = (ball.getData('bikaraState') === 'yang') ? POWERUP_ICON_KEYS.BIKARA_YANG : POWERUP_ICON_KEYS[POWERUP_TYPES.BIKARA];
             } else if (lastPower === POWERUP_TYPES.SINDARA) {
-                // シンダラは合体後の特殊貫通状態で見ためが変わる
                 if (ball.getData('isPenetrating') && !ball.getData('isMerging') && !ball.getData('isAttracting')) {
-                    textureKey = POWERUP_ICON_KEYS.SINDARA_SUPER; // 合体後貫通状態アイコン
+                    textureKey = POWERUP_ICON_KEYS.SINDARA_SUPER;
                 } else {
-                    textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.SINDARA]; // 通常シンデレラアイコン
+                    textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.SINDARA];
                 }
             } else if (POWERUP_ICON_KEYS[lastPower]) {
-                 // 他のパワーは対応するアイコンキーがあればそれを設定
                 textureKey = POWERUP_ICON_KEYS[lastPower];
             }
         }
 
-        // テクスチャが現在と異なれば設定
-        if (ball.texture.key !== textureKey) {
-            ball.setTexture(textureKey);
-        }
-        // 基本的にボール自体のTintは使わないのでクリア
+        if (ball.texture.key !== textureKey) { ball.setTexture(textureKey); }
         ball.clearTint();
+         // ★★★ ここでパワーアップに応じたオーラエフェクトなどを追加/削除できる ★★★
     }
 
     // --- 個別パワーアップ処理 ---
 
-    // クビラ (貫通)
     activateKubira(balls) { balls.forEach(b => b.setData('isPenetrating', true)); }
     deactivateKubira(balls) {
         balls.forEach(b => {
-            // 他の貫通効果（シンダラ合体後、ビカラ陽）が有効でなければ貫通解除
             const lastPower = b.getData('lastActivatedPower');
-            const isSindaraActive = lastPower === POWERUP_TYPES.SINDARA && b.getData('isPenetrating'); // isPenetratingで判定
+            const isSindaraActive = lastPower === POWERUP_TYPES.SINDARA && b.getData('isPenetrating');
             const isBikaraYangActive = lastPower === POWERUP_TYPES.BIKARA && b.getData('bikaraState') === 'yang';
-            const kubiraIsStillActive = b.getData('activePowers').has(POWERUP_TYPES.KUBIRA); // クビラ自体がまだ有効か？
-
             if (!isSindaraActive && !isBikaraYangActive) {
-                 // 他の貫通要因がなければ、クビラが解除されるなら貫通OFF
-                 // (ここでは type === KUBIRA なので kubiraIsStillActive は false のはずだが念のため)
                 b.setData('isPenetrating', false);
             }
         });
     }
 
-
-    // 速度変更系ヘルパー
     applySpeedModifier(ball, type) {
         if (!ball || !ball.active || !ball.body) return;
         const modifier = BALL_SPEED_MODIFIERS[type];
-        if (!modifier) return; // 対応する係数がなければ何もしない
-
+        if (!modifier) return;
         const currentVelocity = ball.body.velocity;
-        // 現在の進行方向ベクトルを取得 (速度0ならデフォルト方向)
         const direction = currentVelocity.length() > 0 ? currentVelocity.clone().normalize() : new Phaser.Math.Vector2(0, -1);
-        const newSpeed = NORMAL_BALL_SPEED * modifier; // 新しい速度を計算
-        ball.setVelocity(direction.x * newSpeed, direction.y * newSpeed); // 速度を適用
+        const newSpeed = NORMAL_BALL_SPEED * modifier;
+        ball.setVelocity(direction.x * newSpeed, direction.y * newSpeed);
     }
 
-    // ボール速度をリセット (他の速度変更効果がなければ標準速度に)
     resetBallSpeed(ball) {
         if (!ball || !ball.active || !ball.body) return;
-        // 他の速度変更パワーが有効かチェック
-        if (ball.getData('isFast')) { // シャトラがまだ有効ならシャトラ速度に
-            this.applySpeedModifier(ball, POWERUP_TYPES.SHATORA);
-        } else if (ball.getData('isSlow')) { // ハイラがまだ有効ならハイラ速度に
-            this.applySpeedModifier(ball, POWERUP_TYPES.HAILA);
-        } else { // どちらも無効なら標準速度に
+        if (ball.getData('isFast')) { this.applySpeedModifier(ball, POWERUP_TYPES.SHATORA); }
+        else if (ball.getData('isSlow')) { this.applySpeedModifier(ball, POWERUP_TYPES.HAILA); }
+        else {
             const currentVelocity = ball.body.velocity;
             const direction = currentVelocity.length() > 0 ? currentVelocity.clone().normalize() : new Phaser.Math.Vector2(0, -1);
             ball.setVelocity(direction.x * NORMAL_BALL_SPEED, direction.y * NORMAL_BALL_SPEED);
         }
     }
 
-    // シャトラ (加速)
-    activateShatora(balls) {
-        balls.forEach(b => {
-            b.setData({ isFast: true, isSlow: false }); // 加速状態ON、減速状態OFF
-            this.applySpeedModifier(b, POWERUP_TYPES.SHATORA);
-        });
-    }
-    deactivateShatora(balls) {
-        balls.forEach(b => {
-            if (b.getData('isFast')) { // isFast が true の場合のみ処理
-                b.setData('isFast', false); // 加速状態OFF
-                this.resetBallSpeed(b);     // 速度をリセット（他の効果があればそれに従う）
-            }
-        });
-    }
+    activateShatora(balls) { balls.forEach(b => { b.setData({ isFast: true, isSlow: false }); this.applySpeedModifier(b, POWERUP_TYPES.SHATORA); }); }
+    deactivateShatora(balls) { balls.forEach(b => { if (b.getData('isFast')) { b.setData('isFast', false); this.resetBallSpeed(b); } }); }
+    activateHaira(balls) { balls.forEach(b => { b.setData({ isSlow: true, isFast: false }); this.applySpeedModifier(b, POWERUP_TYPES.HAILA); }); }
+    deactivateHaira(balls) { balls.forEach(b => { if (b.getData('isSlow')) { b.setData('isSlow', false); this.resetBallSpeed(b); } }); }
 
-    // ハイラ (減速)
-    activateHaira(balls) {
-        balls.forEach(b => {
-            b.setData({ isSlow: true, isFast: false }); // 減速状態ON、加速状態OFF
-            this.applySpeedModifier(b, POWERUP_TYPES.HAILA);
-        });
-    }
-    deactivateHaira(balls) {
-        balls.forEach(b => {
-            if (b.getData('isSlow')) { // isSlow が true の場合のみ処理
-                b.setData('isSlow', false); // 減速状態OFF
-                this.resetBallSpeed(b);     // 速度をリセット
-            }
-        });
-    }
-
-    // アンチラ (3分裂)
     activateAnchira(sourceBall) {
         if (!sourceBall || !sourceBall.active) return;
         console.log("Activating Anchira split.");
-        this.updateBallAppearance(sourceBall); // 元のボールの見た目も更新
+        this.updateBallAppearance(sourceBall);
+        // ★★★ ここに分裂エフェクトを追加可能 ★★★
 
-        const x = sourceBall.x;
-        const y = sourceBall.y;
-        const numSplits = 3; // 分裂数
-        const ballData = sourceBall.data.getAll(); // 元のボールのデータをコピー
-        // lastActivatedPower をアンチラに設定
+        const x = sourceBall.x; const y = sourceBall.y; const numSplits = 3;
+        const ballData = sourceBall.data.getAll();
         ballData.lastActivatedPower = POWERUP_TYPES.ANCHIRA;
-        if (!ballData.activePowers) ballData.activePowers = new Set(); // 安全策
-        ballData.activePowers.add(POWERUP_TYPES.ANCHIRA); // activePowersにも追加
+        if (!ballData.activePowers) ballData.activePowers = new Set();
+        ballData.activePowers.add(POWERUP_TYPES.ANCHIRA);
 
-        // 分裂後のボールを生成
         for (let i = 0; i < numSplits; i++) {
-            const offsetX = Phaser.Math.Between(-5, 5); // 少し位置をずらす
-            const offsetY = Phaser.Math.Between(-5, 5);
-            // 速度もランダムに設定
-            const vx = Phaser.Math.Between(-150, 150);
-            const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8)); // やや遅めに上向き
-            this.createAndAddBall(x + offsetX, y + offsetY, vx, vy, ballData); // 新しいボールを追加
+            const offsetX = Phaser.Math.Between(-5, 5); const offsetY = Phaser.Math.Between(-5, 5);
+            const vx = Phaser.Math.Between(-150, 150); const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8));
+            this.createAndAddBall(x + offsetX, y + offsetY, vx, vy, ballData);
         }
-        // 元のボールは activatePower 側で処理される (activePowers, lastActivatedPower セット済み)
     }
-    deactivateAnchira(balls) { /* 主に deactivatePowerByType の共通処理で状態がリセットされる */ }
+    deactivateAnchira(balls) { /* Common deactivation handles reset */ }
 
-    // シンダラ (2分裂 -> 合体 -> 貫通)
     activateSindara(sourceBall) {
         if (!sourceBall || !sourceBall.active) return;
         console.log("Activating Sindara split.");
         const theBall = sourceBall;
-        this.updateBallAppearance(theBall); // 元のボールの見た目を更新
+        this.updateBallAppearance(theBall);
+        // ★★★ ここに分裂エフェクトを追加可能 ★★★
 
-        const x = theBall.x;
-        const y = theBall.y;
-        const ballData = theBall.data.getAll(); // 元のボールのデータをコピー
+        const x = theBall.x; const y = theBall.y;
+        const ballData = theBall.data.getAll();
         ballData.lastActivatedPower = POWERUP_TYPES.SINDARA;
         if (!ballData.activePowers) ballData.activePowers = new Set();
         ballData.activePowers.add(POWERUP_TYPES.SINDARA);
-        // シンデレラ状態初期化
-        ballData.isAttracting = false;
-        ballData.isMerging = false;
+        ballData.isAttracting = false; ballData.isMerging = false;
 
-        // パートナーボールを生成
-        const vx = Phaser.Math.Between(-150, 150);
-        const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8));
+        const vx = Phaser.Math.Between(-150, 150); const vy = -Math.abs(Phaser.Math.Between(NORMAL_BALL_SPEED * 0.5, NORMAL_BALL_SPEED * 0.8));
         const partnerBall = this.createAndAddBall(x + Phaser.Math.Between(-5, 5), y + Phaser.Math.Between(-5, 5), vx, vy, ballData);
 
         if (partnerBall) {
-            // 互いにパートナーとして参照を設定
             theBall.setData({ sindaraPartner: partnerBall, isAttracting: false, isMerging: false });
             partnerBall.setData({ sindaraPartner: theBall, isAttracting: false, isMerging: false });
-
-            // 引き寄せ開始タイマーをセット
-            if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); // 既存があれば解除
+            if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove();
             console.log("Scheduling Sindara attraction.");
-            this.sindaraAttractionTimer = this.time.delayedCall(SINDARA_ATTRACTION_DELAY, () => {
-                this.startSindaraAttraction(theBall, partnerBall);
-            }, [], this);
+            this.sindaraAttractionTimer = this.time.delayedCall(SINDARA_ATTRACTION_DELAY, () => { this.startSindaraAttraction(theBall, partnerBall); }, [], this);
         } else {
-             // パートナー生成に失敗した場合 (レアケースのはず)
             console.warn("Failed to create partner ball for Sindara.");
-            // 元のボールからシンデレラ状態を解除
             theBall.getData('activePowers').delete(POWERUP_TYPES.SINDARA);
             const remainingPowers = Array.from(theBall.getData('activePowers'));
             theBall.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null);
             this.updateBallAppearance(theBall);
         }
-        // 元のボールは activatePower 側で処理済み
     }
 
-    // シンデレラ: 引き寄せ開始
     startSindaraAttraction(ball1, ball2) {
-        this.sindaraAttractionTimer = null; // タイマー解除
-        // 開始時にボールが存在し、まだシンデレラ状態か確認
-        if (!ball1 || !ball2 || !ball1.active || !ball2.active ||
-            ball1.getData('lastActivatedPower') !== POWERUP_TYPES.SINDARA ||
-            ball2.getData('lastActivatedPower') !== POWERUP_TYPES.SINDARA) {
+        this.sindaraAttractionTimer = null;
+        if (!ball1 || !ball2 || !ball1.active || !ball2.active || ball1.getData('lastActivatedPower') !== POWERUP_TYPES.SINDARA || ball2.getData('lastActivatedPower') !== POWERUP_TYPES.SINDARA) {
             console.warn("Sindara attraction aborted: balls missing or lost power.");
-            // 残っているシンデレラボールがいれば解除処理
             const activeSindaraBalls = this.balls.getMatching('lastActivatedPower', POWERUP_TYPES.SINDARA);
-            if (activeSindaraBalls.length > 0) {
-                this.deactivatePowerByType(POWERUP_TYPES.SINDARA);
-            }
-            return;
+            if (activeSindaraBalls.length > 0) { this.deactivatePowerByType(POWERUP_TYPES.SINDARA); } return;
         }
         console.log("Starting Sindara attraction.");
-        // 両方のボールを引き寄せ状態にし、貫通状態にもする
+         // ★★★ ここに引き寄せ開始エフェクト（オーラなど）を追加可能 ★★★
         ball1.setData({ isAttracting: true, isPenetrating: true });
         ball2.setData({ isAttracting: true, isPenetrating: true });
-        this.updateBallAppearance(ball1); // 見た目更新 (通常シンデレラアイコンのはず)
-        this.updateBallAppearance(ball2);
-        this.setColliders(); // 衝突判定を更新
+        this.updateBallAppearance(ball1); this.updateBallAppearance(ball2); this.setColliders();
     }
 
-    // シンデレラ: 引き寄せ中の処理 (毎フレーム)
-    updateSindaraAttraction(ball) {
-        const partner = ball.getData('sindaraPartner');
-        // パートナーが存在し、両方アクティブで、両方引き寄せ中で、合体中でない場合
-        if (partner && partner.active && ball.active &&
-            ball.getData('isAttracting') && partner.getData('isAttracting') &&
-            !ball.getData('isMerging') && !partner.getData('isMerging'))
-        {
-            // パートナーに向かって物理的に移動させる
-            this.physics.moveToObject(ball, partner, SINDARA_ATTRACTION_FORCE);
-        }
-    }
+    updateSindaraAttraction(ball) { const partner = ball.getData('sindaraPartner'); if (partner && partner.active && ball.active && ball.getData('isAttracting') && partner.getData('isAttracting') && !ball.getData('isMerging') && !partner.getData('isMerging')) { this.physics.moveToObject(ball, partner, SINDARA_ATTRACTION_FORCE); } }
+    handleBallCollision(ball1, ball2) { if (ball1.active && ball2.active && ball1.getData('sindaraPartner') === ball2 && ball1.getData('isAttracting')) { console.log("Sindara balls collided, merging."); this.mergeSindaraBalls(ball1, ball2); } }
 
-    // シンデレラ: ボール同士が衝突した時の処理
-    handleBallCollision(ball1, ball2) {
-        // 互いがパートナーで、引き寄せ中の場合のみ合体処理へ
-        if (ball1.active && ball2.active && ball1.getData('sindaraPartner') === ball2 && ball1.getData('isAttracting')) {
-            console.log("Sindara balls collided, merging.");
-            this.mergeSindaraBalls(ball1, ball2); // ball1 を残すとする
-        }
-    }
-
-    // シンデレラ: 合体処理
     mergeSindaraBalls(ballToKeep, ballToRemove) {
         console.log("[Debug] mergeSindaraBalls called.");
-        // ボイス・SE再生
-        console.log("[Debug] Attempting to play VOICE_SINDARA_MERGE...");
-        try { this.sound.play(AUDIO_KEYS.VOICE_SINDARA_MERGE); } catch (error) { console.error("[Debug] Error playing VOICE_SINDARA_MERGE:", error); }
-        console.log("[Debug] Attempting to play SE_SINDARA_MERGE...");
-        try { this.sound.play(AUDIO_KEYS.SE_SINDARA_MERGE); } catch (error) { console.error("[Debug] Error playing SE_SINDARA_MERGE:", error); }
+        // ★★★ ここに合体エフェクトを追加可能 ★★★
+        console.log("[Debug] Attempting to play VOICE_SINDARA_MERGE..."); try { this.sound.play(AUDIO_KEYS.VOICE_SINDARA_MERGE); } catch (error) { console.error("[Debug] Error playing VOICE_SINDARA_MERGE:", error); }
+        console.log("[Debug] Attempting to play SE_SINDARA_MERGE..."); try { this.sound.play(AUDIO_KEYS.SE_SINDARA_MERGE); } catch (error) { console.error("[Debug] Error playing SE_SINDARA_MERGE:", error); }
 
-        // 合体位置を計算 (中間点)
-        const mergeX = (ballToKeep.x + ballToRemove.x) / 2;
-        const mergeY = (ballToKeep.y + ballToRemove.y) / 2;
-
-        ballToKeep.setPosition(mergeX, mergeY); // 残すボールを移動
-        ballToRemove.destroy(); // 片方を削除
-
-        // 残ったボールの状態を更新: 合体中ON, 引き寄せOFF, 貫通ON, パートナー解除
+        const mergeX = (ballToKeep.x + ballToRemove.x) / 2; const mergeY = (ballToKeep.y + ballToRemove.y) / 2;
+        ballToKeep.setPosition(mergeX, mergeY); ballToRemove.destroy();
         ballToKeep.setData({ isMerging: true, isAttracting: false, isPenetrating: true, sindaraPartner: null });
         this.updateBallAppearance(ballToKeep); // 見た目更新 (まだ通常アイコンのはず)
 
-        // 既存のシンデレラ関連タイマーを解除
-        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove();
-        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove();
-        if (this.sindaraAttractionTimer) { this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; } // 引き寄せタイマーも確実に止める
+        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); if (this.sindaraAttractionTimer) { this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null; }
 
-        // 合体演出終了タイマーをセット
         console.log("Scheduling Sindara merge finish.");
-        this.sindaraMergeTimer = this.time.delayedCall(SINDARA_MERGE_DURATION, () => {
-            this.finishSindaraMerge(ballToKeep); // 合体完了処理へ
-        }, [], this);
-
-        this.setColliders(); // 衝突判定更新
+        this.sindaraMergeTimer = this.time.delayedCall(SINDARA_MERGE_DURATION, () => { this.finishSindaraMerge(ballToKeep); }, [], this);
+        this.setColliders();
     }
 
-    // シンデレラ: 合体演出終了処理
     finishSindaraMerge(mergedBall) {
-        this.sindaraMergeTimer = null; // タイマー解除
-        if (!mergedBall || !mergedBall.active) return; // ボールが存在しない場合は終了
+        this.sindaraMergeTimer = null; if (!mergedBall || !mergedBall.active) return;
         console.log("Finishing Sindara merge.");
-        mergedBall.setData({ isMerging: false }); // 合体中フラグをOFF
-        // ここで見た目をスーパーシンダラアイコンに変える
-        this.updateBallAppearance(mergedBall);
+         // ★★★ ここに合体完了エフェクトを追加可能 ★★★
+        mergedBall.setData({ isMerging: false });
+        this.updateBallAppearance(mergedBall); // 見た目をスーパーシンダラアイコンに
 
-        // 合体後貫通解除タイマーをセット
         if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove();
         console.log("Scheduling Sindara post-merge penetration deactivation.");
-        this.sindaraPenetrationTimer = this.time.delayedCall(SINDARA_POST_MERGE_PENETRATION_DURATION, () => {
-            this.deactivateSindaraPenetration(mergedBall); // 貫通解除処理へ
-        }, [], this);
-
-        this.setColliders(); // 衝突判定更新
+        this.sindaraPenetrationTimer = this.time.delayedCall(SINDARA_POST_MERGE_PENETRATION_DURATION, () => { this.deactivateSindaraPenetration(mergedBall); }, [], this);
+        this.setColliders();
     }
 
-    // シンデレラ: 合体後の貫通効果を解除
     deactivateSindaraPenetration(ball) {
-        this.sindaraPenetrationTimer = null; // タイマー解除
-        if (!ball || !ball.active) return;
+        this.sindaraPenetrationTimer = null; if (!ball || !ball.active) return;
         console.log("Deactivating Sindara post-merge penetration.");
-
-        // クビラやビカラ陽など、他の貫通効果が有効でなければ貫通フラグを解除
+         // ★★★ ここに貫通終了エフェクトを追加可能 ★★★
         if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) {
             const isBikaraYang = ball.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA && ball.getData('bikaraState') === 'yang';
-            if (!isBikaraYang) {
-                ball.setData('isPenetrating', false);
-            }
+            if (!isBikaraYang) { ball.setData('isPenetrating', false); }
         }
-        // シンデレラ能力自体もここで解除
         this.deactivatePowerByType(POWERUP_TYPES.SINDARA);
     }
 
-    // シンデレラ能力の完全解除 (時間切れ、ミスなど)
     deactivateSindara(balls) {
         console.log("Deactivating Sindara power completely.");
-        // 全てのシンデレラ関連タイマーを停止
         if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
         if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
         if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
-
-        // 全ての対象ボールの状態をリセット
         balls.forEach(b => {
             if (b.active) {
                 b.setData({ sindaraPartner: null, isAttracting: false, isMerging: false });
-                // 他の貫通要因がなければ貫通解除
                 if (!b.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) {
                     const isBikaraYang = b.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA && b.getData('bikaraState') === 'yang';
-                    if (!isBikaraYang) {
-                        b.setData('isPenetrating', false);
-                    }
+                    if (!isBikaraYang) { b.setData('isPenetrating', false); }
                 }
             }
         });
-        // 見た目更新とコライダー再設定は deactivatePowerByType の共通処理で行われる
     }
 
-
-    // ビカラ (陰陽転換)
     activateBikara(balls) {
         balls.forEach(ball => {
             if (ball.active) {
-                // 初期状態は「陰」
                 ball.setData({ bikaraState: 'yin', bikaraYangCount: 0 });
-                // 他の貫通要因がなければ貫通を解除
                 if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) {
                     const isSindaraActive = ball.getData('lastActivatedPower') === POWERUP_TYPES.SINDARA && ball.getData('isPenetrating');
-                    if (!isSindaraActive) {
-                        ball.setData('isPenetrating', false);
-                    }
+                    if (!isSindaraActive) { ball.setData('isPenetrating', false); }
                 }
-                this.updateBallAppearance(ball); // 見た目を陰アイコンに
+                this.updateBallAppearance(ball);
             }
         });
-        // コライダーも更新（陰状態では overlap が有効になるため）
         this.setColliders();
     }
 
     deactivateBikara(balls) {
         balls.forEach(ball => {
             if (ball.active) {
-                // 状態をリセット
                 ball.setData({ bikaraState: null, bikaraYangCount: 0 });
-                 // 他の貫通要因がなければ貫通解除 (解除時に陽だった場合を考慮)
                  if (!ball.getData('activePowers').has(POWERUP_TYPES.KUBIRA)) {
                      const isSindaraActive = ball.getData('lastActivatedPower') === POWERUP_TYPES.SINDARA && ball.getData('isPenetrating');
-                     if (!isSindaraActive) {
-                         ball.setData('isPenetrating', false);
-                     }
+                     if (!isSindaraActive) { ball.setData('isPenetrating', false); }
                  }
             }
         });
-         // マークされていたブロックの色を元に戻す
         this.bricks.getChildren().forEach(br => {
             if (br.getData && br.getData('isMarkedByBikara')) {
                 br.setData('isMarkedByBikara', false);
-                br.setTint(br.getData('originalTint') || 0xffffff); // 元の色に戻す
+                br.setTint(br.getData('originalTint') || 0xffffff);
             }
         });
-         // 見た目更新とコライダー再設定は deactivatePowerByType の共通処理で行われる
     }
 
-    // ビカラ: パドルヒットで陰陽状態を切り替え
     switchBikaraState(ball) {
         if (!ball || !ball.active || ball.getData('lastActivatedPower') !== POWERUP_TYPES.BIKARA) return;
         const currentState = ball.getData('bikaraState');
-        const nextState = (currentState === 'yin') ? 'yang' : 'yin'; // 状態を反転
+        const nextState = (currentState === 'yin') ? 'yang' : 'yin';
         console.log(`Switching Bikara state from ${currentState} to ${nextState}`);
         ball.setData('bikaraState', nextState);
+        // ★★★ ここに陰陽転換エフェクトを追加可能 ★★★
 
-        // SE再生
-        console.log("[Debug] Attempting to play SE_BIKARA_CHANGE...");
-        try { this.sound.play(AUDIO_KEYS.SE_BIKARA_CHANGE); } catch (error) { console.error("[Debug] Error playing SE_BIKARA_CHANGE:", error); }
-
-        // ボイス再生 & 状態初期化
+        console.log("[Debug] Attempting to play SE_BIKARA_CHANGE..."); try { this.sound.play(AUDIO_KEYS.SE_BIKARA_CHANGE); } catch (error) { console.error("[Debug] Error playing SE_BIKARA_CHANGE:", error); }
         if (nextState === 'yang') {
-            ball.setData('bikaraYangCount', 0); // 陽になったら破壊カウントリセット
-            // 陽ボイス再生
-            console.log("[Debug] Attempting to play VOICE_BIKARA_YANG...");
-            try { this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YANG); } catch (error) { console.error("[Debug] Error playing VOICE_BIKARA_YANG:", error); }
+            ball.setData('bikaraYangCount', 0);
+            console.log("[Debug] Attempting to play VOICE_BIKARA_YANG..."); try { this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YANG); } catch (error) { console.error("[Debug] Error playing VOICE_BIKARA_YANG:", error); }
         } else {
-            // 陰ボイス再生
-             console.log("[Debug] Attempting to play VOICE_BIKARA_YIN...");
-            try { this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YIN); } catch (error) { console.error("[Debug] Error playing VOICE_BIKARA_YIN:", error); }
+             console.log("[Debug] Attempting to play VOICE_BIKARA_YIN..."); try { this.sound.play(AUDIO_KEYS.VOICE_BIKARA_YIN); } catch (error) { console.error("[Debug] Error playing VOICE_BIKARA_YIN:", error); }
         }
-
-        this.updateBallAppearance(ball); // 見た目更新
-        this.setColliders(); // 衝突判定更新 (陰⇔陽で collider/overlap が切り替わる)
+        this.updateBallAppearance(ball); this.setColliders();
     }
 
-    // ビカラ陰: ブロックをマークする
     markBrickByBikara(brick) {
-        // 無敵ブロックや既にマーク済みのブロックは対象外
         if (!brick || !brick.active || !brick.getData || brick.getData('isMarkedByBikara') || brick.getData('maxHits') === -1) return;
         brick.setData('isMarkedByBikara', true);
-        brick.setTint(BRICK_MARKED_COLOR); // マーク色に変更
+        brick.setTint(BRICK_MARKED_COLOR);
+         // ★★★ ここにマークエフェクトを追加可能（再掲） ★★★
     }
 
-
-    // インダラ (壁反射ホーミング)
-    activateIndara(balls) {
-        balls.forEach(b => b.setData({ isIndaraActive: true, indaraHomingCount: INDARA_MAX_HOMING_COUNT }));
-        // 見た目更新は activatePower 側で行われる
-    }
-
-    // インダラ解除 (個別ボール用)
-    deactivateIndaraForBall(ball) {
-        if (!ball || !ball.active || !ball.getData('isIndaraActive')) return;
-        console.log("Deactivating Indara for ball.");
-        ball.setData({ isIndaraActive: false, indaraHomingCount: 0 });
-        // 見た目更新は呼び出し元 (hitPaddle や deactivatePowerByType) で行うことが多い
-    }
+    activateIndara(balls) { balls.forEach(b => b.setData({ isIndaraActive: true, indaraHomingCount: INDARA_MAX_HOMING_COUNT })); }
+    deactivateIndaraForBall(ball) { if (!ball || !ball.active || !ball.getData('isIndaraActive')) return; console.log("Deactivating Indara for ball."); ball.setData({ isIndaraActive: false, indaraHomingCount: 0 }); }
 
     // 物理世界の境界線に衝突した時の処理 (壁反射)
     handleWorldBounds(body, up, down, left, right) {
         const ball = body.gameObject;
-        // ボール以外や非アクティブボールは無視
         if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls.contains(ball) || !ball.active) return;
 
-        // 上左右の壁に当たった場合
-        if (up || left || right) {
-            // 反射音 (コメントアウト中)
+        if (up || left || right) { // 上左右の壁
+            // --- 壁ヒットエフェクト ---
+            try {
+                let impactPointX = ball.x;
+                let impactPointY = ball.y;
+                let angleMin = 0, angleMax = 0;
+
+                // 衝突した壁に応じて発生位置と角度を設定
+                if (up) {
+                    impactPointY = ball.body.y; // 上端
+                    angleMin = 60; angleMax = 120; // 下向きに広がる
+                } else if (left) {
+                    impactPointX = ball.body.x; // 左端
+                    angleMin = -30; angleMax = 30; // 右向きに広がる
+                } else if (right) {
+                    impactPointX = ball.body.x + ball.body.width; // 右端
+                    angleMin = 150; angleMax = 210; // 左向きに広がる
+                }
+
+                const particles = this.add.particles(0, 0, 'whitePixel', {
+                    x: impactPointX,
+                    y: impactPointY,
+                    lifespan: 150, // 短い寿命
+                    speed: { min: 100, max: 200 }, // 速度
+                    angle: { min: angleMin, max: angleMax }, // 壁からの反射方向
+                    gravityY: 100, // 少し重力
+                    scale: { start: 0.4, end: 0 }, // 小さな粒子
+                    quantity: 4, // 少量
+                    blendMode: 'ADD', // 加算合成
+                    emitting: false
+                });
+                particles.setParticleTint(0xffffff); // 壁は白
+                particles.explode(4); // 放出
+                // 短時間後にエミッタを破棄
+                this.time.delayedCall(200, () => {
+                    if (particles && particles.scene) particles.destroy();
+                });
+
+            } catch (error) {
+                console.error("Error creating wall hit particle effect:", error);
+            }
+             // --- エフェクト終了 ---
+
+             // 反射音 (コメントアウト中)
             try { /* this.sound.play(AUDIO_KEYS.SE_REFLECT); */ console.log("[Temporary] SE_REFLECT playback disabled due to errors (handleWorldBounds)."); } catch(e) { /* console.error("[Debug] Error playing SE_REFLECT in handleWorldBounds:", e); */ }
 
              // インダラ能力チェック
              if (ball.getData('isIndaraActive') && ball.getData('indaraHomingCount') > 0) {
                  console.log("Indara homing attempt on world bounds.");
                  const currentHomingCount = ball.getData('indaraHomingCount');
-                 // 破壊可能なブロックをターゲット候補に
                  const targetBricks = this.bricks.getMatching('active', true).filter(b => b.getData && b.getData('maxHits') !== -1);
 
                  if (targetBricks.length > 0) {
-                     // 最も近い破壊可能ブロックを探す
-                     let closestBrick = null;
-                     let minDistSq = Infinity;
+                     let closestBrick = null; let minDistSq = Infinity;
                      const ballCenter = ball.body.center;
                      targetBricks.forEach(brick => {
                          const distSq = Phaser.Math.Distance.Squared(ballCenter.x, ballCenter.y, brick.body.center.x, brick.body.center.y);
-                         if (distSq < minDistSq) {
-                             minDistSq = distSq;
-                             closestBrick = brick;
-                         }
+                         if (distSq < minDistSq) { minDistSq = distSq; closestBrick = brick; }
                      });
 
                      if (closestBrick) {
-                         // ターゲットが見つかったら、その方向へ速度を変更
                          console.log("Indara homing target found, changing velocity.");
-                         const currentSpeed = ball.body.velocity.length(); // 現在の速度を維持
-                         // ボールからターゲットへの角度を計算
+                          // ★★★ ここにホーミング開始エフェクトを追加可能 ★★★
+                         const currentSpeed = ball.body.velocity.length();
                          const angle = Phaser.Math.Angle.BetweenPoints(ballCenter, closestBrick.body.center);
-                         // 角度と速度から新しい速度ベクトルを設定
-                         this.physics.velocityFromAngle(Phaser.Math.RadToDeg(angle), currentSpeed, ball.body.velocity); // 角度はDegreeで指定
+                         this.physics.velocityFromAngle(Phaser.Math.RadToDeg(angle), currentSpeed, ball.body.velocity);
 
-                         // ホーミング回数を減らす
                          const newHomingCount = currentHomingCount - 1;
                          ball.setData('indaraHomingCount', newHomingCount);
                          if (newHomingCount <= 0) {
-                              // 回数使い切ったらインダラ解除
                              console.log("Indara homing count reached zero.");
                              this.deactivateIndaraForBall(ball);
-                             // インダラパワー自体も解除されるべきか？ -> deactivatePowerByTypeで処理される
-                             // this.deactivatePowerByType(POWERUP_TYPES.INDARA); // ここで呼ぶと他のボールにも影響するので注意
                          }
                      }
                  }
              }
         }
-        // down (画面下) はここでは処理しない (updateループ内で処理)
     }
 
 
-    // アニラ (落下時バウンド)
-    activateAnila(balls) {
-        balls.forEach(b => {
-            if (!b.getData('isAnilaActive')) { // まだ有効でなければ有効化
-                b.setData('isAnilaActive', true);
-            }
-        });
-         // 見た目更新は activatePower 側
-    }
+    activateAnila(balls) { balls.forEach(b => { if (!b.getData('isAnilaActive')) { b.setData('isAnilaActive', true); } }); }
+    deactivateAnilaForBall(ball) { if (!ball || !ball.active || !ball.getData('isAnilaActive')) return; ball.setData('isAnilaActive', false); }
 
-    // アニラ解除 (個別ボール用)
-    deactivateAnilaForBall(ball) {
-        if (!ball || !ball.active || !ball.getData('isAnilaActive')) return;
-        ball.setData('isAnilaActive', false);
-        // 見た目更新は deactivatePowerByType で
-    }
-
-    // アニラ: 画面下に落ちた時のバウンド処理
     triggerAnilaBounce(ball) {
         if (!ball || !ball.active || !ball.getData('isAnilaActive')) return;
         console.log("Triggering Anila bounce.");
+        // ★★★ ここにアニラバウンドエフェクトを追加可能 ★★★
 
-        // 現在のY速度に基づいてバウンド後のY速度を決定 (少し減衰させる)
         const currentVy = ball.body.velocity.y;
-        const bounceVy = -Math.abs(currentVy > -10 ? BALL_INITIAL_VELOCITY_Y * 0.7 : currentVy * 0.8); // 最低速度保証＆減衰
-        ball.setVelocityY(bounceVy); // 上向きに速度設定
-        // Y座標をパドルより少し上に強制移動（床抜け防止）
+        const bounceVy = -Math.abs(currentVy > -10 ? BALL_INITIAL_VELOCITY_Y * 0.7 : currentVy * 0.8);
+        ball.setVelocityY(bounceVy);
         ball.y = this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT;
-
-        // バウンドしたらアニラ効果は解除
         this.deactivateAnilaForBall(ball);
-        // アニラパワー自体も解除
         this.deactivatePowerByType(POWERUP_TYPES.ANILA);
     }
 
 
-    // ヴァジラ (ゲージシステム)
     activateVajra() {
-        if (!this.isVajraSystemActive) { // まだ有効でなければ
+        if (!this.isVajraSystemActive) {
             console.log("Activating Vajra system.");
+             // ★★★ ここにヴァジラゲージ出現エフェクトを追加可能 ★★★
             this.isVajraSystemActive = true;
-            this.vajraGauge = 0; // ゲージ初期化
-            // UIに通知してゲージ表示を開始
+            this.vajraGauge = 0;
             this.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX);
-            // 現在のボールにヴァジラアイコンを付与
             this.balls.getMatching('active', true).forEach(ball => {
                 ball.getData('activePowers').add(POWERUP_TYPES.VAJRA);
                 ball.setData('lastActivatedPower', POWERUP_TYPES.VAJRA);
                 this.updateBallAppearance(ball);
             });
         }
-        // 既に有効な場合は何もしない (ゲージは維持)
     }
 
-    // ヴァジラ: ブロック破壊時にゲージを増加
     increaseVajraGauge() {
-        // ヴァジラシステムが有効で、ゲームプレイ中の場合のみ
         if (this.isVajraSystemActive && !this.isStageClearing && !this.isGameOver) {
             this.vajraGauge += VAJRA_GAUGE_INCREMENT;
-            this.vajraGauge = Math.min(this.vajraGauge, VAJRA_GAUGE_MAX); // 上限を超えないように
-            // UIにゲージ更新を通知
+            this.vajraGauge = Math.min(this.vajraGauge, VAJRA_GAUGE_MAX);
+             // ★★★ ここにゲージ増加エフェクトを追加可能 ★★★
             this.events.emit('updateVajraGauge', this.vajraGauge);
-
-            // ゲージがMAXになったら奥義発動
             if (this.vajraGauge >= VAJRA_GAUGE_MAX) {
+                 // ★★★ ここにゲージMAXエフェクトを追加可能 ★★★
                 this.triggerVajraDestroy();
             }
         }
     }
 
-    // ヴァジラ: システム解除 (奥義発動後、ミス、ステージクリアなど)
     deactivateVajra() {
         if (this.isVajraSystemActive) {
             console.log("Deactivating Vajra system.");
-            this.isVajraSystemActive = false; // システムを無効化
+            this.isVajraSystemActive = false;
         }
-        // ゲージは常にリセットし、UIにも通知
         this.vajraGauge = 0;
-        this.events.emit('deactivateVajraUI'); // UIゲージを非表示に
-
-        // ボールからヴァジラ状態を解除
+        this.events.emit('deactivateVajraUI');
         this.balls.getMatching('active', true).forEach(ball => {
             ball.getData('activePowers').delete(POWERUP_TYPES.VAJRA);
             if (ball.getData('lastActivatedPower') === POWERUP_TYPES.VAJRA) {
                 const remainingPowers = Array.from(ball.getData('activePowers'));
                 ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null);
             }
-            this.updateBallAppearance(ball); // 見た目を戻す
+            this.updateBallAppearance(ball);
         });
     }
 
-    // マキラ (ファミリア & ビーム)
     activateMakira() {
-        if (!this.isMakiraActive) { // まだ有効でなければ
+        if (!this.isMakiraActive) {
             console.log("Activating Makira.");
+             // ★★★ ここにマキラ（ファミリア召喚）エフェクトを追加可能 ★★★
             this.isMakiraActive = true;
-
-            // ファミリアグループ準備 (既存があればクリア)
-            if (this.familiars) this.familiars.clear(true, true);
-            else this.familiars = this.physics.add.group();
-            this.createFamiliars(); // ファミリア生成
-
-             // ビームグループ準備 (既存があればクリア)
-            if (this.makiraBeams) this.makiraBeams.clear(true, true);
-            else this.makiraBeams = this.physics.add.group();
-
-            // ビーム発射タイマー開始
+            if (this.familiars) this.familiars.clear(true, true); else this.familiars = this.physics.add.group();
+            this.createFamiliars();
+            if (this.makiraBeams) this.makiraBeams.clear(true, true); else this.makiraBeams = this.physics.add.group();
             if (this.makiraAttackTimer) this.makiraAttackTimer.remove();
-            this.makiraAttackTimer = this.time.addEvent({
-                delay: MAKIRA_ATTACK_INTERVAL,
-                callback: this.fireMakiraBeam,
-                callbackScope: this,
-                loop: true
-            });
-
-            // ボールにマキラ状態付与
+            this.makiraAttackTimer = this.time.addEvent({ delay: MAKIRA_ATTACK_INTERVAL, callback: this.fireMakiraBeam, callbackScope: this, loop: true });
             this.balls.getMatching('active', true).forEach(ball => {
                 ball.getData('activePowers').add(POWERUP_TYPES.MAKIRA);
                 ball.setData('lastActivatedPower', POWERUP_TYPES.MAKIRA);
                 this.updateBallAppearance(ball);
             });
         }
-
-        // 効果時間タイマー設定 (再度取得した場合も上書き)
         const duration = POWERUP_DURATION[POWERUP_TYPES.MAKIRA];
         if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove();
         this.powerUpTimers[POWERUP_TYPES.MAKIRA] = this.time.delayedCall(duration, () => {
             console.log("Deactivating Makira due to duration.");
-            this.deactivateMakira(); // 時間切れで解除
+             // ★★★ ここにマキラ終了エフェクトを追加可能 ★★★
+            this.deactivateMakira();
             this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null;
         }, [], this);
-
-        this.setColliders(); // ビーム用コライダーを有効化
+        this.setColliders();
     }
 
-    // マキラ: 能力解除
     deactivateMakira() {
-        if (this.isMakiraActive) { // 有効な場合のみ処理
+        if (this.isMakiraActive) {
             console.log("Deactivating Makira.");
             this.isMakiraActive = false;
-
-            // ビームタイマー停止
             if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; }
-            // 効果時間タイマーも停止 (念のため)
             if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) { this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; }
-
-            // ファミリアとビームを削除
             if (this.familiars) { this.familiars.clear(true, true); }
             if (this.makiraBeams) { this.makiraBeams.clear(true, true); }
-
-            // ボールからマキラ状態を解除
             this.balls.getMatching('active', true).forEach(ball => {
                 ball.getData('activePowers').delete(POWERUP_TYPES.MAKIRA);
                 if (ball.getData('lastActivatedPower') === POWERUP_TYPES.MAKIRA) {
                     const remainingPowers = Array.from(ball.getData('activePowers'));
                     ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null);
                 }
-                this.updateBallAppearance(ball); // 見た目を戻す
+                this.updateBallAppearance(ball);
             });
         }
     }
 
-    // マキラ: ファミリア生成
     createFamiliars() {
-        if (!this.paddle) return; // パドルがないと生成不可
-        const paddleX = this.paddle.x;
-        const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE; // パドルの少し上
-
-        // 左ファミリア
-        const familiarLeft = this.familiars.create(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun') // joykun画像を使用
-            .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2)
-            .clearTint(); // Tint不要
-        if (familiarLeft.body) { familiarLeft.body.setAllowGravity(false).setImmovable(true); } // 動かないように
-        else { console.error("Failed to create familiarLeft physics body!"); if(familiarLeft) familiarLeft.destroy(); }
-
-        // 右ファミリア
-        const familiarRight = this.familiars.create(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun')
-             .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2)
-             .clearTint();
-        if (familiarRight.body) { familiarRight.body.setAllowGravity(false).setImmovable(true); }
-        else { console.error("Failed to create familiarRight physics body!"); if(familiarRight) familiarRight.destroy();}
+        if (!this.paddle) return;
+        const paddleX = this.paddle.x; const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
+        const familiarLeft = this.familiars.create(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun').setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).clearTint();
+        if (familiarLeft.body) { familiarLeft.body.setAllowGravity(false).setImmovable(true); } else { console.error("Failed to create familiarLeft physics body!"); if(familiarLeft) familiarLeft.destroy(); }
+        const familiarRight = this.familiars.create(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun').setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).clearTint();
+        if (familiarRight.body) { familiarRight.body.setAllowGravity(false).setImmovable(true); } else { console.error("Failed to create familiarRight physics body!"); if(familiarRight) familiarRight.destroy();}
     }
 
-    // マキラ: ビーム発射
     fireMakiraBeam() {
-         // マキラ有効、ファミリア存在、ゲームプレイ中の場合のみ発射
         if (!this.isMakiraActive || !this.familiars || this.familiars.countActive(true) === 0 || this.isStageClearing || this.isGameOver) return;
-
-        // SE再生 (未実装 or コメントアウト中)
         /* this.sound.play(AUDIO_KEYS.SE_MAKIRA_BEAM); */
-
-        // 各ファミリアからビームを発射
         this.familiars.getChildren().forEach(familiar => {
             if (familiar.active) {
-                // ビーム生成 (whitePixelを赤くTint)
-                const beam = this.makiraBeams.create(familiar.x, familiar.y - MAKIRA_FAMILIAR_SIZE, 'whitePixel')
-                    .setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT)
-                    .setTint(MAKIRA_BEAM_COLOR);
-
-                if (beam && beam.body) {
-                     beam.setVelocity(0, -MAKIRA_BEAM_SPEED); // 真上に発射
-                     beam.body.setAllowGravity(false); // 重力無視
-                 } else {
-                     console.error("Failed to create Makira beam body!");
-                     if (beam) beam.destroy(); // ボディ生成失敗なら削除
-                 }
+                 // ★★★ ここにビーム発射エフェクトを追加可能 ★★★
+                const beam = this.makiraBeams.create(familiar.x, familiar.y - MAKIRA_FAMILIAR_SIZE, 'whitePixel').setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT).setTint(MAKIRA_BEAM_COLOR);
+                if (beam && beam.body) { beam.setVelocity(0, -MAKIRA_BEAM_SPEED); beam.body.setAllowGravity(false); }
+                else { console.error("Failed to create Makira beam body!"); if (beam) beam.destroy(); }
             }
         });
     }
@@ -2282,328 +2020,162 @@ export default class GameScene extends Phaser.Scene {
 
     // --- ゲーム進行管理 ---
 
-    // ライフを失った時の処理
     loseLife() {
-        // ステージクリア中、ゲームオーバー中、ライフ0以下なら何もしない
         if (this.isStageClearing || this.isGameOver || this.lives <= 0) return;
-
         console.log(`Losing life. Lives remaining: ${this.lives - 1}`);
+         // ★★★ ここにライフ減少エフェクトを追加可能 ★★★
 
-        // --- 状態リセット ---
-        this.deactivateMakira(); // マキラ解除
-        this.deactivateVajra();  // ヴァジラ解除
-        // 全ての持続系パワーアップタイマーを解除
-        Object.keys(this.powerUpTimers).forEach(key => {
-            if (this.powerUpTimers[key]) {
-                this.powerUpTimers[key].remove();
-                this.powerUpTimers[key] = null;
-            }
-        });
-        // シンデレラ関連タイマーも解除
-        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
-        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
-        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
-
-        this.lives--; // ライフを減らす
-        this.events.emit('updateLives', this.lives); // UIに通知
-
-        this.isBallLaunched = false; // ボール未発射状態に戻す
-
-        // --- 残っているボールの状態をリセット ---
-        const activeBalls = this.balls.getMatching('active', true);
-        if (activeBalls.length > 0) {
-            activeBalls.forEach(ball => {
-                if (ball.active) {
-                    // 全てのパワーアップ状態をクリア
-                    ball.setData('activePowers', new Set());
-                    ball.setData('lastActivatedPower', null);
-                    ball.setData({
-                        isPenetrating: false, isFast: false, isSlow: false,
-                        sindaraPartner: null, isAttracting: false, isMerging: false,
-                        bikaraState: null, bikaraYangCount: 0,
-                        isIndaraActive: false, indaraHomingCount: 0,
-                        isAnilaActive: false
-                    });
-                    this.resetBallSpeed(ball); // 速度を標準に戻す
-                    this.updateBallAppearance(ball); // 見た目を標準に戻す
-                }
-            });
-        }
-
-        // --- 次の処理分岐 ---
-        if (this.lives > 0) {
-            // ライフが残っていれば、少し待ってから新しいボールを準備
-            this.time.delayedCall(500, this.resetForNewLife, [], this);
-        } else {
-            // ライフが0になったらゲームオーバー処理へ
-            console.log("Game Over condition met.");
-            this.sound.play(AUDIO_KEYS.SE_GAME_OVER); // ゲームオーバー音
-            this.stopBgm(); // BGM停止
-            this.time.delayedCall(500, this.gameOver, [], this); // 少し待ってからゲームオーバー表示
-        }
-    }
-
-    // 新しいライフのために状態をリセット (ボール再生成など)
-    resetForNewLife() {
-        // ゲームオーバーやステージクリア処理が既に動いていたら中断
-        if (this.isGameOver || this.isStageClearing) {
-            console.warn(`resetForNewLife aborted: isGameOver=${this.isGameOver}, isStageClearing=${this.isStageClearing}`);
-            return;
-        }
-        console.log("Resetting for new life...");
-
-        // ボールグループをクリア (既存のボールを全て削除)
-        if (this.balls) {
-            this.balls.clear(true, true);
-        } else {
-             // 万が一グループがなければ再作成
-            console.warn("this.balls was null in resetForNewLife. Recreating group.");
-            this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
-        }
-
-        // パドルを初期位置に戻す
-        if (this.paddle && this.paddle.active) {
-            this.paddle.x = this.scale.width / 2;
-            // Y座標は動かないはずだが念のため
-            // this.paddle.y = this.scale.height - PADDLE_Y_OFFSET;
-            this.updatePaddleSize(); // サイズも確認
-        } else {
-            console.warn("Paddle not found or inactive in resetForNewLife.");
-        }
-
-        // 新しいボールを作成
-        let newBall = null;
-        if (this.paddle && this.paddle.active) {
-            // パドルの上に生成
-            newBall = this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
-        } else {
-             // パドルがない場合 (エラーケース) は画面中央下部に生成
-            console.warn("Creating ball without active paddle reference.");
-            newBall = this.createAndAddBall(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET - PADDLE_HEIGHT / 2 - BALL_RADIUS);
-        }
-
-        if (newBall) {
-            this.isBallLaunched = false; // 未発射状態
-            this.setColliders(); // コライダー再設定
-            console.log("New ball created and colliders set.");
-        } else {
-            // ボール生成失敗なら、強制的にゲームオーバーにするしかない
-            console.error("Failed to create new ball in resetForNewLife!");
-            this.gameOver();
-        }
-    }
-
-    // ゲームオーバー処理
-    gameOver() {
-        if (this.isGameOver) return; // 既にゲームオーバーなら何もしない
-        console.log("Executing gameOver sequence.");
-        this.isGameOver = true;
-
-        // 進行中のパワーアップ等を停止
-        this.deactivateMakira();
-        this.deactivateVajra();
-
-        // ゲームオーバーテキスト表示
-        if (this.gameOverText) this.gameOverText.setVisible(true);
-
-        // 物理演算を停止
-        this.physics.pause();
-
-        // ボールの動きを止める (念のため)
-        if (this.balls) {
-            this.balls.getChildren().forEach(ball => {
-                if (ball.active) {
-                    ball.setVelocity(0, 0);
-                    if (ball.body) ball.body.enable = false; // 物理ボディも無効化
-                }
-            });
-        }
-
-        // 全てのタイマーを停止
-        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(); });
-        this.powerUpTimers = {};
-        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
-        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
-        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
-        if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = null;
-
-        // 以降はクリック待ち (inputハンドラで returnToTitle が呼ばれる)
-    }
-
-    // ステージクリア処理
-    stageClear() {
-        // ステージクリア中、ゲームオーバー中は処理しない
-        if (this.isStageClearing || this.isGameOver) return;
-        console.log(`Stage ${this.currentStage} Clear Initiated.`);
-        this.isStageClearing = true;
-
-        // パワーアップ解除
-        this.deactivateMakira();
-        this.deactivateVajra();
-
-        // クリア音 (コメントアウト中)
-        try { console.log("[Debug] Attempting to play SE_STAGE_CLEAR..."); /* this.sound.play(AUDIO_KEYS.SE_STAGE_CLEAR); */ console.log("[Temporary] SE_STAGE_CLEAR playback disabled due to errors."); } catch (e) { console.error("Error playing SE_STAGE_CLEAR:", e); }
-
-        // 物理演算一時停止
-        this.physics.pause();
-
-        // 全てのタイマーを停止
+        this.deactivateMakira(); this.deactivateVajra();
         Object.keys(this.powerUpTimers).forEach(key => { if (this.powerUpTimers[key]) { this.powerUpTimers[key].remove(); this.powerUpTimers[key] = null; } });
         if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
         if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
         if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
 
-        // ボールをリセット (次のステージ開始時に新しく生成するため、状態だけクリア)
+        this.lives--;
+        this.events.emit('updateLives', this.lives);
+        this.isBallLaunched = false;
+
         const activeBalls = this.balls.getMatching('active', true);
         if (activeBalls.length > 0) {
             activeBalls.forEach(ball => {
                 if (ball.active) {
-                    ball.setData('activePowers', new Set());
-                    ball.setData('lastActivatedPower', null);
-                    ball.setData({ /* 他の状態もリセット */
-                        isPenetrating: false, isFast: false, isSlow: false, sindaraPartner: null, isAttracting: false, isMerging: false, bikaraState: null, bikaraYangCount: 0, isIndaraActive: false, indaraHomingCount: 0, isAnilaActive: false
-                    });
-                    this.updateBallAppearance(ball); // 見た目も標準に
-                    ball.setVelocity(0, 0); // 動きを止める
+                    ball.setData('activePowers', new Set()); ball.setData('lastActivatedPower', null);
+                    ball.setData({ isPenetrating: false, isFast: false, isSlow: false, sindaraPartner: null, isAttracting: false, isMerging: false, bikaraState: null, bikaraYangCount: 0, isIndaraActive: false, indaraHomingCount: 0, isAnilaActive: false });
+                    this.resetBallSpeed(ball); this.updateBallAppearance(ball);
                 }
             });
         }
 
-        // ビカラマーク解除
-        if (this.bricks) {
-            this.bricks.getChildren().forEach(br => {
-                if (br.getData && br.getData('isMarkedByBikara')) {
-                    br.setData('isMarkedByBikara', false);
-                    // 色は次のステージで消えるのでそのままでも良い
+        if (this.lives > 0) {
+            this.time.delayedCall(500, this.resetForNewLife, [], this);
+        } else {
+            console.log("Game Over condition met.");
+            this.sound.play(AUDIO_KEYS.SE_GAME_OVER);
+            this.stopBgm();
+             // ★★★ ここにゲームオーバー演出を追加可能 ★★★
+            this.time.delayedCall(500, this.gameOver, [], this);
+        }
+    }
+
+    resetForNewLife() {
+        if (this.isGameOver || this.isStageClearing) { console.warn(`resetForNewLife aborted: isGameOver=${this.isGameOver}, isStageClearing=${this.isStageClearing}`); return; }
+        console.log("Resetting for new life...");
+         // ★★★ ここに復活エフェクトを追加可能 ★★★
+
+        if (this.balls) { this.balls.clear(true, true); } else { console.warn("this.balls was null..."); this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true }); }
+        if (this.paddle && this.paddle.active) { this.paddle.x = this.scale.width / 2; this.updatePaddleSize(); } else { console.warn("Paddle not found..."); }
+
+        let newBall = null;
+        if (this.paddle && this.paddle.active) { newBall = this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS); }
+        else { newBall = this.createAndAddBall(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET - PADDLE_HEIGHT / 2 - BALL_RADIUS); }
+
+        if (newBall) { this.isBallLaunched = false; this.setColliders(); console.log("New ball created and colliders set."); }
+        else { console.error("Failed to create new ball in resetForNewLife!"); this.gameOver(); }
+    }
+
+    gameOver() {
+        if (this.isGameOver) return;
+        console.log("Executing gameOver sequence.");
+        this.isGameOver = true;
+        this.deactivateMakira(); this.deactivateVajra();
+        if (this.gameOverText) this.gameOverText.setVisible(true);
+        this.physics.pause();
+        if (this.balls) { this.balls.getChildren().forEach(ball => { if (ball.active) { ball.setVelocity(0, 0); if (ball.body) ball.body.enable = false; } }); }
+        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(); }); this.powerUpTimers = {};
+        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
+        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
+        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
+        if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = null;
+    }
+
+    stageClear() {
+        if (this.isStageClearing || this.isGameOver) return;
+        console.log(`Stage ${this.currentStage} Clear Initiated.`);
+        this.isStageClearing = true;
+        // ★★★ ここにステージクリア演出（画面フラッシュなど）を追加可能 ★★★
+
+        this.deactivateMakira(); this.deactivateVajra();
+        try { console.log("[Debug] Attempting to play SE_STAGE_CLEAR..."); /* this.sound.play(AUDIO_KEYS.SE_STAGE_CLEAR); */ console.log("[Temporary] SE_STAGE_CLEAR playback disabled."); } catch (e) { console.error("Error playing SE_STAGE_CLEAR:", e); }
+        this.physics.pause();
+        Object.keys(this.powerUpTimers).forEach(key => { if (this.powerUpTimers[key]) { this.powerUpTimers[key].remove(); this.powerUpTimers[key] = null; } });
+        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
+        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
+        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
+
+        const activeBalls = this.balls.getMatching('active', true);
+        if (activeBalls.length > 0) {
+            activeBalls.forEach(ball => {
+                if (ball.active) {
+                     // ★★★ ここにボール消滅/吸収エフェクトを追加可能 ★★★
+                    ball.setData('activePowers', new Set()); ball.setData('lastActivatedPower', null);
+                    ball.setData({ /* reset state */ });
+                    this.updateBallAppearance(ball); ball.setVelocity(0, 0);
                 }
             });
         }
+        if (this.bricks) { this.bricks.getChildren().forEach(br => { if (br.getData && br.getData('isMarkedByBikara')) { br.setData('isMarkedByBikara', false); } }); }
+        if (this.powerUps) { this.powerUps.clear(true, true); }
 
-        // 画面上のパワーアップアイテムをクリア
-        if (this.powerUps) {
-            this.powerUps.clear(true, true);
-        }
-
-        // ステージ番号を進める
         this.currentStage++;
         console.log(`Incrementing stage to ${this.currentStage}`);
 
-        // --- 次のステージへ ---
         if (this.currentStage > MAX_STAGE) {
-             // 最終ステージクリア
             console.log("Game Complete triggered.");
-            this.gameComplete(); // ゲームクリア処理へ
+            this.gameComplete();
         } else {
-             // 次のステージがある場合
-            this.events.emit('updateStage', this.currentStage); // UIに通知
-            this.updateBgm(); // BGM更新
-
-            // 背景更新
+            this.events.emit('updateStage', this.currentStage);
+            this.updateBgm();
             const nextBgKey = this.getBackgroundKeyForStage(this.currentStage);
-            if (this.bgImage && this.bgImage.texture.key !== nextBgKey) {
-                this.bgImage.setTexture(nextBgKey);
-                this.resizeBackground(); // 新しい背景に合わせてリサイズ
-            }
-
+            if (this.bgImage && this.bgImage.texture.key !== nextBgKey) { this.bgImage.setTexture(nextBgKey); this.resizeBackground(); }
             console.log("Scheduling next stage setup...");
-            // 少し待ってから次のステージの準備を開始
-            this.time.delayedCall(1000, () => {
+            this.time.delayedCall(1000, () => { // ★ この遅延時間でクリア演出を見せる
                 console.log("Executing delayed call for next stage setup.");
-                // delayedCall の実行前にゲームオーバーになったりシーンが停止してないか確認
-                if (this.isGameOver || !this.scene || !this.scene.isActive()) {
-                    console.warn("Next stage setup aborted: Game Over or Scene inactive.");
-                    return;
-                }
-
-                this.isStageClearing = false; // ステージクリア状態を解除
+                if (this.isGameOver || !this.scene || !this.scene.isActive()) { console.warn("Next stage setup aborted."); return; }
+                this.isStageClearing = false;
                 console.log("isStageClearing set to false before reset/setup.");
-
                 try {
-                    console.log("Setting up next stage...");
-                    this.setupStage(); // ブロック生成、ドロッププール更新
-                    console.log("Resetting for new life (stage transition)...");
-                    this.resetForNewLife(); // ボール再生成
-                    console.log("Resuming physics...");
-                    this.physics.resume(); // 物理演算再開
+                    console.log("Setting up next stage..."); this.setupStage();
+                    console.log("Resetting for new life (stage transition)..."); this.resetForNewLife();
+                    console.log("Resuming physics..."); this.physics.resume();
                     console.log("Next stage setup complete.");
-                } catch (e_inner) {
-                    console.error("CRITICAL Error during next stage setup:", e_inner);
-                    // ステージ準備中にエラーが起きたらタイトルに戻すなど
-                    if (!this.isGameOver) { this.returnToTitle(); }
-                }
+                } catch (e_inner) { console.error("CRITICAL Error during next stage setup:", e_inner); if (!this.isGameOver) { this.returnToTitle(); } }
             }, [], this);
         }
-        // stageClearの try...catch は削除（問題ないはず）
     }
 
-    // ゲームクリア処理
     gameComplete() {
         console.log("Game Complete!");
-        // クリア音 (コメントアウト中だが、ここは鳴らしたい)
-        this.sound.play(AUDIO_KEYS.SE_STAGE_CLEAR); // ステージクリア音を流用
-        this.stopBgm(); // BGM停止
-        alert(`ゲームクリア！ スコア: ${this.score}`); // アラートで通知 (仮)
-        this.returnToTitle(); // タイトル画面へ
+         // ★★★ ここにゲームクリア演出を追加可能 ★★★
+        this.sound.play(AUDIO_KEYS.SE_STAGE_CLEAR);
+        this.stopBgm();
+        alert(`ゲームクリア！ スコア: ${this.score}`);
+        this.returnToTitle();
     }
 
-    // タイトルシーンに戻る
     returnToTitle() {
         console.log("Returning to Title Scene...");
-        this.stopBgm(); // BGM停止
-
-        // 物理演算が停止していたら再開 (シーン停止時にエラーになることがあるため)
-        if (this.physics.world && !this.physics.world.running) {
-            try { this.physics.resume(); } catch (e) { console.warn("Error resuming physics before returning to title:", e); }
-        }
-
-        // UISceneがアクティブなら停止
-        if (this.scene.isActive('UIScene')) {
-            try { this.scene.stop('UIScene'); console.log("UIScene stopped."); } catch (e) { console.error("Error stopping UIScene:", e); }
-        }
-
-        // GameScene自体を停止
+        this.stopBgm();
+        if (this.physics.world && !this.physics.world.running) { try { this.physics.resume(); } catch (e) { console.warn("Error resuming physics:", e); } }
+        if (this.scene.isActive('UIScene')) { try { this.scene.stop('UIScene'); console.log("UIScene stopped."); } catch (e) { console.error("Error stopping UIScene:", e); } }
         try { this.scene.stop(); console.log("GameScene stopping..."); } catch (e) { console.error("Error stopping GameScene:", e); }
-
-        // 少し待ってからTitleSceneを開始 (シーン遷移の安定化のため)
-        this.time.delayedCall(50, () => {
-            if (this.scene && this.scene.manager) {
-                 // シーンマネージャー経由で開始
-                try { this.scene.start('TitleScene'); console.log("Started TitleScene."); } catch (e) { console.error("Error starting TitleScene:", e); }
-            } else {
-                console.error("Scene Manager not found, cannot return to Title.");
-            }
-        });
+        this.time.delayedCall(50, () => { if (this.scene && this.scene.manager) { try { this.scene.start('TitleScene'); console.log("Started TitleScene."); } catch (e) { console.error("Error starting TitleScene:", e); } } else { console.error("Scene Manager not found."); } });
     }
 
-    // シーン終了時のクリーンアップ
     shutdownScene() {
         console.log("GameScene shutdown initiated.");
-        this.stopBgm(); // BGM停止
-
-        // --- イベントリスナー解除 ---
+        this.stopBgm();
         if (this.scale) this.scale.off('resize', this.handleResize, this);
         if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this);
         this.events.off('shutdown', this.shutdownScene, this);
-        this.events.removeAllListeners(); // このシーンが発行するイベントリスナーも全て解除
-        if (this.input) this.input.removeAllListeners(); // 入力イベントも解除
-
-        // --- 状態フラグリセット ---
-        this.isGameOver = false;
-        this.isStageClearing = false;
-
-        // --- 実行中の処理停止 ---
-        this.deactivateMakira(); // タイマー等も停止される
-        this.deactivateVajra(); // ゲージ等もリセットされる
-        // 他のタイマーも全て停止
-        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); }); // false: イベントを発火させずに削除
-        this.powerUpTimers = {};
+        this.events.removeAllListeners();
+        if (this.input) this.input.removeAllListeners();
+        this.isGameOver = false; this.isStageClearing = false;
+        this.deactivateMakira(); this.deactivateVajra();
+        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); }); this.powerUpTimers = {};
         if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null;
         if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null;
         if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null;
         if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
-
-        // --- オブジェクト破棄 ---
-        // try-catchで囲むと安全
         if (this.bgImage) { try { this.bgImage.destroy(); } catch (e) { console.error("Error destroying bgImage:", e); } this.bgImage = null; }
         if (this.balls) { try { this.balls.destroy(true); } catch (e) { console.error("Error destroying balls group:", e); } this.balls = null; }
         if (this.bricks) { try { this.bricks.destroy(true); } catch (e) { console.error("Error destroying bricks group:", e); } this.bricks = null; }
@@ -2612,14 +2184,7 @@ export default class GameScene extends Phaser.Scene {
         if (this.familiars) { try { this.familiars.destroy(true); } catch (e) { console.error("Error destroying familiars group:", e); } this.familiars = null; }
         if (this.makiraBeams) { try { this.makiraBeams.destroy(true); } catch (e) { console.error("Error destroying makiraBeams group:", e); } this.makiraBeams = null; }
         if (this.gameOverText) { try { this.gameOverText.destroy(); } catch (e) { console.error("Error destroying gameOverText:", e); } this.gameOverText = null; }
-
-        // --- コライダー参照クリア ---
-        this.ballPaddleCollider = null;
-        this.ballBrickCollider = null;
-        this.ballBrickOverlap = null;
-        this.ballBallCollider = null;
-        this.makiraBeamBrickOverlap = null;
-
+        this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
         console.log("GameScene shutdown complete.");
     }
 } // <-- GameScene クラスの終わり
