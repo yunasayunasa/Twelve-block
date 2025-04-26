@@ -1,4 +1,3 @@
-javascript
 import { POWERUP_ICON_KEYS, AUDIO_KEYS } from './constants.js';
 
 export default class BootScene extends Phaser.Scene {
