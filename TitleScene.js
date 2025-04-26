@@ -8,20 +8,35 @@ export default class TitleScene extends Phaser.Scene {
         this.selectedRate = 50; // ドロップ率 (0-100%)
         this.domElements = []; // DOM要素管理用
         this.currentBgm = null; // BGM管理用
+        this.titleLogo = null; // ★ロゴオブジェクトを保持するプロパティ追加
      }
 
     create() {
         console.log("TitleScene Create Start");
         const w = this.scale.width;
         const h = this.scale.height;
-        this.cameras.main.setBackgroundColor('#222'); // 暗めの背景色
+       // this.cameras.main.setBackgroundColor('#222'); // 暗めの背景色
+       // --- ▼ 背景画像を設定 ▼ ---
+       this.add.image(w / 2, h / 2, 'titleBg') // 背景画像を表示
+       .setOrigin(0.5, 0.5) // 中心基準
+       .setDisplaySize(w, h); // 画面全体に表示 (アスペクト比は無視)
+       // もしアスペクト比を維持したい場合は resizeBackground のような処理が必要
+   // --- ▲ 背景画像を設定 ▲ ---
 
         // タイトルBGM再生
         this.playTitleBgm();
 
+         // --- ▼ ロゴ画像を表示 ▼ ---
+        // 初期位置は画面上部外側 (アニメーションで落とすため)
+        this.titleLogo = this.add.image(w / 2, -200, 'titleLogo') // Y座標を画面外に
+            .setOrigin(0.5, 0.5); // 中心基準
+        // サイズ調整が必要な場合は .setScale() などを使う
+        // 例: this.titleLogo.setScale(0.8);
+        // --- ▲ ロゴ画像を表示 ▲ ---
+
         // タイトルテキスト
-        this.add.text(w / 2, h * 0.15, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        this.add.text(w / 2, h * 0.25, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
+        //this.add.text(w / 2, h * 0.15, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
+       // this.add.text(w / 2, h * 0.25, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
 
         // --- ハチャメチャ度設定UI (DOM要素を使用) ---
         const sliderContainer = document.createElement('div');
@@ -93,7 +108,7 @@ export default class TitleScene extends Phaser.Scene {
         sliderContainer.appendChild(rateDiv);
 
         // DOM要素をPhaserに追加
-        const domElement = this.add.dom(w / 2, h * 0.5, sliderContainer).setOrigin(0.5);
+        const domElement = this.add.dom(w / 2, h * 0.6, sliderContainer).setOrigin(0.5);
         this.domElements.push(domElement); // 破棄用に保持
 
         // スライダーイベントリスナー
@@ -110,7 +125,7 @@ export default class TitleScene extends Phaser.Scene {
         const buttonStyle = { fontSize: '32px', fill: '#fff', backgroundColor: '#555', padding: { x: 20, y: 10 } };
         const buttonHoverStyle = { fill: '#ff0' }; // ホバー時の色
 
-        const startButton = this.add.text(w / 2, h * 0.75, 'ゲーム開始', buttonStyle)
+        const startButton = this.add.text(w / 2, h * 0.85, 'ゲーム開始', buttonStyle)
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true }) // カーソル変更
             .on('pointerover', () => { startButton.setStyle(buttonHoverStyle) })

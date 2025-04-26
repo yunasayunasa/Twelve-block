@@ -22,6 +22,12 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('gameBackground', 'assets/gamebackground.jpg');
         this.load.image('gameBackground2', 'assets/gamebackground2.jpg');
         this.load.image('gameBackground3', 'assets/gamebackground3.jpg');
+        // --- ▼ ロゴとタイトル背景の読み込みを追加 ▼ ---
+    this.load.image('titleLogo', 'assets/Title_logo.png'); // ロゴ画像
+    this.load.image('titleBg', 'assets/Titlebg.jpg');   // タイトル背景画像
+    console.log("Loading title assets: titleLogo, titleBg");
+    // --- ▲ ロゴとタイトル背景の読み込みを追加 ▲ ---
+
 
         // --- 音声読み込み ---
         console.log("Loading audio files (all as .mp3)...");
