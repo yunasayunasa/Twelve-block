@@ -1,4 +1,3 @@
-
 import { VAJRA_GAUGE_MAX, POWERUP_ICON_KEYS, POWERUP_TYPES, DROP_POOL_UI_ICON_SIZE, DROP_POOL_UI_SPACING, UI_BOTTOM_OFFSET } from './constants.js';
 
 export default class UIScene extends Phaser.Scene {

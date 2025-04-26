@@ -5,49 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>十二神将ブロック崩し</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; } /* 中央寄せのため変更 */
-        #phaser-game-container { width: 100vw; height: 100vh; position: relative; } /* コンテナを画面全体に */
-        canvas + div { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; /* DOM要素コンテナも全画面に */ }
-        canvas + div > div { pointer-events: auto; /* スライダー等は触れるように */ }
-
-        /* --- ▼ ローダーCSSを追加 ▼ --- */
-        #loader-container {
-            position: absolute; /* ゲームコンテナの上に表示 */
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex; /* Flexboxで中央寄せ */
-            justify-content: center;
-            align-items: center;
-            background-color: rgba(0, 0, 0, 0.8); /* 半透明の黒背景 */
-            z-index: 9999; /* 最前面に */
-        }
-        #loader {
-            border: 8px solid #f3f3f3; /* Light grey */
-            border-top: 8px solid #3498db; /* Blue */
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite; /* 回転アニメーション */
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        /* --- ▲ ローダーCSSを追加 ▲ --- */
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #000; }
+        #phaser-game-container { width: 100vw; height: 100vh; } /* コンテナを画面全体に */
+        /* スライダーなどのDOM要素がゲーム画面上に来るように */
+        canvas + div { position: absolute; top: 0; left: 0; pointer-events: none; /* デフォルトでは触れない */ }
+        canvas + div > div { pointer-events: auto; /* コンテナ自体は触れるように */ }
     </style>
 </head>
 <body>
-    <!-- ▼ ローダー要素を追加 ▼ -->
-    <div id="loader-container">
-        <div id="loader"></div>
-    </div>
-    <!-- ▲ ローダー要素を追加 ▲ -->
-
     <div id="phaser-game-container"></div>
 
+    <!-- Phaserライブラリの読み込み (CDNまたはローカルパス) -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+
+    <!-- 分割したメインのJSファイルをモジュールとして読み込む -->
     <script type="module" src="main.js"></script>
+
+    <!-- 以前の <script src="game.js"></script> は削除 -->
 </body>
 </html>
