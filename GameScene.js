@@ -967,7 +967,7 @@ export default class GameScene extends Phaser.Scene {
                 speed: { min: 30, max: 80 }, // ★速度を少し遅くする
                 angle: { min: 0, max: 360 },
                 gravityY: 0, // ★重力をなくす
-                scale: { start: 1, end: 0.5 }, // ★少し大きめに表示し、最後まで見えるようにする
+                scale: { start: 1, end: 0.7 }, // ★少し大きめに表示し、最後まで見えるようにする
                 quantity: 15, // ★量を少し増やす
                 blendMode: 'NORMAL',
                 emitting: false
