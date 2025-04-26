@@ -24,10 +24,11 @@ export default class TitleScene extends Phaser.Scene {
                .setDisplaySize(w, h);
             console.log("Background image added."); // ログ追加
 
-            console.log("Attempting to play title BGM..."); // ログ追加
-            this.playTitleBgm(); // BGM再生呼び出し
-            console.log("Title BGM play called (or attempted)."); // ログ追加
-
+            /////
+            //console.log("Attempting to play title BGM..."); // ログ追加
+            //this.playTitleBgm(); // BGM再生呼び出し
+            //console.log("Title BGM play called (or attempted)."); // ログ追加
+///
             console.log("Adding title logo..."); // ログ追加
             this.titleLogo = this.add.image(w / 2, -200, 'titleLogo')
                 .setOrigin(0.5, 0.5);
