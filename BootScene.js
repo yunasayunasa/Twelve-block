@@ -60,6 +60,16 @@ export default class BootScene extends Phaser.Scene {
 
     create() {
         console.log("BootScene Create Start");
+        // --- ▼ ローダー非表示処理を追加 ▼ ---
+        const loaderElement = document.getElementById('loader-container');
+        if (loaderElement) {
+            loaderElement.style.display = 'none';
+            console.log("Loader hidden.");
+        } else {
+            console.warn("Loader element not found.");
+        }
+        // --- ▲ ローダー非表示処理を追加 ▲ ---
+
         // 読み込みが完了したらTitleSceneへ
         this.scene.start('TitleScene');
         console.log("BootScene Create End");
