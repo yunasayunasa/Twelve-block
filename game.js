@@ -310,7 +310,7 @@ class UIScene extends Phaser.Scene {
     deactivateVajraUIDisplay() { if (this.vajraGaugeText) { this.vajraGaugeText.setVisible(false); this.updateDropPoolPosition(); } }
     updateDropPoolDisplay(dropPoolTypes) { if (!this.dropPoolIconsGroup) return; this.dropPoolIconsGroup.clear(true, true); if (!dropPoolTypes || dropPoolTypes.length === 0) { this.updateDropPoolPosition(); return; } dropPoolTypes.forEach((type, index) => { let iconKey = POWERUP_ICON_KEYS[type] || 'whitePixel'; let tintColor = null; if (iconKey === 'whitePixel') { tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc; } const icon = this.add.image(0, 0, iconKey).setDisplaySize(DROP_POOL_UI_ICON_SIZE, DROP_POOL_UI_ICON_SIZE).setOrigin(0, 0.5); if (tintColor !== null) { icon.setTint(tintColor); } else { icon.clearTint(); } this.dropPoolIconsGroup.add(icon); }); this.updateDropPoolPosition(); }
     updateDropPoolPosition() { if (!this.dropPoolIconsGroup || !this.vajraGaugeText) return; const startX = this.vajraGaugeText.visible ? this.vajraGaugeText.x + this.vajraGaugeText.width + 15 : 16; const startY = this.gameHeight - UI_BOTTOM_OFFSET; let currentX = startX; this.dropPoolIconsGroup.getChildren().forEach(icon => { icon.x = currentX; icon.y = startY; currentX += DROP_POOL_UI_ICON_SIZE + DROP_POOL_UI_SPACING; }); }
-} // <-- UIScene クラスの終わり
+} // <-- UIScene 
 
 // --- Phaserゲーム設定 ---
 const config = {
