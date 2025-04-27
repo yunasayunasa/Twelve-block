@@ -537,7 +537,13 @@ export default class GameScene extends Phaser.Scene {
                 const initialVelocityX = Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0], BALL_INITIAL_VELOCITY_X_RANGE[1]);
                 firstBall.setVelocity(initialVelocityX, BALL_INITIAL_VELOCITY_Y);
                 this.isBallLaunched = true;
-                this.sound.play(AUDIO_KEYS.SE_LAUNCH); // 発射音
+                // --- ▼ SE_LAUNCH を try...catch で囲む ▼ ---
+                try {
+                    this.sound.play(AUDIO_KEYS.SE_LAUNCH); // 発射音
+                } catch (error) {
+                    console.error("Error playing SE_LAUNCH:", error);
+                }
+                // --- ▲ SE_LAUNCH を try...catch で囲む ▲ ---
             }
         }
     }
@@ -2050,7 +2056,13 @@ export default class GameScene extends Phaser.Scene {
             this.time.delayedCall(500, this.resetForNewLife, [], this);
         } else {
             console.log("Game Over condition met.");
-            this.sound.play(AUDIO_KEYS.SE_GAME_OVER);
+               // --- ▼ SE_GAME_OVER を try...catch で囲む ▼ ---
+               try {
+                this.sound.play(AUDIO_KEYS.SE_GAME_OVER); // ゲームオーバー音
+            } catch (error) {
+                console.error("Error playing SE_GAME_OVER:", error);
+            }
+            // --- ▲ SE_GAME_OVER を try...catch で囲む ▲ ---
             this.stopBgm();
              // ★★★ ここにゲームオーバー演出を追加可能 ★★★
             this.time.delayedCall(500, this.gameOver, [], this);
@@ -2074,18 +2086,47 @@ export default class GameScene extends Phaser.Scene {
     }
 
     gameOver() {
-        if (this.isGameOver) return;
-        console.log("Executing gameOver sequence.");
-        this.isGameOver = true;
-        this.deactivateMakira(); this.deactivateVajra();
-        if (this.gameOverText) this.gameOverText.setVisible(true);
-        this.physics.pause();
-        if (this.balls) { this.balls.getChildren().forEach(ball => { if (ball.active) { ball.setVelocity(0, 0); if (ball.body) ball.body.enable = false; } }); }
-        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(); }); this.powerUpTimers = {};
-        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
-        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); this.sindaraMergeTimer = null;
-        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); this.sindaraPenetrationTimer = null;
-        if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); this.makiraAttackTimer = null;
+        // --- ▼ gameOver メソッド全体を try...catch で囲む ▼ ---
+        try {
+            if (this.isGameOver) return;
+            console.log("Executing gameOver sequence.");
+            this.isGameOver = true;
+
+            this.deactivateMakira();
+            this.deactivateVajra();
+
+            if (this.gameOverText) this.gameOverText.setVisible(true);
+
+            // 物理演算を停止 (エラーが起きやすい可能性)
+            try {
+                if (this.physics.world.running) { // 実行中か確認
+                    this.physics.pause();
+                    console.log("Physics paused for game over.");
+                } else {
+                    console.log("Physics already paused.");
+                }
+            } catch(e) {
+                 console.error("Error pausing physics in gameOver:", e);
+            }
+
+
+            if (this.balls) { /* ... ボール停止 ... */ }
+            Object.values(this.powerUpTimers).forEach(timer => { /* ... タイマー削除 ... */ });
+            this.powerUpTimers = {};
+            if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); /* ... */
+            if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(); /* ... */
+            if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(); /* ... */
+            if (this.makiraAttackTimer) this.makiraAttackTimer.remove(); /* ... */
+
+        } catch (error) {
+            console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            console.error("Error occurred during gameOver method:", error);
+            console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+             // フォールバックとして、最低限ゲームオーバー状態にする
+             this.isGameOver = true;
+             if (this.gameOverText) this.gameOverText.setVisible(true);
+        }
+        // --- ▲ gameOver メソッド全体を try...catch で囲む ▲ ---
     }
 
     stageClear() {
@@ -2187,4 +2228,4 @@ export default class GameScene extends Phaser.Scene {
         this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
         console.log("GameScene shutdown complete.");
     }
-} // <-- GameScene クラスの終わり
+} // <-- GameScene クラスの終わ
