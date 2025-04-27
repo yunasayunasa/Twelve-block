@@ -2204,7 +2204,16 @@ export default class GameScene extends Phaser.Scene {
         // ★★★ ここにステージクリア演出（画面フラッシュなど）を追加可能 ★★★
 
         this.deactivateMakira(); this.deactivateVajra();
-        try { console.log("[Debug] Attempting to play SE_STAGE_CLEAR..."); /* this.sound.play(AUDIO_KEYS.SE_STAGE_CLEAR); */ console.log("[Temporary] SE_STAGE_CLEAR playback disabled."); } catch (e) { console.error("Error playing SE_STAGE_CLEAR:", e); }
+        // --- ▼ SE_STAGE_CLEAR の再生処理を修正・復活 ▼ ---
+    try {
+        console.log("[Debug] Attempting to play SE_STAGE_CLEAR (stage clear)...");
+        this.sound.add(AUDIO_KEYS.SE_STAGE_CLEAR).play();
+        console.log("SE_STAGE_CLEAR (stage clear) playback attempted via add().play().");
+        // 元のコード: /* this.sound.play(AUDIO_KEYS.SE_STAGE_CLEAR); */
+    } catch (e) {
+        console.error("Error playing SE_STAGE_CLEAR (stage clear):", e);
+    }
+    // --- ▲ SE_STAGE_CLEAR の再生処理を修正・復活 ▲ ---
         this.physics.pause();
         Object.keys(this.powerUpTimers).forEach(key => { if (this.powerUpTimers[key]) { this.powerUpTimers[key].remove(); this.powerUpTimers[key] = null; } });
         if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(); this.sindaraAttractionTimer = null;
