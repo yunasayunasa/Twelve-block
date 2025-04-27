@@ -1373,9 +1373,16 @@ export default class GameScene extends Phaser.Scene {
         // --- エフェクト終了 ---
 
 
-        // 反射音 (コメントアウト中)
-        console.log("[Debug] Attempting to play SE_REFLECT...");
-        try { /* this.sound.play(AUDIO_KEYS.SE_REFLECT); */ console.log("[Temporary] SE_REFLECT playback disabled due to errors."); } catch (error) { /* console.error("[Debug] Error playing SE_REFLECT:", error); */ }
+        // --- ▼ SE_REFLECT の再生処理を修正・復活 ▼ ---
+    console.log("[Debug] Attempting to play SE_REFLECT (paddle)...");
+    try {
+        this.sound.add(AUDIO_KEYS.SE_REFLECT).play();
+        console.log("SE_REFLECT (paddle) playback attempted via add().play().");
+        // 元のコード: /* this.sound.play(AUDIO_KEYS.SE_REFLECT); */
+    } catch (error) {
+        console.error("Error playing SE_REFLECT (paddle):", error);
+    }
+    // --- ▲ SE_REFLECT の再生処理を修正・復活 ▲ ---
 
         // --- パワーアップ関連の処理 ---
         if (ball.getData('lastActivatedPower') === POWERUP_TYPES.BIKARA) {
@@ -1876,8 +1883,16 @@ export default class GameScene extends Phaser.Scene {
             }
              // --- エフェクト終了 ---
 
-             // 反射音 (コメントアウト中)
-            try { /* this.sound.play(AUDIO_KEYS.SE_REFLECT); */ console.log("[Temporary] SE_REFLECT playback disabled due to errors (handleWorldBounds)."); } catch(e) { /* console.error("[Debug] Error playing SE_REFLECT in handleWorldBounds:", e); */ }
+             /// --- ▼ SE_REFLECT の再生処理を修正・復活 ▼ ---
+        console.log("[Debug] Attempting to play SE_REFLECT (wall)...");
+        try {
+            this.sound.add(AUDIO_KEYS.SE_REFLECT).play();
+            console.log("SE_REFLECT (wall) playback attempted via add().play().");
+            // 元のコード: /* this.sound.play(AUDIO_KEYS.SE_REFLECT); */
+        } catch(e) {
+            console.error("Error playing SE_REFLECT (wall):", e);
+        }
+        // --- ▲ SE_REFLECT の再生処理を修正・復活 ▲ ---
 
              // インダラ能力チェック
              if (ball.getData('isIndaraActive') && ball.getData('indaraHomingCount') > 0) {
