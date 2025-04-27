@@ -22,9 +22,15 @@ export default class UIScene extends Phaser.Scene {
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
 
-        // --- UI要素作成 ---
-        const textStyle = { fontSize: '24px', fill: '#fff' }; // 基本テキストスタイル
-        // ライフ表示 (左上)
+         // --- ▼ テキストスタイルにカスタムフォントを指定 ▼ ---
+         const textStyle = {
+            fontSize: '24px',
+            fill: '#fff',
+            fontFamily: 'MyGameFont, sans-serif' // ★ CSSで定義したフォント名 + 予備フォント
+        };
+        // --- ▲ テキストスタイルにカスタムフォントを指定 ▲ ---
+
+        /// ライフ表示 (左上)
         this.livesText = this.add.text(16, 16, 'ライフ: ', textStyle).setOrigin(0, 0);
         // ステージ表示 (上部中央)
         this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ', textStyle).setOrigin(0.5, 0);

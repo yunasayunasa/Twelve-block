@@ -1,5 +1,16 @@
 /* style.css */
 
+/* --- ▼ カスタムフォント定義 ▼ --- */
+@font-face {
+    font-family: 'MyGameFont'; /* ★ PhaserやCSSで使うフォント名を定義 (任意) */
+    src: url('assets/gomarice_sikakusimen.ttf') format('ttf'), /* ★ woff2形式のパス */
+         url('assets/MyCustomFont.woff') format('woff');   /* ★ woff形式があれば追加 (フォールバック用) */
+         /* 他の形式 (ttf, otf) も追加可能ですが、woff/woff2が推奨 */
+    font-weight: normal; /* 通常の太さ */
+    font-style: normal;  /* 通常のスタイル */
+}
+/* --- ▲ カスタムフォント定義 ▲ --- */
+
 /* --- 基本的なページスタイル --- */
 body {
     margin: 0;
