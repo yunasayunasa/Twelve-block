@@ -64,6 +64,7 @@ export default class BossScene extends Phaser.Scene {
         console.log("BossScene Create Start");
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
+        
 
         // 背景
         this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground3')
@@ -149,6 +150,7 @@ export default class BossScene extends Phaser.Scene {
         this.boss = this.physics.add.image(this.gameWidth / 2, 150, 'bossStand')
              .setImmovable(true); // 物理的には動かない
         console.log("Boss object created (initial).");
+        this.updateBossSize(); // ★ サイズ更新用メソッド呼び出し
         // ★ ここにボスの体力、当たり判定設定などを追加
 
         // 子機グループ生成
@@ -246,13 +248,51 @@ export default class BossScene extends Phaser.Scene {
         this.gameWidth = gameSize.width;
         this.gameHeight = gameSize.height;
         this.updatePaddleSize();
+        
         // 背景リサイズ (必要なら)
         // this.resizeBackground();
         // UIシーンにも通知
         if (this.uiScene && this.uiScene.scene.isActive()) {
             this.uiScene.events.emit('gameResize');
         }
+        if (this.boss) { // ボスが存在すれば
+            this.updateBossSize(); // ★ サイズ更新用メソッド呼び出し
+        }
+
     }
+
+    // サイズ更新用メソッド
+updateBossSize() {
+    if (!this.boss || !this.boss.texture || !this.boss.texture.source[0]) return; // 安全チェック
+
+    const texture = this.boss.texture;
+    const originalWidth = texture.source[0].width;
+    const originalHeight = texture.source[0].height;
+
+    const targetWidthRatio = 0.20; // ★ 画面幅の20%
+    const targetBossWidth = this.scale.width * targetWidthRatio;
+    let desiredScale = targetBossWidth / originalWidth;
+    desiredScale = Phaser.Math.Clamp(desiredScale, 0.1, 1.0); // 上下限制限
+
+    this.boss.setScale(desiredScale); // スケール適用
+
+    // 当たり判定調整
+    const hitboxWidth = originalWidth * desiredScale;
+    // 横2x縦4ブロック相当の高さにするための調整 (例)
+    // ブロック1つの幅 = this.scale.width * BRICK_WIDTH_RATIO (constants.jsから)
+    // ボスの当たり判定高さ = ブロック幅 * 4
+    const blockWidth = this.scale.width * 0.095; // 仮: BRICK_WIDTH_RATIOを直接使うか定数インポート
+    const targetHitboxHeightRatio = 4; // 縦4ブロック分
+    const hitboxHeight = blockWidth * targetHitboxHeightRatio;
+
+    // setSizeは中央基準で幅・高さを設定
+    this.boss.body.setSize(hitboxWidth, hitboxHeight);
+    // オフセットは通常不要だが、必要なら調整
+    // this.boss.body.setOffset(offsetX, offsetY);
+
+    console.log(`Boss size updated. Scale: ${desiredScale.toFixed(2)}, Hitbox: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)}`);
+}
+
 
     handlePointerMove(pointer) {
         if (this.playerControlEnabled && !this.isGameOver && this.paddle && this.paddle.active) {
