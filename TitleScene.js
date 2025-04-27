@@ -44,7 +44,7 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
     // --- ▲ テキストタイトル表示を修正 ▲ ---
 
         // --- ハチャメチャ度設定UI ---
-   /*
+   
         const sliderContainer = document.createElement('div');
     sliderContainer.id = 'chaos-slider-container';
     // CSSでスタイルを設定するので、JSでのスタイル設定は最小限に
@@ -128,7 +128,7 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
             this.selectedRate = parseInt(event.target.value);
             rateValueSpan.textContent = this.selectedRate.toString() + '%';
         });
-*/
+
         // --- ▼ ゲーム開始ボタン (インタラクション設定修正) ▼ ---
     const buttonW = 240; const buttonH = 70; const buttonX = w / 2; const buttonY = h * 0.75; const buttonRadius = 15;
     const buttonTextStyle = { fontSize: '36px', fill: '#fff', fontFamily: '"Arial Black", Gadget, sans-serif', shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, stroke: true, fill: true } };
