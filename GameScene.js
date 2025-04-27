@@ -182,7 +182,7 @@ export default class GameScene extends Phaser.Scene {
         this.setupStage();
 
         // ゲームオーバーテキスト (最初は非表示)
-        this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'GAME OVER\nTap to Restart', { fontSize: '48px', fill: '#f00', align: 'center' })
+        this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2, '全滅した...\nタップで戻る', { fontSize: '48px', fill: '#f00', align: 'center' })
             .setOrigin(0.5)
             .setVisible(false)
             .setDepth(1); // 最前面に
