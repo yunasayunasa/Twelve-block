@@ -128,42 +128,54 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
             rateValueSpan.textContent = this.selectedRate.toString() + '%';
         });
 
-        // --- ▼ ゲーム開始ボタン (角丸背景付き・半透明) ▼ ---
+        // --- ▼ ゲーム開始ボタン (インタラクション修正) ▼ ---
     const buttonW = 240; const buttonH = 70; const buttonX = w / 2; const buttonY = h * 0.75; const buttonRadius = 15;
     const buttonTextStyle = { /* ... */ };
+    const buttonNormalAlpha = 0.8; const buttonHoverAlpha = 0.95;
+    const buttonNormalColor = 0xff6347; const buttonHoverColor = 0xff8c00;
 
-    // ★ アルファ値を追加 (例: 0.8 = 80%不透明)
-    const buttonNormalAlpha = 0.8;
-    const buttonHoverAlpha = 0.95; // ホバー時は少し濃くする？
-
-    const buttonNormalColor = 0xff6347; // トマト色
-    const buttonHoverColor = 0xff8c00;  // オレンジ
-
+    // 1. 角丸背景を描画
     const buttonBg = this.add.graphics();
-    // ★ fillStyle にアルファ値を追加
     buttonBg.fillStyle(buttonNormalColor, buttonNormalAlpha);
     buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
-    buttonBg.setInteractive(/* ... */);
 
-    // テキストは変更なし
+    // --- ▼ setInteractive を引数なしで呼び出す ▼ ---
+    buttonBg.setInteractive(); // ヒットエリアの自動検出に任せる
+    // 念のため、inputが有効になったか確認 (trueならOK)
+    console.log("Button background interactive enabled:", buttonBg.input?.enabled);
+    // --- ▲ setInteractive を引数なしで呼び出す ▲ ---
+
+    // 2. テキストを描画
     const startButtonText = this.add.text(buttonX, buttonY, 'ゲーム開始', buttonTextStyle).setOrigin(0.5);
+    // ★ テキスト自体のインタラクションは無効化する
+    startButtonText.disableInteractive();
 
-    // ホバー/アウト時の処理もアルファ値を追加
+    // 3. 背景に対するインタラクションを設定
+    console.log("Adding button event listeners...");
     buttonBg.on('pointerover', () => {
+        console.log("Button pointerover"); // ★ログ追加
         buttonBg.clear();
-        // ★ fillStyle にアルファ値を追加
         buttonBg.fillStyle(buttonHoverColor, buttonHoverAlpha);
         buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
+        this.input.setDefaultCursor('pointer'); // マウスカーソルを指マークに
     });
     buttonBg.on('pointerout', () => {
+        console.log("Button pointerout"); // ★ログ追加
         buttonBg.clear();
-         // ★ fillStyle にアルファ値を追加
         buttonBg.fillStyle(buttonNormalColor, buttonNormalAlpha);
         buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
+        this.input.setDefaultCursor('default'); // マウスカーソルを元に戻す
     });
-    buttonBg.on('pointerdown', () => { /* ... */ });
-    // --- ▲ ゲーム開始ボタン (角丸背景付き・半透明) ▲ ---
-
+    buttonBg.on('pointerdown', () => {
+        console.log("Start button clicked."); // ★これが重要
+        this.sound.play(AUDIO_KEYS.SE_START);
+        this.stopTitleBgm();
+        this.clearDOM();
+        this.scene.start('GameScene', { chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } });
+        this.scene.launch('UIScene');
+    });
+    console.log("Button event listeners added."); // リスナー登録完了ログ
+    // --- ▲ ゲーム開始ボタン (インタラクション修正) ▲ ---
         // シーン終了時の処理を登録
         this.events.on('shutdown', this.shutdownScene, this);
 
