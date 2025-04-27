@@ -115,16 +115,20 @@ export default class GameScene extends Phaser.Scene {
         console.log("GameScene Create Start");
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
-
-        // 背景設定
-        this.cameras.main.setBackgroundColor('#222'); // フォールバック背景色
+    
+        // --- ▼ setBackgroundColor を元のシンプルな呼び出しに戻す ▼ ---
+        // (初回起動時は this.cameras.main が存在するはず)
+        this.cameras.main.setBackgroundColor('#222');
+        // --- ▲ setBackgroundColor を元のシンプルな呼び出しに戻す ▲ ---
+    
+        // --- ▼ 2回目以降のための再初期化ロジックは削除し、初回起動時のコードに戻す ▼ ---
+        // (例: オブジェクトの破棄確認などは不要)
         const initialBgKey = this.getBackgroundKeyForStage(this.currentStage);
         this.bgImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, initialBgKey)
             .setOrigin(0.5, 0.5)
-            .setDepth(-1); // 他のオブジェクトより後ろに
-        this.resizeBackground(); // 初期サイズ合わせ
-
-        // BGM再生/更新
+            .setDepth(-1);
+        this.resizeBackground();
+    
         this.updateBgm();
 
         // 初期UI更新 (UISceneの準備ができてから)
@@ -189,8 +193,9 @@ export default class GameScene extends Phaser.Scene {
         // パワーアップ取得判定
         this.physics.add.overlap(this.paddle, this.powerUps, this.collectPowerUp, null, this);
 
-        // --- 入力イベント ---
-        // ポインター移動 (パドル操作)
+        // 入力イベント (重複防止offは残す)
+    this.input.off('pointermove');
+    this.input.off('pointerdown');
         this.input.on('pointermove', (pointer) => {
             if (!this.isGameOver && this.lives > 0 && this.paddle && !this.isStageClearing) {
                 const targetX = pointer.x;
@@ -208,25 +213,21 @@ export default class GameScene extends Phaser.Scene {
         });
 
         // ポインターダウン (ボール発射 / ゲームオーバーリスタート)
-    this.input.on('pointerdown', () => {
-        console.log("Pointer down event detected."); // ★ログ追加: まずイベントが発生するか
-
-        if (this.isGameOver && this.gameOverText?.visible) {
-            // --- ▼ ゲームオーバー時の処理を明確化 & ログ追加 ▼ ---
-            console.log("Game Over detected on pointer down, attempting to return to title...");
-            try { // ★ returnToTitle 呼び出しも try-catch
-                this.returnToTitle();
-            } catch(e) {
-                 console.error("Error calling returnToTitle from pointerdown:", e);
+        this.input.on('pointerdown', () => {
+            console.log("Pointer down event detected.");
+            if (this.isGameOver && this.gameOverText?.visible) {
+                 console.log("Game Over detected on pointer down, reloading page...");
+                 try {
+                     this.returnToTitle(); // リロード処理を呼び出す
+                 } catch(e) {
+                      console.error("Error calling returnToTitle:", e);
+                 }
+            } else if (this.lives > 0 && !this.isBallLaunched && !this.isStageClearing) {
+                 this.launchBall();
+            } else {
+                 console.log("Pointer down ignored.");
             }
-            // --- ▲ ゲームオーバー時の処理を明確化 & ログ追加 ▲ ---
-        } else if (this.lives > 0 && !this.isBallLaunched && !this.isStageClearing) {
-            // ライフがあり、ボール未発射、ステージクリア中でなければボールを発射
-            this.launchBall();
-        } else {
-             console.log("Pointer down ignored (not game over or cannot launch)."); // ★無視された場合のログ
-        }
-    });
+        });
 
 
         // リサイズイベント
@@ -2236,74 +2237,26 @@ export default class GameScene extends Phaser.Scene {
         this.returnToTitle();
     }
 
-// GameScene.js の returnToTitle メソッド
-
 returnToTitle() {
+    // --- ▼ シーン遷移の代わりにページリロードを実行 ▼ ---
     try {
-        console.log("[ReturnToTitle] Executing returnToTitle...");
-        this.stopBgm();
+        console.log("[ReturnToTitle] Attempting to reload the page...");
+        this.stopBgm(); // BGMは止めておく
 
-        try {
-            if (this.physics.world && !this.physics.world.running) {
-                console.log("[ReturnToTitle] Attempting to resume physics before stopping scene...");
-                this.physics.resume();
-            }
-        } catch (e) {
-            console.warn("[ReturnToTitle] Non-critical error resuming physics:", e.message);
-        }
+        // ★ ページ全体をリロード ★
+        window.location.reload();
 
-        // UISceneの停止は先に行う方が安全
-        try {
-            if (this.scene.isActive('UIScene')) {
-                console.log("[ReturnToTitle] Stopping UIScene...");
-                this.scene.stop('UIScene');
-                console.log("[ReturnToTitle] UIScene stop command sent.");
-            } else {
-                 console.log("[ReturnToTitle] UIScene was not active.");
-            }
-        } catch (e) {
-            console.error("[ReturnToTitle] Error stopping UIScene:", e.message, e.stack);
-        }
+        // リロード後は以下のコードは実行されない
+        // console.log("[ReturnToTitle] Reload command sent.");
 
-        // --- ▼ GameScene の停止と TitleScene の開始を統合 ▼ ---
-        console.log("[ReturnToTitle] Attempting to start TitleScene directly (will stop current scene)...");
-        try {
-            // isGameOverフラグをリセット (シーン再利用に備えるならここで)
-            this.isGameOver = false;
-
-            // ★★★ 直接 TitleScene を開始 ★★★
-            // scene.start は現在のシーンの shutdown をトリガーし、
-            // その後、指定されたシーンの init -> preload -> create を呼び出す
-            this.scene.start('TitleScene');
-
-            // このログは scene.start が呼び出された直後に表示されるが、
-            // 実際のシーン遷移が完了したことを意味するわけではない
-            console.log("[ReturnToTitle] scene.start('TitleScene') command sent.");
-
-        } catch (e) { // scene.start のエラーキャッチ
-             console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-             console.error("[ReturnToTitle] CRITICAL Error DURING scene.start('TitleScene'):");
-             console.error("  Message:", e.message);
-             console.error("  Stack:", e.stack);
-             console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        }
-        // --- ▲ GameScene の停止と TitleScene の開始を統合 ▲ ---
-
-        // delayedCall は不要になったので削除
-        // console.log("[ReturnToTitle] Scheduling TitleScene start...");
-        // this.time.delayedCall(50, () => { ... }, [], this);
-
-        console.log("[ReturnToTitle] returnToTitle execution finished."); // メソッドの同期処理はここまで
-
-    } catch (error) { // returnToTitle全体のcatchブロック
+    } catch (error) {
          console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-         console.error("[ReturnToTitle] CRITICAL Error occurred during returnToTitle method:");
-         console.error("  Message:", error.message);
-         console.error("  Stack:", error.stack);
+         console.error("[ReturnToTitle] CRITICAL Error occurred during returnToTitle (reload):", error);
          console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+         // リロード失敗時のフォールバックは難しい
     }
+    // --- ▲ シーン遷移の代わりにページリロードを実行 ▲ ---
 }
-
 // shutdownScene メソッドは変更なし (scene.start によって自動的に呼ばれる)
 // safeDestroy ヘルパーメソッドも変更なし
     
