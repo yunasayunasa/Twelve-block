@@ -621,8 +621,17 @@ export default class GameScene extends Phaser.Scene {
         if (specialLayoutType === 'wall') {
             // --- 壁レイアウト ---
             console.log(`Generating Special Layout: Wall (Stage ${stage}, Density: ${density.toFixed(3)})`);
-            const exitColTop = Math.floor(actualCols / 2); // 上の出口列
-            const exitColBottom = Math.floor(actualCols / 2); // 下の出口列
+             // --- ▼ 出口の幅を広げる ▼ ---
+            // const exitColTop = Math.floor(actualCols / 2); // 元のコード
+            // const exitColBottom = Math.floor(actualCols / 2); // 元のコード
+            const exitColCenter = Math.floor(actualCols / 2);
+            const exitColStartTop = Math.max(0, exitColCenter - 1); // 中央から左に1つ (最低0列目)
+            const exitColEndTop = Math.min(actualCols - 1, exitColCenter); // 中央 (最低 (列数-1)列目)
+            const exitColStartBottom = exitColStartTop; // 下も同じにする場合
+            const exitColEndBottom = exitColEndTop;
+            console.log(`Wall Exit Top Cols: ${exitColStartTop} to ${exitColEndTop}`);
+            console.log(`Wall Exit Bottom Cols: ${exitColStartBottom} to ${exitColEndBottom}`);
+            // --- ▲ 出口の幅を広げる ▲ ---
             for (let i = 0; i < actualRows; i++) {
                 for (let j = 0; j < actualCols; j++) {
                     const bX = oX + j * (bW + BRICK_SPACING) + bW / 2;
@@ -635,8 +644,12 @@ export default class GameScene extends Phaser.Scene {
                     let isDurable = false;
 
                     const isOuterWall = (i === 0 || i === actualRows - 1 || j === 0 || j === actualCols - 1);
-                    const isExit = (i === 0 && j === exitColTop) || (i === actualRows - 1 && j === exitColBottom);
-
+                    // --- ▼ 出口判定を修正 ▼ ---
+                    // const isExit = (i === 0 && j === exitColTop) || (i === actualRows - 1 && j === exitColBottom); // 元のコード
+                    const isTopExit = (i === 0 && j >= exitColStartTop && j <= exitColEndTop);
+                    const isBottomExit = (i === actualRows - 1 && j >= exitColStartBottom && j <= exitColEndBottom);
+                    const isExit = isTopExit || isBottomExit;
+                    // --- ▲ 出口判定を修正 ▲ ---
                     if (isOuterWall && !isExit) {
                         // 外壁 (出口以外) は破壊不能
                         brickType = 'indestructible';
@@ -680,8 +693,14 @@ export default class GameScene extends Phaser.Scene {
         } else if (specialLayoutType === 's_shape') {
             // --- S字レイアウト ---
             console.log(`Generating Special Layout: S-Shape (Stage ${stage}, Density: ${density.toFixed(3)})`);
-            const wallRow1 = Math.floor(actualRows / 3); // 上の壁の行
-            const wallRow2 = Math.floor(actualRows * 2 / 3); // 下の壁の行
+            // --- ▼ 壁の位置を調整して間隔を広げる ▼ ---
+            // const wallRow1 = Math.floor(actualRows / 3); // 元のコード
+            // const wallRow2 = Math.floor(actualRows * 2 / 3); // 元のコード
+            const gapHeight = 3; // ★ 壁と壁の間の行数（3行分のスペースを確保）
+            const wallRow1 = Math.floor((actualRows - gapHeight) / 2); // 上の壁の位置を少し上げる
+            const wallRow2 = wallRow1 + gapHeight; // 下の壁の位置を wallRow1 から gapHeight 行下に設定
+            console.log(`S-Shape Wall Rows: ${wallRow1} and ${wallRow2} (Gap: ${gapHeight})`);
+            // --- ▲ 壁の位置を調整して間隔を広げる ▲ ---
             const wallLengthCols = Math.floor(actualCols * 2 / 3); // 壁の長さ（列数）
             let generatedDestroyableCount = 0;
 
@@ -696,19 +715,13 @@ export default class GameScene extends Phaser.Scene {
                     let maxHits = 1;
                     let isDurable = false;
 
-                    // S字の壁部分を判定
-                    const isWallPart = (i === wallRow1 && j >= actualCols - wallLengthCols) || // 上の壁（右側）
-                                     (i === wallRow2 && j < wallLengthCols); // 下の壁（左側）
+                    // 壁判定 (wallRow1 と wallRow2 を使う)
+                    const isWallPart = (i === wallRow1 && j >= actualCols - wallLengthCols) || (i === wallRow2 && j < wallLengthCols);
 
                     if (isWallPart) {
-                        brickType = 'indestructible';
-                        brickColor = INDESTRUCTIBLE_BRICK_COLOR;
-                        maxHits = -1;
+                         brickType = 'indestructible'; brickColor = INDESTRUCTIBLE_BRICK_COLOR; maxHits = -1;
                     } else {
-                        // 壁以外の部分
-                        if (Phaser.Math.FloatBetween(0, 1) > density) {
-                            generateBrick = false;
-                        } else {
+                         if (Phaser.Math.FloatBetween(0, 1) > density) { generateBrick = false; } else {
                             const rand = Phaser.Math.FloatBetween(0, 1);
                             if (stage >= 3 && rand < durableRatio) {
                                 brickType = 'durable';
