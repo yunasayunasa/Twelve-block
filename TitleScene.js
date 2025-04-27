@@ -26,11 +26,20 @@ export default class TitleScene extends Phaser.Scene {
         // タイトルBGM再生
         this.playTitleBgm();
 
-        // タイトルテキスト
-        this.add.text(w / 2, h * 0.15, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold',stroke: '#000', // 黒い縁取り
-            strokeThickness: 4  }).setOrigin(0.5);
-        //this.add.text(w / 2, h * 0.25, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
+        // --- ▼ テキストタイトル表示を修正 ▼ ---
+       this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', { // ★ 改行文字 \n を挿入
+        fontSize: '40px',
+        fill: '#fff',
+        fontStyle: 'bold',
+        stroke: '#000',      // 黒い縁取り
+        strokeThickness: 4, // 縁取りの太さ
+        align: 'center'     // ★ 中央揃えを追加 (複数行の場合に有効)
+    }).setOrigin(0.5); // オブジェクト全体の基準点は中央のまま
 
+    // (仮) のテキストは削除またはコメントアウト？ 必要なら残す
+    // this.add.text(w / 2, h * 0.25, '(仮)', { /* ... */ }).setOrigin(0.5);
+    // --- ▲ テキストタイトル表示を修正 ▲ ---
+    
         // --- ハチャメチャ度設定UI (DOM要素を使用) ---
         const sliderContainer = document.createElement('div');
         sliderContainer.style.width = '80%';
