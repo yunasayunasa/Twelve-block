@@ -128,57 +128,41 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
             rateValueSpan.textContent = this.selectedRate.toString() + '%';
         });
 
-        // TitleScene.js の create メソッド内
-// --- ▼ ゲーム開始ボタン (角丸背景付き) ▼ ---
-const buttonW = 240; // ボタンの幅
-const buttonH = 70;  // ボタンの高さ
-const buttonX = w / 2;
-const buttonY = h * 0.75;
-const buttonRadius = 15; // 角の丸み
+        // --- ▼ ゲーム開始ボタン (角丸背景付き・半透明) ▼ ---
+    const buttonW = 240; const buttonH = 70; const buttonX = w / 2; const buttonY = h * 0.75; const buttonRadius = 15;
+    const buttonTextStyle = { /* ... */ };
 
-// スタイル定義 (backgroundColor は削除)
-const buttonTextStyle = {
-    fontSize: '36px',
-    fill: '#fff',
-    fontFamily: '"Arial Black", Gadget, sans-serif',
-    // backgroundColor: '#ff6347', // ★削除
-    // padding は直接設定できないので、テキスト位置で調整
-    shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, stroke: true, fill: true }
-};
-const buttonNormalColor = 0xff6347; // 通常時の色 (トマト色)
-const buttonHoverColor = 0xff8c00;  // ホバー時の色 (オレンジ)
+    // ★ アルファ値を追加 (例: 0.8 = 80%不透明)
+    const buttonNormalAlpha = 0.8;
+    const buttonHoverAlpha = 0.95; // ホバー時は少し濃くする？
 
-// 1. 角丸背景を描画 (Graphicsオブジェクト)
-const buttonBg = this.add.graphics();
-buttonBg.fillStyle(buttonNormalColor, 1); // 通常色で塗りつぶし
-buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius); // 角丸四角形を描画
-buttonBg.setInteractive(new Phaser.Geom.Rectangle(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH), Phaser.Geom.Rectangle.Contains); // 背景に当たり判定を設定
-buttonBg.setCursor = 'pointer'; // ← setCursor は DOM にしかないので、useHandCursor で代用
+    const buttonNormalColor = 0xff6347; // トマト色
+    const buttonHoverColor = 0xff8c00;  // オレンジ
 
-// 2. テキストを描画 (背景の上に)
-const startButtonText = this.add.text(buttonX, buttonY, 'ゲーム開始', buttonTextStyle).setOrigin(0.5);
-
-// 3. 背景に対するインタラクションを設定
-buttonBg.on('pointerover', () => {
-    buttonBg.clear(); // 前の色をクリア
-    buttonBg.fillStyle(buttonHoverColor, 1); // ホバー色で再描画
+    const buttonBg = this.add.graphics();
+    // ★ fillStyle にアルファ値を追加
+    buttonBg.fillStyle(buttonNormalColor, buttonNormalAlpha);
     buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
-});
-buttonBg.on('pointerout', () => {
-    buttonBg.clear();
-    buttonBg.fillStyle(buttonNormalColor, 1); // 通常色で再描画
-    buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
-});
-buttonBg.on('pointerdown', () => {
-    console.log("Start button clicked.");
-    this.sound.play(AUDIO_KEYS.SE_START);
-    this.stopTitleBgm();
-    // 他のUI要素も破棄する必要があるかもしれない
-    this.clearDOM(); // スライダーを消す
-    this.scene.start('GameScene', { chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } });
-    this.scene.launch('UIScene');
-});
-// --- ▲ ゲーム開始ボタン (角丸背景付き) ▲ ---
+    buttonBg.setInteractive(/* ... */);
+
+    // テキストは変更なし
+    const startButtonText = this.add.text(buttonX, buttonY, 'ゲーム開始', buttonTextStyle).setOrigin(0.5);
+
+    // ホバー/アウト時の処理もアルファ値を追加
+    buttonBg.on('pointerover', () => {
+        buttonBg.clear();
+        // ★ fillStyle にアルファ値を追加
+        buttonBg.fillStyle(buttonHoverColor, buttonHoverAlpha);
+        buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
+    });
+    buttonBg.on('pointerout', () => {
+        buttonBg.clear();
+         // ★ fillStyle にアルファ値を追加
+        buttonBg.fillStyle(buttonNormalColor, buttonNormalAlpha);
+        buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
+    });
+    buttonBg.on('pointerdown', () => { /* ... */ });
+    // --- ▲ ゲーム開始ボタン (角丸背景付き・半透明) ▲ ---
 
         // シーン終了時の処理を登録
         this.events.on('shutdown', this.shutdownScene, this);
