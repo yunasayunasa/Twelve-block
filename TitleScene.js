@@ -129,56 +129,86 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
             rateValueSpan.textContent = this.selectedRate.toString() + '%';
         });
 */
-        // --- ▼ ゲーム開始ボタン (インタラクション修正) ▼ ---
+        // --- ▼ ゲーム開始ボタン (インタラクション設定修正) ▼ ---
     const buttonW = 240; const buttonH = 70; const buttonX = w / 2; const buttonY = h * 0.75; const buttonRadius = 15;
-    const buttonTextStyle = { /* ... */ };
+    const buttonTextStyle = { fontSize: '36px', fill: '#fff', fontFamily: '"Arial Black", Gadget, sans-serif', shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, stroke: true, fill: true } };
     const buttonNormalAlpha = 0.8; const buttonHoverAlpha = 0.95;
     const buttonNormalColor = 0xff6347; const buttonHoverColor = 0xff8c00;
 
-    // 1. 角丸背景を描画
+    // 1. 角丸背景を描画 (Graphicsオブジェクト)
     const buttonBg = this.add.graphics();
     buttonBg.fillStyle(buttonNormalColor, buttonNormalAlpha);
     buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
+    // ★★★ buttonBg.setInteractive() は削除 ★★★
 
-    // --- ▼ setInteractive を引数なしで呼び出す ▼ ---
-    buttonBg.setInteractive(); // ヒットエリアの自動検出に任せる
-    // 念のため、inputが有効になったか確認 (trueならOK)
-    console.log("Button background interactive enabled:", buttonBg.input?.enabled);
-    // --- ▲ setInteractive を引数なしで呼び出す ▲ ---
-
-    // 2. テキストを描画
+    // 2. テキストを描画 (背景の上に)
     const startButtonText = this.add.text(buttonX, buttonY, 'ゲーム開始', buttonTextStyle).setOrigin(0.5);
-    // ★ テキスト自体のインタラクションは無効化する
-    startButtonText.disableInteractive();
+    // ★★★ startButtonText をインタラクティブにする ★★★
+    startButtonText.setInteractive({ useHandCursor: true }); // テキストにインタラクションを設定
+    // ★★★ 当たり判定の形状として背景の矩形を使用 (必要に応じて) ★★★
+    // startButtonText.input.hitArea.setTo(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH); // これだと Graphics の形とずれる可能性あり
+    // → Graphics の形状を使う場合は setHitArea を使うのが確実 (Phaser 3.60 以降)
+    // または、より簡単なのは Graphics を直接使うのではなく、コンテナを使う方法
 
-    // 3. 背景に対するインタラクションを設定
-    console.log("Adding button event listeners...");
-    buttonBg.on('pointerover', () => {
-        console.log("Button pointerover"); // ★ログ追加
-        buttonBg.clear();
-        buttonBg.fillStyle(buttonHoverColor, buttonHoverAlpha);
-        buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
-        this.input.setDefaultCursor('pointer'); // マウスカーソルを指マークに
+    // --- ▼ より確実な方法: コンテナを使う ▼ ---
+    // 上記の buttonBg と startButtonText の作成を一旦コメントアウトし、以下のように変更
+
+    /*
+    // 古いコードをコメントアウト
+    const buttonBg = this.add.graphics();
+    buttonBg.fillStyle(buttonNormalColor, buttonNormalAlpha);
+    buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
+    const startButtonText = this.add.text(buttonX, buttonY, 'ゲーム開始', buttonTextStyle).setOrigin(0.5);
+    */
+
+    // コンテナを作成
+    const buttonContainer = this.add.container(buttonX, buttonY);
+
+    // コンテナ内に背景 (Graphics) を追加 (座標はコンテナ基準で 0, 0 が中心になるように)
+    const buttonBg_cont = this.add.graphics();
+    buttonBg_cont.fillStyle(buttonNormalColor, buttonNormalAlpha);
+    buttonBg_cont.fillRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, buttonRadius);
+    buttonContainer.add(buttonBg_cont); // コンテナに追加
+
+    // コンテナ内にテキストを追加 (座標はコンテナ基準で 0, 0)
+    const startButtonText_cont = this.add.text(0, 0, 'ゲーム開始', buttonTextStyle).setOrigin(0.5);
+    buttonContainer.add(startButtonText_cont); // コンテナに追加
+
+    // コンテナのサイズを設定してインタラクティブにする
+    buttonContainer.setSize(buttonW, buttonH); // コンテナ自体のサイズを設定
+    buttonContainer.setInteractive({ useHandCursor: true }); // コンテナをインタラクティブに
+
+    console.log("Button container interactive enabled:", buttonContainer.input?.enabled);
+
+    // 3. コンテナに対するインタラクションを設定
+    console.log("Adding button container event listeners...");
+    buttonContainer.on('pointerover', () => {
+        console.log("Button pointerover");
+        buttonBg_cont.clear(); // コンテナ内の背景をクリア
+        buttonBg_cont.fillStyle(buttonHoverColor, buttonHoverAlpha);
+        buttonBg_cont.fillRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, buttonRadius);
+        // this.input.setDefaultCursor('pointer'); // setInteractive で設定済み
     });
-    buttonBg.on('pointerout', () => {
-        console.log("Button pointerout"); // ★ログ追加
-        buttonBg.clear();
-        buttonBg.fillStyle(buttonNormalColor, buttonNormalAlpha);
-        buttonBg.fillRoundedRect(buttonX - buttonW / 2, buttonY - buttonH / 2, buttonW, buttonH, buttonRadius);
-        this.input.setDefaultCursor('default'); // マウスカーソルを元に戻す
+    buttonContainer.on('pointerout', () => {
+        console.log("Button pointerout");
+        buttonBg_cont.clear();
+        buttonBg_cont.fillStyle(buttonNormalColor, buttonNormalAlpha);
+        buttonBg_cont.fillRoundedRect(-buttonW / 2, -buttonH / 2, buttonW, buttonH, buttonRadius);
+        // this.input.setDefaultCursor('default');
     });
-    buttonBg.on('pointerdown', () => {
-        console.log("Start button clicked."); // ★これが重要
+    buttonContainer.on('pointerdown', () => {
+        console.log("Start button clicked."); // ★ これが出るか？
         this.sound.play(AUDIO_KEYS.SE_START);
         this.stopTitleBgm();
-      //  this.clearDOM();
+        this.clearDOM();
         this.scene.start('GameScene', { chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } });
         this.scene.launch('UIScene');
     });
-    console.log("Button event listeners added."); // リスナー登録完了ログ
-    // --- ▲ ゲーム開始ボタン (インタラクション修正) ▲ ---
-        // シーン終了時の処理を登録
-    //    this.events.on('shutdown', this.shutdownScene, this);
+    console.log("Button container event listeners added.");
+    // --- ▲ ゲーム開始ボタン (コンテナ使用) ▲ ---
+        
+    // シーン終了時の処理を登録
+        this.events.on('shutdown', this.shutdownScene, this);
 
         console.log("TitleScene Create End");
     }
