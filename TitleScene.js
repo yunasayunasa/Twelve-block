@@ -42,10 +42,11 @@ export default class TitleScene extends Phaser.Scene {
 
         // --- ハチャメチャ度設定UI ---
     const sliderContainer = document.createElement('div');
+    sliderContainer.id = 'chaos-slider-container';
     // CSSでスタイルを設定するので、JSでのスタイル設定は最小限に
     // sliderContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'; // CSSで設定するので削除可能
-    sliderContainer.style.width = '80%'; // 必要なら残す
-    sliderContainer.style.maxWidth = '400px'; // 必要なら残す
+    //sliderContainer.style.width = '80%'; // 必要なら残す
+   // sliderContainer.style.maxWidth = '400px'; // 必要なら残す
     // sliderContainer.style.color = 'white'; // CSSで設定
     // sliderContainer.style.fontSize = '18px'; // CSSで設定
     // sliderContainer.style.padding = '15px'; // CSSで設定
