@@ -2236,72 +2236,81 @@ export default class GameScene extends Phaser.Scene {
         this.returnToTitle();
     }
 
-    returnToTitle() {
-        // --- ▼ returnToTitle 全体を try...catch で囲む ▼ ---
+// GameScene.js の returnToTitle メソッド
+
+returnToTitle() {
+    try {
+        console.log("[ReturnToTitle] Executing returnToTitle...");
+        this.stopBgm();
+
         try {
-            console.log("Executing returnToTitle..."); // ★ログ追加: メソッド開始
-            this.stopBgm(); // BGM停止
-    
-            // 物理演算が停止していたら再開 (シーン停止時にエラーになることがあるため)
-            try {
-                if (this.physics.world && !this.physics.world.running) {
-                    console.log("Attempting to resume physics before stopping scene...");
-                    this.physics.resume();
-                }
-            } catch (e) {
-                console.warn("Non-critical error resuming physics before returning to title:", e);
+            if (this.physics.world && !this.physics.world.running) {
+                console.log("[ReturnToTitle] Attempting to resume physics before stopping scene...");
+                this.physics.resume();
             }
-    
-            // UISceneがアクティブなら停止
-            try {
-                if (this.scene.isActive('UIScene')) {
-                    console.log("Stopping UIScene...");
-                    this.scene.stop('UIScene');
-                    console.log("UIScene stopped command sent.");
-                } else {
-                     console.log("UIScene was not active.");
-                }
-            } catch (e) {
-                console.error("Error stopping UIScene:", e);
-            }
-    
-            // GameScene自体を停止
-            try {
-                console.log("Stopping GameScene...");
-                // isGameOver フラグをリセットしておく (シーンが再利用される場合に備える)
-                this.isGameOver = false;
-                this.scene.stop(); // 自分自身を停止
-                console.log("GameScene stop command sent.");
-            } catch (e) {
-                console.error("Error stopping GameScene:", e);
-            }
-    
-            // 少し待ってからTitleSceneを開始 (シーン遷移の安定化のため)
-            console.log("Scheduling TitleScene start...");
-            this.time.delayedCall(50, () => {
-                try {
-                    if (this.scene && this.scene.manager) {
-                        console.log("Starting TitleScene now...");
-                        this.scene.start('TitleScene');
-                        console.log("TitleScene start command sent.");
-                    } else {
-                        console.error("Scene Manager not found, cannot return to Title.");
-                    }
-                } catch(e) {
-                     console.error("Error starting TitleScene in delayedCall:", e);
-                }
-            }, [], this);
-    
-            console.log("returnToTitle execution finished (async start scheduled)."); // ★ログ追加: メソッド終了
-    
-        } catch (error) {
-             console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-             console.error("CRITICAL Error occurred during returnToTitle method:", error);
-             console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-             // ここでエラーが起きると復帰が難しい場合がある
+        } catch (e) {
+            console.warn("[ReturnToTitle] Non-critical error resuming physics:", e.message);
         }
-        // --- ▲ returnToTitle 全体を try...catch で囲む ▲ ---
+
+        try {
+            if (this.scene.isActive('UIScene')) {
+                console.log("[ReturnToTitle] Stopping UIScene...");
+                this.scene.stop('UIScene');
+                console.log("[ReturnToTitle] UIScene stop command sent.");
+            } else {
+                 console.log("[ReturnToTitle] UIScene was not active.");
+            }
+        } catch (e) {
+            console.error("[ReturnToTitle] Error stopping UIScene:", e.message, e.stack);
+        }
+
+        try {
+            console.log("[ReturnToTitle] Stopping GameScene...");
+            this.isGameOver = false;
+            this.scene.stop();
+            console.log("[ReturnToTitle] GameScene stop command sent.");
+        } catch (e) {
+            console.error("[ReturnToTitle] Error stopping GameScene:", e.message, e.stack);
+        }
+
+        console.log("[ReturnToTitle] Scheduling TitleScene start...");
+        // --- ▼ delayedCall 内のログとエラーチェックを強化 ▼ ---
+        this.time.delayedCall(50, () => {
+            console.log("[DelayedCall] Now attempting to start TitleScene..."); // ★実行開始ログ
+            try {
+                // シーンマネージャーと対象シーンのキーが存在するか最終確認
+                if (this.scene && this.scene.manager && this.scene.manager.keys.TitleScene) {
+                    console.log("[DelayedCall] Scene manager OK. Calling scene.start('TitleScene').");
+                    // ★★★ シーン開始呼び出し ★★★
+                    this.scene.start('TitleScene');
+                    console.log("[DelayedCall] scene.start('TitleScene') CALLED successfully."); // ★呼び出し成功ログ
+                } else {
+                    // シーンを開始できない場合のエラー詳細
+                    console.error("[DelayedCall] Cannot start TitleScene: Scene Manager or Key invalid.");
+                    if (!this.scene) console.error(" -> this.scene is invalid.");
+                    else if (!this.scene.manager) console.error(" -> this.scene.manager is invalid.");
+                    else if (!this.scene.manager.keys.TitleScene) console.error(" -> 'TitleScene' key not found in scene manager keys:", Object.keys(this.scene.manager.keys));
+                }
+            } catch (e) { // scene.start 自体のエラーキャッチ
+                 console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                 console.error("[DelayedCall] CRITICAL Error DURING scene.start('TitleScene'):");
+                 console.error("  Message:", e.message);
+                 console.error("  Stack:", e.stack);
+                 console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            }
+        }, [], this);
+        // --- ▲ delayedCall 内のログとエラーチェックを強化 ▲ ---
+
+        console.log("[ReturnToTitle] returnToTitle execution finished (async start scheduled).");
+
+    } catch (error) { // returnToTitle全体のcatchブロック
+         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+         console.error("[ReturnToTitle] CRITICAL Error occurred during returnToTitle method:");
+         console.error("  Message:", error.message);
+         console.error("  Stack:", error.stack);
+         console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     }
+}
     
 
     // GameScene.js の shutdownScene メソッド（再掲、エラー詳細化版）
