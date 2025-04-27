@@ -1948,21 +1948,54 @@ export default class GameScene extends Phaser.Scene {
         }
     }
 
+    // GameScene.js の deactivateVajra メソッド
+
     deactivateVajra() {
+        console.log("[Shutdown] Entering deactivateVajra method..."); // 開始ログ
         if (this.isVajraSystemActive) {
-            console.log("Deactivating Vajra system.");
+            console.log("[Shutdown] Deactivating Vajra system flag.");
             this.isVajraSystemActive = false;
         }
         this.vajraGauge = 0;
-        this.events.emit('deactivateVajraUI');
-        this.balls.getMatching('active', true).forEach(ball => {
-            ball.getData('activePowers').delete(POWERUP_TYPES.VAJRA);
-            if (ball.getData('lastActivatedPower') === POWERUP_TYPES.VAJRA) {
-                const remainingPowers = Array.from(ball.getData('activePowers'));
-                ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null);
+        // UIイベントの発行は try-catch で囲むとより安全
+        try {
+            this.events.emit('deactivateVajraUI');
+            console.log("[Shutdown] Vajra gauge reset and UI event emitted.");
+        } catch (e) {
+            console.error("[Shutdown] Error emitting deactivateVajraUI event:", e.message);
+        }
+
+
+        // ▼▼▼ this.balls が存在し、かつ有効かチェック ▼▼▼
+        if (this.balls && this.balls.scene && this.balls.active) { // グループが存在し、シーンに属し、アクティブか確認
+            console.log("[Shutdown] Attempting to clear Vajra status from active balls...");
+            try {
+                 // getMatching('active', true) はエラーの原因になりうるので、childrenを直接ループする方が安全かもしれない
+                 const children = this.balls.getChildren();
+                 console.log(`[Shutdown] Iterating over ${children.length} balls in group for Vajra clear.`);
+                 children.forEach(ball => {
+                    // ループ中にボールが破棄される可能性も考慮
+                    if (ball && ball.active && ball.getData) { // ボールが有効か、getDataが存在するか確認
+                        try {
+                             ball.getData('activePowers')?.delete(POWERUP_TYPES.VAJRA); // Optional chaining
+                             if (ball.getData('lastActivatedPower') === POWERUP_TYPES.VAJRA) {
+                                 const remainingPowers = Array.from(ball.getData('activePowers') || []); // Ensure iterable
+                                 ball.setData('lastActivatedPower', remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null);
+                             }
+                             this.updateBallAppearance(ball);
+                        } catch (ballError) {
+                             console.error("[Shutdown] Error processing individual ball in deactivateVajra:", ballError.message, ball?.name); // エラー発生時のボール情報も出す
+                        }
+                    }
+                 });
+                 console.log("[Shutdown] Finished clearing Vajra status from balls.");
+            } catch (e) {
+                 console.error("[Shutdown] Error during ball iteration in deactivateVajra:", e.message, e.stack);
             }
-            this.updateBallAppearance(ball);
-        });
+        } else {
+            console.log("[Shutdown] this.balls group does not exist or is inactive, skipping ball status clear.");
+        }
+         console.log("[Shutdown] Exiting deactivateVajra method."); // 終了ログ
     }
 
     activateMakira() {
