@@ -2271,30 +2271,83 @@ export default class GameScene extends Phaser.Scene {
     }
     
 
+    // GameScene.js の shutdownScene メソッドを修正
+
     shutdownScene() {
-        console.log("GameScene shutdown initiated.");
-        this.stopBgm();
-        if (this.scale) this.scale.off('resize', this.handleResize, this);
-        if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this);
-        this.events.off('shutdown', this.shutdownScene, this);
-        this.events.removeAllListeners();
-        if (this.input) this.input.removeAllListeners();
-        this.isGameOver = false; this.isStageClearing = false;
-        this.deactivateMakira(); this.deactivateVajra();
-        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); }); this.powerUpTimers = {};
-        if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null;
-        if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null;
-        if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null;
-        if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
-        if (this.bgImage) { try { this.bgImage.destroy(); } catch (e) { console.error("Error destroying bgImage:", e); } this.bgImage = null; }
-        if (this.balls) { try { this.balls.destroy(true); } catch (e) { console.error("Error destroying balls group:", e); } this.balls = null; }
-        if (this.bricks) { try { this.bricks.destroy(true); } catch (e) { console.error("Error destroying bricks group:", e); } this.bricks = null; }
-        if (this.powerUps) { try { this.powerUps.destroy(true); } catch (e) { console.error("Error destroying powerUps group:", e); } this.powerUps = null; }
-        if (this.paddle) { try { this.paddle.destroy(); } catch (e) { console.error("Error destroying paddle:", e); } this.paddle = null; }
-        if (this.familiars) { try { this.familiars.destroy(true); } catch (e) { console.error("Error destroying familiars group:", e); } this.familiars = null; }
-        if (this.makiraBeams) { try { this.makiraBeams.destroy(true); } catch (e) { console.error("Error destroying makiraBeams group:", e); } this.makiraBeams = null; }
-        if (this.gameOverText) { try { this.gameOverText.destroy(); } catch (e) { console.error("Error destroying gameOverText:", e); } this.gameOverText = null; }
-        this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
-        console.log("GameScene shutdown complete.");
+        try { // shutdownScene全体もtry-catchで囲む
+            console.log("GameScene shutdown initiated.");
+            this.stopBgm();
+
+            // --- イベントリスナー解除など ---
+            if (this.scale) this.scale.off('resize', this.handleResize, this);
+            if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this);
+            // 自分自身のshutdownイベントはoffしない方が良い場合がある（Phaserが管理するため）
+            // this.events.off('shutdown', this.shutdownScene, this);
+            this.events.removeAllListeners(); // 他のカスタムイベントは解除
+            if (this.input) this.input.removeAllListeners();
+
+            // --- 状態リセット ---
+            this.isGameOver = false;
+            this.isStageClearing = false;
+            this.deactivateMakira();
+            this.deactivateVajra();
+
+            // --- タイマー解除 ---
+            console.log("Removing timers...");
+            Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); });
+            this.powerUpTimers = {};
+            if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null;
+            if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null;
+            if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null;
+            if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
+            console.log("Timers removed.");
+
+            // --- オブジェクト破棄 (詳細ログ付き) ---
+            console.log("Destroying GameObjects in shutdown...");
+
+            if (this.bgImage && this.bgImage.scene) { console.log("Attempting to destroy bgImage..."); try { this.bgImage.destroy(); console.log("bgImage destroyed."); } catch (e) { console.error("Error destroying bgImage:", e); } } else { console.log("bgImage was null or already destroyed."); }
+            this.bgImage = null; // 参照解除
+
+            if (this.balls && this.balls.scene) { console.log("Attempting to destroy balls group..."); try { this.balls.destroy(true); console.log("balls group destroyed."); } catch (e) { console.error("Error destroying balls group:", e); } } else { console.log("balls group was null or already destroyed."); }
+            this.balls = null;
+
+            if (this.bricks && this.bricks.scene) { console.log("Attempting to destroy bricks group..."); try { this.bricks.destroy(true); console.log("bricks group destroyed."); } catch (e) { console.error("Error destroying bricks group:", e); } } else { console.log("bricks group was null or already destroyed."); }
+            this.bricks = null;
+
+            if (this.powerUps && this.powerUps.scene) { console.log("Attempting to destroy powerUps group..."); try { this.powerUps.destroy(true); console.log("powerUps group destroyed."); } catch (e) { console.error("Error destroying powerUps group:", e); } } else { console.log("powerUps group was null or already destroyed."); }
+            this.powerUps = null;
+
+            if (this.paddle && this.paddle.scene) { console.log("Attempting to destroy paddle..."); try { this.paddle.destroy(); console.log("paddle destroyed."); } catch (e) { console.error("Error destroying paddle:", e); } } else { console.log("paddle was null or already destroyed."); }
+            this.paddle = null;
+
+            if (this.familiars && this.familiars.scene) { console.log("Attempting to destroy familiars group..."); try { this.familiars.destroy(true); console.log("familiars group destroyed."); } catch (e) { console.error("Error destroying familiars group:", e); } } else { console.log("familiars group was null or already destroyed."); }
+            this.familiars = null;
+
+            if (this.makiraBeams && this.makiraBeams.scene) { console.log("Attempting to destroy makiraBeams group..."); try { this.makiraBeams.destroy(true); console.log("makiraBeams group destroyed."); } catch (e) { console.error("Error destroying makiraBeams group:", e); } } else { console.log("makiraBeams group was null or already destroyed."); }
+            this.makiraBeams = null;
+
+            if (this.gameOverText && this.gameOverText.scene) { console.log("Attempting to destroy gameOverText..."); try { this.gameOverText.destroy(); console.log("gameOverText destroyed."); } catch (e) { console.error("Error destroying gameOverText:", e); } } else { console.log("gameOverText was null or already destroyed."); }
+            this.gameOverText = null;
+
+            console.log("Finished destroying GameObjects.");
+
+            // --- コライダー参照クリア ---
+            this.ballPaddleCollider = null;
+            this.ballBrickCollider = null;
+            this.ballBrickOverlap = null;
+            this.ballBallCollider = null;
+            this.makiraBeamBrickOverlap = null;
+            console.log("Collider references cleared.");
+
+            console.log("GameScene shutdown complete."); // ★ このログが出るか？
+
+        } catch (error) {
+            console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            console.error("CRITICAL Error occurred during shutdownScene method:", error);
+            console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+             // エラーが起きても、最低限参照はnullにしておく
+             this.bgImage = null; this.balls = null; this.bricks = null; this.powerUps = null; this.paddle = null; this.familiars = null; this.makiraBeams = null; this.gameOverText = null;
+             this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
+        }
     }
 } // <-- GameScene クラスの終わ
