@@ -548,13 +548,17 @@ export default class GameScene extends Phaser.Scene {
                 const initialVelocityX = Phaser.Math.Between(BALL_INITIAL_VELOCITY_X_RANGE[0], BALL_INITIAL_VELOCITY_X_RANGE[1]);
                 firstBall.setVelocity(initialVelocityX, BALL_INITIAL_VELOCITY_Y);
                 this.isBallLaunched = true;
-                // --- ▼ SE_LAUNCH を try...catch で囲む ▼ ---
+                // --- ▼ SE_LAUNCH の再生方法を変更 ▼ ---
                 try {
-                    this.sound.play(AUDIO_KEYS.SE_LAUNCH); // 発射音
+                    // 元のコード: this.sound.play(AUDIO_KEYS.SE_LAUNCH);
+                    // 変更後: add() でサウンドインスタンスを作成してから play()
+                    this.sound.add(AUDIO_KEYS.SE_LAUNCH).play();
+                    console.log("SE_LAUNCH playback attempted via add().play()."); // ログ変更
                 } catch (error) {
+                    // エラーログは引き続き表示させる
                     console.error("Error playing SE_LAUNCH:", error);
                 }
-                // --- ▲ SE_LAUNCH を try...catch で囲む ▲ ---
+                // --- ▲ SE_LAUNCH の再生方法を変更 ▲ ---
             }
         }
     }
