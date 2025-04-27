@@ -14,14 +14,22 @@ export default class TitleScene extends Phaser.Scene {
         console.log("TitleScene Create Start");
         const w = this.scale.width;
         const h = this.scale.height;
-        this.cameras.main.setBackgroundColor('#222'); // 暗めの背景色
+        //this.cameras.main.setBackgroundColor('#222'); // 暗めの背景色
+        // --- ▼ 背景画像を gameBackground3 に変更 ▼ ---
+       this.add.image(w / 2, h / 2, 'gameBackground3') // キーを 'gameBackground3' に変更
+       .setOrigin(0.5, 0.5)
+       .setDisplaySize(w, h); // 画面全体に表示 (アスペクト比無視)
+       // 必要なら setScale や resizeBackground のような処理を追加
+   // --- ▲ 背景画像を gameBackground3 に変更 ▲ ---
+
 
         // タイトルBGM再生
         this.playTitleBgm();
 
         // タイトルテキスト
-        this.add.text(w / 2, h * 0.15, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold' }).setOrigin(0.5);
-        this.add.text(w / 2, h * 0.25, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
+        this.add.text(w / 2, h * 0.15, '十二神将ブロック崩し', { fontSize: '40px', fill: '#fff', fontStyle: 'bold',stroke: '#000', // 黒い縁取り
+            strokeThickness: 4  }).setOrigin(0.5);
+        //this.add.text(w / 2, h * 0.25, '(仮)', { fontSize: '20px', fill: '#fff' }).setOrigin(0.5);
 
         // --- ハチャメチャ度設定UI (DOM要素を使用) ---
         const sliderContainer = document.createElement('div');
