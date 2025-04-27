@@ -44,7 +44,8 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
     // --- ▲ テキストタイトル表示を修正 ▲ ---
 
         // --- ハチャメチャ度設定UI ---
-    const sliderContainer = document.createElement('div');
+   /*
+        const sliderContainer = document.createElement('div');
     sliderContainer.id = 'chaos-slider-container';
     // CSSでスタイルを設定するので、JSでのスタイル設定は最小限に
     // sliderContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'; // CSSで設定するので削除可能
@@ -127,7 +128,7 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
             this.selectedRate = parseInt(event.target.value);
             rateValueSpan.textContent = this.selectedRate.toString() + '%';
         });
-
+*/
         // --- ▼ ゲーム開始ボタン (インタラクション修正) ▼ ---
     const buttonW = 240; const buttonH = 70; const buttonX = w / 2; const buttonY = h * 0.75; const buttonRadius = 15;
     const buttonTextStyle = { /* ... */ };
@@ -170,14 +171,14 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
         console.log("Start button clicked."); // ★これが重要
         this.sound.play(AUDIO_KEYS.SE_START);
         this.stopTitleBgm();
-        this.clearDOM();
+      //  this.clearDOM();
         this.scene.start('GameScene', { chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } });
         this.scene.launch('UIScene');
     });
     console.log("Button event listeners added."); // リスナー登録完了ログ
     // --- ▲ ゲーム開始ボタン (インタラクション修正) ▲ ---
         // シーン終了時の処理を登録
-        this.events.on('shutdown', this.shutdownScene, this);
+    //    this.events.on('shutdown', this.shutdownScene, this);
 
         console.log("TitleScene Create End");
     }
