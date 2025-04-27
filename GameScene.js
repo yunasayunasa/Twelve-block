@@ -1017,13 +1017,18 @@ export default class GameScene extends Phaser.Scene {
         // ブロック本体の無効化（エフェクト生成後に行う）
         brick.disableBody(true, true);
 
-        console.log("[Debug] Attempting to play SE_DESTROY (simple)...");
-        try {
-             /* this.sound.play(AUDIO_KEYS.SE_DESTROY); */
-             console.log("[Temporary] SE_DESTROY playback disabled due to errors.");
-        } catch (error) {
-            /* console.error("[Debug] Error occurred directly when trying to play SE_DESTROY:", error); */
-        }
+        // --- ▼ SE_DESTROY の再生処理を修正・復活 ▼ ---
+    console.log("[Debug] Attempting to play SE_DESTROY..."); // ログ変更
+    try {
+        // コメントアウト解除 & 再生方法変更
+        this.sound.add(AUDIO_KEYS.SE_DESTROY).play();
+        console.log("SE_DESTROY playback attempted via add().play().");
+        // 元のコード: /* this.sound.play(AUDIO_KEYS.SE_DESTROY); */
+        // 元のログ: console.log("[Temporary] SE_DESTROY playback disabled due to errors.");
+    } catch (error) {
+        console.error("Error playing SE_DESTROY:", error); // エラーログは維持
+    }
+    // --- ▲ SE_DESTROY の再生処理を修正・復活 ▲ ---
 
         // スコア加算など
         this.score += 10;
