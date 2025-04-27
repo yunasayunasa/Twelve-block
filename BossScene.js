@@ -338,17 +338,83 @@ export default class BossScene extends Phaser.Scene {
         // ★★★ ここに ボール vs ボス, ボール vs 子機, ボール vs 攻撃ブロック の Collider/Overlap を追加 ★★★
     }
 
-    hitPaddle(paddle, ball) {
-        if (!paddle || !ball || !ball.active || !ball.body) return;
-        console.log("[BossScene] Ball hit paddle.");
-        let diff = ball.x - paddle.x; /* ...反射計算... */
-        const targetSpeed = NORMAL_BALL_SPEED; /* ...速度設定... */
-        ball.setVelocity(newVelocity.x, newVelocity.y);
-        try { this.sound.add(AUDIO_KEYS.SE_REFLECT).play(); } catch (e) { /*...*/ }
-        // パドルヒットエフェクト
-        try { /* ... エフェクト生成 ... */ } catch (e) { /*...*/ }
-    }
+    // BossScene.js の hitPaddle メソッド
 
+hitPaddle(paddle, ball) {
+    console.log("[hitPaddle] Start"); // ★ 開始ログ
+    try {
+        // オブジェクトの有効性チェック
+        if (!paddle || !paddle.active || !ball || !ball.active || !ball.body || !paddle.body) {
+            console.warn("[hitPaddle] Aborting: Invalid paddle or ball state.");
+            return;
+        }
+        console.log("[hitPaddle] Paddle and ball objects are valid.");
+
+        // --- 反射角度計算 ---
+        console.log("[hitPaddle] Calculating reflection angle...");
+        let diff = ball.x - paddle.x;
+        const maxDiff = paddle.displayWidth / 2;
+        let influence = diff / maxDiff;
+        influence = Phaser.Math.Clamp(influence, -1, 1);
+        const maxVx = NORMAL_BALL_SPEED * 0.8;
+        let newVx = maxVx * influence;
+        const minVy = NORMAL_BALL_SPEED * 0.5;
+        let currentVy = ball.body.velocity.y;
+        let newVy = -Math.abs(currentVy);
+        if (Math.abs(newVy) < minVy) newVy = -minVy;
+        console.log(`[hitPaddle] diff=${diff.toFixed(2)}, influence=${influence.toFixed(2)}, newVx=${newVx.toFixed(2)}, newVy=${newVy.toFixed(2)}`);
+
+        // --- 速度設定 ---
+        const targetSpeed = NORMAL_BALL_SPEED; // ボス戦では速度変化なし
+        const newVelocity = new Phaser.Math.Vector2(newVx, newVy);
+        // ゼロベクトルチェック (念のため)
+        if (newVelocity.lengthSq() === 0) {
+            console.warn("[hitPaddle] Calculated zero velocity! Using default up.");
+            newVelocity.set(0, -1); // デフォルト上向き
+        }
+        newVelocity.normalize().scale(targetSpeed);
+        console.log(`[hitPaddle] Setting velocity to (${newVelocity.x.toFixed(2)}, ${newVelocity.y.toFixed(2)})`);
+        ball.setVelocity(newVelocity.x, newVelocity.y); // ★ ここでエラー？
+        console.log("[hitPaddle] Velocity set.");
+
+        // --- SE再生 ---
+        console.log("[hitPaddle] Attempting to play SE_REFLECT...");
+        try {
+            this.sound.add(AUDIO_KEYS.SE_REFLECT).play();
+             console.log("[hitPaddle] SE_REFLECT playback attempted.");
+        } catch (e) {
+            console.error("[hitPaddle] Error playing SE_REFLECT:", e.message, e.stack);
+        }
+
+        // --- エフェクト生成 ---
+        console.log("[hitPaddle] Attempting to create particle effect...");
+        try {
+            const impactPointY = ball.y + BALL_RADIUS * 0.8;
+            const impactPointX = ball.x;
+            const particles = this.add.particles(0, 0, 'whitePixel', { /* ... エフェクト設定 ... */ });
+            if (particles) { // ★ particles が null でないか確認
+                particles.setParticleTint(0xffffcc);
+                particles.explode(5);
+                this.time.delayedCall(200, () => { if (particles && particles.scene) particles.destroy(); });
+                console.log("[hitPaddle] Particle effect created.");
+            } else {
+                console.error("[hitPaddle] Failed to create particle manager!");
+            }
+        } catch (e) {
+            console.error("[hitPaddle] Error creating particle effect:", e.message, e.stack);
+        }
+
+    } catch (error) { // hitPaddle全体のcatchブロック
+        console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        console.error("[hitPaddle] CRITICAL Error occurred during hitPaddle method:");
+        console.error(" Message:", error.message);
+        console.error(" Stack:", error.stack);
+        console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        // フリーズ回避のため、エラー発生時はボールを強制的に上に飛ばすなど検討？
+        // if (ball && ball.body) ball.setVelocity(0, -NORMAL_BALL_SPEED);
+    }
+    console.log("[hitPaddle] End"); // ★ 終了ログ
+}
     handleWorldBounds(body, up, down, left, right) {
         const ball = body.gameObject;
         if (!ball || !(ball instanceof Phaser.Physics.Arcade.Image) || !this.balls?.contains(ball) || !ball.active) return; // ?.で安全呼び出し
