@@ -2271,83 +2271,115 @@ export default class GameScene extends Phaser.Scene {
     }
     
 
-    // GameScene.js の shutdownScene メソッドを修正
+    // GameScene.js の shutdownScene メソッド（再掲、エラー詳細化版）
 
     shutdownScene() {
-        try { // shutdownScene全体もtry-catchで囲む
-            console.log("GameScene shutdown initiated.");
+        try {
+            console.log("[Shutdown] GameScene shutdown initiated.");
+            console.log("[Shutdown] Stopping BGM...");
             this.stopBgm();
+            console.log("[Shutdown] BGM stopped.");
 
             // --- イベントリスナー解除など ---
-            if (this.scale) this.scale.off('resize', this.handleResize, this);
-            if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this);
-            // 自分自身のshutdownイベントはoffしない方が良い場合がある（Phaserが管理するため）
-            // this.events.off('shutdown', this.shutdownScene, this);
-            this.events.removeAllListeners(); // 他のカスタムイベントは解除
-            if (this.input) this.input.removeAllListeners();
+            console.log("[Shutdown] Removing event listeners...");
+            try {
+                if (this.scale) this.scale.off('resize', this.handleResize, this);
+                if (this.physics.world) this.physics.world.off('worldbounds', this.handleWorldBounds, this);
+                this.events.removeAllListeners();
+                if (this.input) this.input.removeAllListeners();
+                console.log("[Shutdown] Event listeners removed.");
+            } catch (e) {
+                console.error("[Shutdown] Error removing event listeners:", e.message, e.stack);
+            }
 
-            // --- 状態リセット ---
+            // --- 状態リセット & 関連処理停止 ---
+            console.log("[Shutdown] Resetting flags and deactivating systems...");
             this.isGameOver = false;
             this.isStageClearing = false;
-            this.deactivateMakira();
-            this.deactivateVajra();
+            try {
+                console.log("[Shutdown] Deactivating Makira...");
+                this.deactivateMakira();
+                console.log("[Shutdown] Makira deactivated.");
+            } catch(e) {
+                console.error("[Shutdown] Error during deactivateMakira:", e.message, e.stack);
+            }
+             try {
+                console.log("[Shutdown] Deactivating Vajra...");
+                this.deactivateVajra();
+                console.log("[Shutdown] Vajra deactivated.");
+            } catch(e) {
+                console.error("[Shutdown] Error during deactivateVajra:", e.message, e.stack);
+            }
+            console.log("[Shutdown] Flags reset and systems deactivated.");
+
 
             // --- タイマー解除 ---
-            console.log("Removing timers...");
-            Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); });
-            this.powerUpTimers = {};
-            if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null;
-            if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null;
-            if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null;
-            if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
-            console.log("Timers removed.");
+            console.log("[Shutdown] Removing timers...");
+             try {
+                Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(false); });
+                this.powerUpTimers = {};
+                if (this.sindaraAttractionTimer) this.sindaraAttractionTimer.remove(false); this.sindaraAttractionTimer = null;
+                if (this.sindaraMergeTimer) this.sindaraMergeTimer.remove(false); this.sindaraMergeTimer = null;
+                if (this.sindaraPenetrationTimer) this.sindaraPenetrationTimer.remove(false); this.sindaraPenetrationTimer = null;
+                if (this.makiraAttackTimer) this.makiraAttackTimer.remove(false); this.makiraAttackTimer = null;
+                console.log("[Shutdown] Timers removed.");
+            } catch (e) {
+                 console.error("[Shutdown] Error removing timers:", e.message, e.stack);
+            }
 
-            // --- オブジェクト破棄 (詳細ログ付き) ---
-            console.log("Destroying GameObjects in shutdown...");
 
-            if (this.bgImage && this.bgImage.scene) { console.log("Attempting to destroy bgImage..."); try { this.bgImage.destroy(); console.log("bgImage destroyed."); } catch (e) { console.error("Error destroying bgImage:", e); } } else { console.log("bgImage was null or already destroyed."); }
-            this.bgImage = null; // 参照解除
+            // --- オブジェクト破棄 (safeDestroyを使用) ---
+            console.log("[Shutdown] Destroying GameObjects...");
+            this.safeDestroy(this.bgImage, "bgImage");
+            this.safeDestroy(this.balls, "balls group", true);
+            this.safeDestroy(this.bricks, "bricks group", true);
+            this.safeDestroy(this.powerUps, "powerUps group", true);
+            this.safeDestroy(this.paddle, "paddle");
+            this.safeDestroy(this.familiars, "familiars group", true);
+            this.safeDestroy(this.makiraBeams, "makiraBeams group", true);
+            this.safeDestroy(this.gameOverText, "gameOverText");
+            console.log("[Shutdown] Finished destroying GameObjects.");
 
-            if (this.balls && this.balls.scene) { console.log("Attempting to destroy balls group..."); try { this.balls.destroy(true); console.log("balls group destroyed."); } catch (e) { console.error("Error destroying balls group:", e); } } else { console.log("balls group was null or already destroyed."); }
-            this.balls = null;
+            // --- オブジェクト参照をnullに設定 ---
+            this.bgImage = null; this.balls = null; this.bricks = null; this.powerUps = null; this.paddle = null; this.familiars = null; this.makiraBeams = null; this.gameOverText = null;
 
-            if (this.bricks && this.bricks.scene) { console.log("Attempting to destroy bricks group..."); try { this.bricks.destroy(true); console.log("bricks group destroyed."); } catch (e) { console.error("Error destroying bricks group:", e); } } else { console.log("bricks group was null or already destroyed."); }
-            this.bricks = null;
-
-            if (this.powerUps && this.powerUps.scene) { console.log("Attempting to destroy powerUps group..."); try { this.powerUps.destroy(true); console.log("powerUps group destroyed."); } catch (e) { console.error("Error destroying powerUps group:", e); } } else { console.log("powerUps group was null or already destroyed."); }
-            this.powerUps = null;
-
-            if (this.paddle && this.paddle.scene) { console.log("Attempting to destroy paddle..."); try { this.paddle.destroy(); console.log("paddle destroyed."); } catch (e) { console.error("Error destroying paddle:", e); } } else { console.log("paddle was null or already destroyed."); }
-            this.paddle = null;
-
-            if (this.familiars && this.familiars.scene) { console.log("Attempting to destroy familiars group..."); try { this.familiars.destroy(true); console.log("familiars group destroyed."); } catch (e) { console.error("Error destroying familiars group:", e); } } else { console.log("familiars group was null or already destroyed."); }
-            this.familiars = null;
-
-            if (this.makiraBeams && this.makiraBeams.scene) { console.log("Attempting to destroy makiraBeams group..."); try { this.makiraBeams.destroy(true); console.log("makiraBeams group destroyed."); } catch (e) { console.error("Error destroying makiraBeams group:", e); } } else { console.log("makiraBeams group was null or already destroyed."); }
-            this.makiraBeams = null;
-
-            if (this.gameOverText && this.gameOverText.scene) { console.log("Attempting to destroy gameOverText..."); try { this.gameOverText.destroy(); console.log("gameOverText destroyed."); } catch (e) { console.error("Error destroying gameOverText:", e); } } else { console.log("gameOverText was null or already destroyed."); }
-            this.gameOverText = null;
-
-            console.log("Finished destroying GameObjects.");
 
             // --- コライダー参照クリア ---
+            console.log("[Shutdown] Clearing collider references...");
             this.ballPaddleCollider = null;
             this.ballBrickCollider = null;
             this.ballBrickOverlap = null;
             this.ballBallCollider = null;
             this.makiraBeamBrickOverlap = null;
-            console.log("Collider references cleared.");
+            console.log("[Shutdown] Collider references cleared.");
 
-            console.log("GameScene shutdown complete."); // ★ このログが出るか？
+            console.log("[Shutdown] GameScene shutdown COMPLETE."); // ★ 完了ログ
 
-        } catch (error) {
-            console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            console.error("CRITICAL Error occurred during shutdownScene method:", error);
-            console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        } catch (error) { // shutdownScene全体のcatchブロック
+            console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            console.error("[Shutdown] CRITICAL Error occurred during shutdownScene method:");
+            console.error(" Message:", error.message); // ★エラーメッセージ
+            console.error(" Stack:", error.stack);     // ★スタックトレース
+            console.error(" Error Object:", error);
+            console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
              // エラーが起きても、最低限参照はnullにしておく
              this.bgImage = null; this.balls = null; this.bricks = null; this.powerUps = null; this.paddle = null; this.familiars = null; this.makiraBeams = null; this.gameOverText = null;
              this.ballPaddleCollider = null; this.ballBrickCollider = null; this.ballBrickOverlap = null; this.ballBallCollider = null; this.makiraBeamBrickOverlap = null;
+        }
+    }
+
+    // オブジェクトを安全に破棄するためのヘルパーメソッド (変更なし)
+    safeDestroy(obj, name, destroyChildren = false) {
+        if (obj && obj.scene) {
+            console.log(`[Shutdown] Attempting to destroy ${name}...`);
+            try {
+                obj.destroy(destroyChildren);
+                console.log(`[Shutdown] ${name} destroyed.`);
+            } catch (e) {
+                console.error(`[Shutdown] Error destroying ${name}:`, e.message, e.stack);
+            }
+        } else {
+            console.log(`[Shutdown] ${name} was null or already destroyed.`);
         }
     }
 } // <-- GameScene クラスの終わ
