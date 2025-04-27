@@ -39,17 +39,18 @@ export default class TitleScene extends Phaser.Scene {
     // (仮) のテキストは削除またはコメントアウト？ 必要なら残す
     // this.add.text(w / 2, h * 0.25, '(仮)', { /* ... */ }).setOrigin(0.5);
     // --- ▲ テキストタイトル表示を修正 ▲ ---
-    
-        // --- ハチャメチャ度設定UI (DOM要素を使用) ---
-        const sliderContainer = document.createElement('div');
-        sliderContainer.style.width = '80%';
-        sliderContainer.style.maxWidth = '400px';
-        sliderContainer.style.color = 'white';
-        sliderContainer.style.fontSize = '18px';
-        sliderContainer.style.backgroundColor = 'rgba(0,0,0,0.6)';
-        sliderContainer.style.padding = '15px';
-        sliderContainer.style.borderRadius = '8px';
-        sliderContainer.style.textAlign = 'left';
+
+        // --- ハチャメチャ度設定UI ---
+    const sliderContainer = document.createElement('div');
+    // CSSでスタイルを設定するので、JSでのスタイル設定は最小限に
+    // sliderContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'; // CSSで設定するので削除可能
+    sliderContainer.style.width = '80%'; // 必要なら残す
+    sliderContainer.style.maxWidth = '400px'; // 必要なら残す
+    // sliderContainer.style.color = 'white'; // CSSで設定
+    // sliderContainer.style.fontSize = '18px'; // CSSで設定
+    // sliderContainer.style.padding = '15px'; // CSSで設定
+    // sliderContainer.style.borderRadius = '8px'; // CSSで設定
+    // sliderContainer.style.textAlign = 'left'; // CSSで設定
 
         // 抽選候補数スライダー
         const countDiv = document.createElement('div');
@@ -123,15 +124,25 @@ export default class TitleScene extends Phaser.Scene {
             rateValueSpan.textContent = this.selectedRate.toString() + '%';
         });
 
-        // --- ゲーム開始ボタン ---
-        const buttonStyle = { fontSize: '32px', fill: '#fff', backgroundColor: '#555', padding: { x: 20, y: 10 } };
-        const buttonHoverStyle = { fill: '#ff0' }; // ホバー時の色
-
-        const startButton = this.add.text(w / 2, h * 0.75, 'ゲーム開始', buttonStyle)
-            .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true }) // カーソル変更
-            .on('pointerover', () => { startButton.setStyle(buttonHoverStyle) })
-            .on('pointerout', () => { startButton.setStyle(buttonStyle) })
+        // --- ゲーム開始ボタン (ポップなスタイル) ---
+    const buttonStyle = {
+        fontSize: '36px',
+        fill: '#fff',
+        fontFamily: '"Arial Black", Gadget, sans-serif',
+        backgroundColor: '#ff6347', // トマト色 (例)
+        padding: { x: 30, y: 15 },
+        // borderRadius は効かない可能性あり
+        shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, stroke: true, fill: true }
+    };
+    const buttonHoverStyle = {
+        fill: '#fff',
+        backgroundColor: '#ff8c00' // オレンジ色 (例)
+    };
+    const startButton = this.add.text(w / 2, h * 0.75, 'ゲーム開始', buttonStyle)
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerover', () => { startButton.setStyle(buttonHoverStyle) })
+        .on('pointerout', () => { startButton.setStyle(buttonStyle) })
             .on('pointerdown', () => {
                 console.log("Start button clicked.");
                 this.sound.play(AUDIO_KEYS.SE_START); // 開始SE
