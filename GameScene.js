@@ -111,66 +111,25 @@ export default class GameScene extends Phaser.Scene {
         console.log("GameScene Preload (nothing to load here usually)");
     }
 
-    // GameScene.js の create メソッド
+    create() {
+        console.log("GameScene Create Start");
+        this.gameWidth = this.scale.width;
+        this.gameHeight = this.scale.height;
 
-create() {
-    console.log("GameScene Create Start");
-    this.gameWidth = this.scale.width;
-    this.gameHeight = this.scale.height;
-
-    // --- ▼ カメラの準備確認と setBackgroundColor の修正 ▼ ---
-    try {
-        console.log("Checking cameras...");
-        // this.cameras.main が存在するか確認してから呼び出す
-        if (this.cameras && this.cameras.main) {
-            console.log("this.cameras.main found. Setting background color.");
-            this.cameras.main.setBackgroundColor('#222'); // フォールバック背景色
-        } else {
-            // カメラがまだ準備できていない場合（2回目以降の起動時に発生する可能性）
-            console.warn("this.cameras.main not available at the beginning of create. Background color will rely on bgImage.");
-            // ここでエラーを発生させずに続行する
-        }
-    } catch (e) {
-        // 念のため try-catch を残す
-        console.error("Error accessing or setting background color:", e.message, e.stack);
-    }
-    // --- ▲ カメラの準備確認と setBackgroundColor の修正 ▲ ---
-
-
-    // 背景画像の設定 (これはカメラがなくても追加はできるはず)
-    const initialBgKey = this.getBackgroundKeyForStage(this.currentStage);
-    console.log(`Adding background image with key: ${initialBgKey}`);
-    try {
-        // 既存のbgImageがあれば破棄 (シーン再利用時のため)
-        if (this.bgImage) {
-             console.log("Destroying previous bgImage...");
-             this.bgImage.destroy();
-             this.bgImage = null;
-        }
+        // 背景設定
+        this.cameras.main.setBackgroundColor('#222'); // フォールバック背景色
+        const initialBgKey = this.getBackgroundKeyForStage(this.currentStage);
         this.bgImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, initialBgKey)
             .setOrigin(0.5, 0.5)
-            .setDepth(-1);
-        this.resizeBackground();
-        console.log("Background image added and resized.");
-    } catch(e) {
-        console.error("Error adding/resizing background image:", e.message, e.stack);
-    }
+            .setDepth(-1); // 他のオブジェクトより後ろに
+        this.resizeBackground(); // 初期サイズ合わせ
 
-
-    // BGM再生/更新
-    try {
-        console.log("Updating BGM...");
+        // BGM再生/更新
         this.updateBgm();
-        console.log("BGM updated.");
-    } catch(e) {
-        console.error("Error updating BGM:", e.message, e.stack);
-    }
 
-
-    // 初期UI更新 (UISceneの準備ができてから)
-    this.time.delayedCall(50, () => {
-        console.log("[Delayed Call] Updating initial UI in UIScene.");
-        try {
+        // 初期UI更新 (UISceneの準備ができてから)
+        this.time.delayedCall(50, () => {
+            console.log("Delayed call: Updating initial UI.");
             if (this.scene.isActive('UIScene')) {
                 this.events.emit('updateLives', this.lives);
                 this.events.emit('updateScore', this.score);
@@ -180,182 +139,104 @@ create() {
                 } else {
                     this.events.emit('deactivateVajraUI');
                 }
-                this.events.emit('updateDropPoolUI', this.stageDropPool);
-                 console.log("[Delayed Call] Initial UI update emitted.");
-            } else {
-                 console.log("[Delayed Call] UIScene not active, skipping UI update.");
+                this.events.emit('updateDropPoolUI', this.stageDropPool); // 初期のドロッププール表示
             }
-        } catch(e) {
-             console.error("[Delayed Call] Error updating UI:", e.message, e.stack);
-        }
-    });
+        });
 
-    // 物理ワールド設定
-    console.log("Setting physics world bounds...");
-    try {
-        this.physics.world.setBoundsCollision(true, true, true, false);
-        // イベントリスナーの重複登録を防ぐ (initでリセットされているはずだが念のため)
-        this.physics.world.off('worldbounds', this.handleWorldBounds, this); // 既存を削除
-        this.physics.world.on('worldbounds', this.handleWorldBounds, this); // 再登録
-        console.log("Physics world bounds set.");
-    } catch(e) {
-         console.error("Error setting physics world bounds:", e.message, e.stack);
-    }
+        // 物理ワールド設定
+        this.physics.world.setBoundsCollision(true, true, true, false); // 上左右の壁と衝突、下は通過
+        // 物理境界イベントリスナー
+        this.physics.world.on('worldbounds', this.handleWorldBounds, this);
 
-
-    // パドル作成
-    console.log("Creating paddle...");
-    try {
-        // 既存のパドルがあれば破棄
-        if (this.paddle) { this.paddle.destroy(); this.paddle = null; }
+        // パドル作成
         this.paddle = this.physics.add.image(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET, 'whitePixel')
-            .setTint(0xffff00)
+            .setTint(0xffff00) // 黄色
             .setImmovable(true)
-            .setData('originalWidthRatio', PADDLE_WIDTH_RATIO);
-        this.updatePaddleSize();
-        console.log("Paddle created.");
-    } catch(e) {
-         console.error("Error creating paddle:", e.message, e.stack);
-    }
+            .setData('originalWidthRatio', PADDLE_WIDTH_RATIO); // サイズ調整用に比率を保持
+        this.updatePaddleSize(); // 初期サイズ設定
 
+        // ボールグループ作成
+        this.balls = this.physics.add.group({
+            bounceX: 1,
+            bounceY: 1,
+            collideWorldBounds: true
+        });
+        // 初期ボール作成 (パドルの上)
+        this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
 
-    // ボールグループ作成 & 初期ボール作成
-    console.log("Creating balls group and initial ball...");
-    try {
-        // 既存のボールグループがあればクリア・破棄
-        if (this.balls) { this.balls.destroy(true); this.balls = null; }
-        this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
-        if (this.paddle && this.paddle.active) { // パドルがあればその上に
-             this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
-        } else { // パドルがない場合 (エラーケース)
-             console.warn("Paddle not found when creating initial ball.");
-             this.createAndAddBall(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET - PADDLE_HEIGHT/2 - BALL_RADIUS);
-        }
-        console.log("Balls group and initial ball created.");
-    } catch(e) {
-         console.error("Error creating balls:", e.message, e.stack);
-    }
+        // ブロックグループ作成 (setupStage内で)
+        this.bricks = this.physics.add.staticGroup(); // 初回は空で作成
 
-
-    // ブロックグループ作成 (setupStage内で初期化されるはずだが念のため)
-    if (!this.bricks) {
-        this.bricks = this.physics.add.staticGroup();
-    } else {
-         this.bricks.clear(true, true); // 既存があればクリア
-    }
-
-    // パワーアップグループ作成
-     if (!this.powerUps) {
+        // パワーアップグループ作成
         this.powerUps = this.physics.add.group();
-    } else {
-         this.powerUps.clear(true, true);
-    }
 
-    // マキラ用グループ作成
-     if (!this.familiars) {
+        // マキラ用グループ作成
         this.familiars = this.physics.add.group();
-    } else {
-         this.familiars.clear(true, true);
-    }
-     if (!this.makiraBeams) {
         this.makiraBeams = this.physics.add.group();
-    } else {
-         this.makiraBeams.clear(true, true);
-    }
 
-    // ステージ初期設定 (ブロック生成、ドロッププール決定)
-    try {
-        console.log("Setting up stage...");
+        // ステージ初期設定 (ブロック生成、ドロッププール決定)
         this.setupStage();
-        console.log("Stage setup complete.");
-    } catch (e) {
-         console.error("Error during setupStage:", e.message, e.stack);
-    }
 
-
-    // ゲームオーバーテキスト (最初は非表示)
-    console.log("Creating game over text...");
-    try {
-        if (this.gameOverText) { this.gameOverText.destroy(); this.gameOverText = null; }
+        // ゲームオーバーテキスト (最初は非表示)
         this.gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2, 'GAME OVER\nTap to Restart', { fontSize: '48px', fill: '#f00', align: 'center' })
             .setOrigin(0.5)
             .setVisible(false)
-            .setDepth(1);
-         console.log("Game over text created.");
-    } catch(e) {
-         console.error("Error creating game over text:", e.message, e.stack);
-    }
+            .setDepth(1); // 最前面に
 
-
-    // 衝突判定設定
-    try {
-        console.log("Setting colliders...");
+        // 衝突判定設定
         this.setColliders();
-        console.log("Colliders set.");
-    } catch (e) {
-         console.error("Error during setColliders:", e.message, e.stack);
-    }
 
-
-    // パワーアップ取得判定
-    console.log("Setting powerup overlap...");
-    try {
-        // 重複登録防止のため、一度 clear した方が安全かもしれないが、通常は大丈夫なはず
+        // パワーアップ取得判定
         this.physics.add.overlap(this.paddle, this.powerUps, this.collectPowerUp, null, this);
-         console.log("Powerup overlap set.");
-    } catch(e) {
-         console.error("Error setting powerup overlap:", e.message, e.stack);
-    }
 
-
-    // --- 入力イベント ---
-    console.log("Setting input listeners...");
-    try {
-        // 既存のリスナーをクリアしてから再登録 (重複防止)
-        this.input.off('pointermove'); // 既存のリスナーを削除
-        this.input.off('pointerdown');
-        this.input.on('pointermove', (pointer) => { /* ... パドル操作 ... */ });
-        this.input.on('pointerdown', () => {
-             console.log("Pointer down event detected.");
-            if (this.isGameOver && this.gameOverText?.visible) {
-                 console.log("Game Over detected on pointer down, attempting to return to title...");
-                 try { this.returnToTitle(); } catch(e) { console.error("Error calling returnToTitle:", e); }
-            } else if (this.lives > 0 && !this.isBallLaunched && !this.isStageClearing) {
-                 this.launchBall();
-            } else {
-                 console.log("Pointer down ignored.");
+        // --- 入力イベント ---
+        // ポインター移動 (パドル操作)
+        this.input.on('pointermove', (pointer) => {
+            if (!this.isGameOver && this.lives > 0 && this.paddle && !this.isStageClearing) {
+                const targetX = pointer.x;
+                const halfWidth = this.paddle.displayWidth / 2;
+                // パドルが画面外に出ないように制限
+                const clampedX = Phaser.Math.Clamp(targetX, halfWidth, this.scale.width - halfWidth);
+                this.paddle.x = clampedX;
+                // ボール発射前はボールもパドルに追従
+                if (!this.isBallLaunched) {
+                    this.balls.getChildren().forEach(ball => {
+                        if (ball.active) ball.x = clampedX;
+                    });
+                }
             }
         });
-         console.log("Input listeners set.");
-    } catch(e) {
-         console.error("Error setting input listeners:", e.message, e.stack);
-    }
+
+        // ポインターダウン (ボール発射 / ゲームオーバーリスタート)
+    this.input.on('pointerdown', () => {
+        console.log("Pointer down event detected."); // ★ログ追加: まずイベントが発生するか
+
+        if (this.isGameOver && this.gameOverText?.visible) {
+            // --- ▼ ゲームオーバー時の処理を明確化 & ログ追加 ▼ ---
+            console.log("Game Over detected on pointer down, attempting to return to title...");
+            try { // ★ returnToTitle 呼び出しも try-catch
+                this.returnToTitle();
+            } catch(e) {
+                 console.error("Error calling returnToTitle from pointerdown:", e);
+            }
+            // --- ▲ ゲームオーバー時の処理を明確化 & ログ追加 ▲ ---
+        } else if (this.lives > 0 && !this.isBallLaunched && !this.isStageClearing) {
+            // ライフがあり、ボール未発射、ステージクリア中でなければボールを発射
+            this.launchBall();
+        } else {
+             console.log("Pointer down ignored (not game over or cannot launch)."); // ★無視された場合のログ
+        }
+    });
 
 
-    // リサイズイベント
-    console.log("Setting resize listener...");
-     try {
-        this.scale.off('resize', this.handleResize, this); // 重複防止
+        // リサイズイベント
         this.scale.on('resize', this.handleResize, this);
-        console.log("Resize listener set.");
-    } catch(e) {
-        console.error("Error setting resize listener:", e.message, e.stack);
-    }
 
-
-    // シーン終了イベント
-    console.log("Setting shutdown listener...");
-    try {
-        this.events.off('shutdown', this.shutdownScene, this); // 重複防止
+        // シーン終了イベント
         this.events.on('shutdown', this.shutdownScene, this);
-        console.log("Shutdown listener set.");
-    } catch(e) {
-        console.error("Error setting shutdown listener:", e.message, e.stack);
+
+        console.log("GameScene Create End");
     }
-
-
-    console.log("GameScene Create End"); // ★ 完了ログ
-}
 
     // ステージ番号に応じた背景画像のキーを返す
     getBackgroundKeyForStage(stage) {
