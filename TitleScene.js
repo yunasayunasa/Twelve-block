@@ -206,7 +206,38 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
     });
     console.log("Button container event listeners added.");
     // --- ▲ ゲーム開始ボタン (コンテナ使用) ▲ ---
-        
+     
+     // --- ▼ ボス直行テストボタンを追加 ▼ ---
+     const testButtonY = buttonY + buttonH + 20; // 開始ボタンの下に配置
+     const testButtonStyle = { fontSize: '24px', fill: '#fff', backgroundColor: '#888', padding: { x: 15, y: 8 } };
+     const testButtonHoverStyle = { fill: '#ff0', backgroundColor: '#aaa'};
+
+     const testButtonText = this.add.text(w / 2, testButtonY, '[TEST] Boss Battle', testButtonStyle)
+         .setOrigin(0.5)
+         .setInteractive({ useHandCursor: true })
+         .on('pointerover', () => testButtonText.setStyle(testButtonHoverStyle))
+         .on('pointerout', () => testButtonText.setStyle(testButtonStyle))
+         .on('pointerdown', () => {
+             console.log("Test Boss Battle button clicked.");
+             this.sound.play(AUDIO_KEYS.SE_START);
+             this.stopTitleBgm();
+             this.clearDOM(); // スライダーを消す
+
+             // テスト用の初期値を設定して BossScene を開始
+             const testData = {
+                 lives: 3, // テスト時のライフ
+                 score: 0, // テスト時のスコア
+                 chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } // カオス設定も引き継ぐ
+             };
+             console.log("Starting BossScene with test data:", testData);
+             this.scene.start('BossScene', testData); // BossSceneへ遷移
+             // ★ BossScene 側で UIScene を launch する必要あり ★
+             // ここで launch すると BossScene より先に UI が表示されてしまう可能性
+             // this.scene.launch('UIScene'); // ← ここでは launch しない
+         });
+     // --- ▲ ボス直行テストボタンを追加 ▲ ---
+
+
     // シーン終了時の処理を登録
         this.events.on('shutdown', this.shutdownScene, this);
 

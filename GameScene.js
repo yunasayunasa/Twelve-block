@@ -2250,29 +2250,37 @@ export default class GameScene extends Phaser.Scene {
         this.currentStage++;
         console.log(`Incrementing stage to ${this.currentStage}`);
 
-        if (this.currentStage > MAX_STAGE) {
-            console.log("Game Complete triggered.");
-            this.gameComplete();
-        } else {
-            this.events.emit('updateStage', this.currentStage);
-            this.updateBgm();
-            const nextBgKey = this.getBackgroundKeyForStage(this.currentStage);
-            if (this.bgImage && this.bgImage.texture.key !== nextBgKey) { this.bgImage.setTexture(nextBgKey); this.resizeBackground(); }
-            console.log("Scheduling next stage setup...");
-            this.time.delayedCall(1000, () => { // ★ この遅延時間でクリア演出を見せる
-                console.log("Executing delayed call for next stage setup.");
-                if (this.isGameOver || !this.scene || !this.scene.isActive()) { console.warn("Next stage setup aborted."); return; }
-                this.isStageClearing = false;
-                console.log("isStageClearing set to false before reset/setup.");
-                try {
-                    console.log("Setting up next stage..."); this.setupStage();
-                    console.log("Resetting for new life (stage transition)..."); this.resetForNewLife();
-                    console.log("Resuming physics..."); this.physics.resume();
-                    console.log("Next stage setup complete.");
-                } catch (e_inner) { console.error("CRITICAL Error during next stage setup:", e_inner); if (!this.isGameOver) { this.returnToTitle(); } }
-            }, [], this);
+        // --- ▼ ステージ遷移処理 (再掲) ▼ ---
+       if (this.currentStage === MAX_STAGE) { // ★ ステージ12になったら
+        console.log("Proceeding to Boss Stage!");
+        this.scene.start('BossScene', { // ★ BossSceneを開始
+            lives: this.lives,
+            score: this.score,
+            chaosSettings: this.chaosSettings // ★ カオス設定も引き継ぐ
+        });
+         // GameScene用のUIは停止 (BossScene側で再起動する想定)
+        if (this.scene.isActive('UIScene')) {
+             this.scene.stop('UIScene');
         }
+    } else if (this.currentStage > MAX_STAGE) {
+        console.log("Game Complete triggered (from stageClear).");
+        this.gameComplete();
+    } else { // ★ 通常ステージクリア
+        this.events.emit('updateStage', this.currentStage);
+        this.updateBgm();
+        const nextBgKey = this.getBackgroundKeyForStage(this.currentStage);
+        if (this.bgImage && this.bgImage.texture.key !== nextBgKey) { this.bgImage.setTexture(nextBgKey); this.resizeBackground(); }
+        console.log("Scheduling next stage setup...");
+        this.time.delayedCall(1000, () => {
+              if (this.isGameOver || !this.scene || !this.scene.isActive()) { return; }
+              this.isStageClearing = false;
+              try {
+                  this.setupStage(); this.resetForNewLife(); this.physics.resume();
+              } catch (e_inner) { if (!this.isGameOver) { this.returnToTitle(); } }
+          }, [], this);
     }
+    // --- ▲ ステージ遷移処理 ▲ ---
+}
 
     gameComplete() {
         console.log("Game Complete!");
