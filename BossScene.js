@@ -269,7 +269,7 @@ updateBossSize() {
     const originalWidth = texture.source[0].width;
     const originalHeight = texture.source[0].height;
 
-    const targetWidthRatio = 0.20; // ★ 画面幅の20%
+    const targetWidthRatio = 0.40; // ★ 画面幅の20%
     const targetBossWidth = this.scale.width * targetWidthRatio;
     let desiredScale = targetBossWidth / originalWidth;
     desiredScale = Phaser.Math.Clamp(desiredScale, 0.1, 1.0); // 上下限制限
