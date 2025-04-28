@@ -626,6 +626,10 @@ update(time, delta) {
     // --- ▼ 攻撃ブロック衝突処理メソッド (実装) ▼ ---
     hitAttackBrick(brick, ball) {
         if (!brick || !brick.active || !ball || !ball.active) return;
+         // ★★★ chaosSettings の値をログに出力 ★★★
+    console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
+    // ★★★ chaosSettings の値をログに出力 ★★★
+
         console.log("Attack brick hit by ball!");
 
         const brickX = brick.x;
