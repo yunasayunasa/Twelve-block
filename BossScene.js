@@ -34,6 +34,7 @@ export default class BossScene extends Phaser.Scene {
         this.bossDefeated = false;
         this.playerControlEnabled = true;
         this.bossMoveTween = null;
+        this.bossAfterImageEmitter = null; // ★ 残像用エミッタのプロパテ
 
         // コライダー参照
         this.ballPaddleCollider = null;
@@ -90,6 +91,7 @@ export default class BossScene extends Phaser.Scene {
         // --- 3. ボス関連オブジェクトの生成 ---
         this.createBoss();
         this.createAttackBricksGroup();
+        this.setupAfterImageEmitter(); // ★ 残像エミッタのセットアップ呼び出
 
         // --- 4. 衝突判定の設定 ---
         this.setColliders();
@@ -326,6 +328,62 @@ startBossMovement() {
     moveToRight();
 
     console.log("Chained boss movement tweens initiated.");
+}
+
+// --- ▼ 残像エミッタ設定メソッド (新規追加) ▼ ---
+setupAfterImageEmitter() {
+    if (this.bossAfterImageEmitter) { this.bossAfterImageEmitter.destroy(); } // 既存があれば破棄
+
+    this.bossAfterImageEmitter = this.add.particles(0, 0, 'whitePixel', { // ★ whitePixel を使う
+        // frame: 'bossStand', // 画像を使う場合はフレーム指定
+        x: { min: -5, max: 5 }, // X座標を少しばらつかせる
+        y: { min: -5, max: 5 }, // Y座標を少しばらつかせる
+        lifespan: 200, // 短い寿命 (ms)
+        speed: 0, // 速度は不要 (その場に残る)
+        scale: { start: this.boss.scale * 0.8, end: 0 }, // ★ ボスのスケールに合わせて開始、小さくなって消える
+        alpha: { start: 0.5, end: 0 }, // 半透明で開始し、消える
+        quantity: 1, // 一度に1つ放出
+        frequency: 50, // 放出頻度 (ms) - 小さいほど頻繁
+        blendMode: 'NORMAL', // NORMALかADDかお好みで
+        tint: 0xCCCCCC, // ★ 残像の色 (例: 少し暗い白、ボスの色に合わせても良い)
+        emitting: false // ★ updateで追従させるので最初は止めておく
+    });
+    this.bossAfterImageEmitter.setDepth(this.boss.depth - 1); // ボスより後ろに表示
+    console.log("After image emitter created.");
+}
+// --- ▲ 残像エミッタ設定メソッド ▲ ---
+
+
+update(time, delta) {
+    if (this.isGameOver || this.bossDefeated) {
+         // ゲーム終了時は残像エミッタを停止
+         if (this.bossAfterImageEmitter && this.bossAfterImageEmitter.emitting) {
+             this.bossAfterImageEmitter.stop();
+         }
+        return;
+    }
+
+    // --- ▼ 残像エミッタの位置をボスに追従 & 放出制御 ▼ ---
+    if (this.bossAfterImageEmitter && this.boss && this.boss.body) { // エミッタとボスが存在するか確認
+        // ボスの物理ボディが動いている（速度がある）時だけ残像を出す
+        const bossVelocityX = Math.abs(this.boss.body.velocity.x); // ボスの現在のX速度（Tween中も物理速度はあるはず）
+        const threshold = 10; // 速度がこの値より大きい時だけ放出
+
+        if (bossVelocityX > threshold && !this.bossAfterImageEmitter.emitting) {
+            // 動き始めたら放出開始
+            this.bossAfterImageEmitter.start();
+        } else if (bossVelocityX <= threshold && this.bossAfterImageEmitter.emitting) {
+            // 止まったら放出停止
+            this.bossAfterImageEmitter.stop();
+        }
+
+        // エミッタ自体の位置をボスの中心に合わせる
+        this.bossAfterImageEmitter.setPosition(this.boss.x, this.boss.y);
+    }
+    // --- ▲ 残像エミッタの位置をボスに追従 & 放出制御 ▲ ---
+    this.updateBallFall();
+    this.updateAttackBricks();
+    // updateOrbiters は削除済み
 }
 
 
@@ -650,6 +708,9 @@ startBossMovement() {
         this.safeDestroy(this.attackBricks, "attackBricks group", true);
         this.safeDestroy(this.gameOverText, "gameOverText");
         console.log("[Shutdown] Finished destroying GameObjects.");
+        this.safeDestroy(this.bossAfterImageEmitter, "bossAfterImageEmitter"); // ★ エミッタも破棄
+        // ...
+        this.bossAfterImageEmitter = null; // 参照クリア
         // 参照クリア
         this.paddle = null; this.balls = null; this.boss = null; /*this.orbiters = null;*/ this.attackBricks = null; this.gameOverText = null;
         this.uiScene = null; this.ballPaddleCollider = null; this.ballBossCollider = null; /*this.ballOrbiterCollider = null;*/ this.ballAttackBrickCollider = null;
