@@ -12,6 +12,11 @@ import {
 // ★ ボス体力の定数を追加 (任意)
 const BOSS_MAX_HEALTH = 5;
 const BOSS_SCORE = 1000; // ボス撃破スコア
+// ★ ボスの動きに関する定数を追加 (調整用)
+const BOSS_PATH_CENTER_Y = 180; // 8の字の中心Y座標
+const BOSS_PATH_RADIUS_X = 150; // 8の字の横方向の半径（広がり具合）
+const BOSS_PATH_RADIUS_Y = 50;  // 8の字の縦方向の半径（上下の揺れ幅）
+const BOSS_MOVE_DURATION = 8000; // 8の字を一周する時間 (ミリ秒)
 
 export default class BossScene extends Phaser.Scene {
     constructor() {
@@ -155,12 +160,47 @@ export default class BossScene extends Phaser.Scene {
        console.log("Initializing boss elements...");
        this.boss = this.physics.add.image(this.gameWidth / 2, 150, 'bossStand')
             .setImmovable(true);
+
+            // ★ パスの開始点を計算 (8の字の中心の少し左)
+        const startX = this.gameWidth / 2 - BOSS_PATH_RADIUS_X;
+        const startY = BOSS_PATH_CENTER_Y;
+
+        this.boss = this.physics.add.image(startX, startY, 'bossStand') // ★ 初期位置をパスの開始点に
        // ★★★ ボスに体力を設定 ★★★
        this.boss.setData('health', BOSS_MAX_HEALTH);
        this.boss.setData('maxHealth', BOSS_MAX_HEALTH); // 最大体力も保持 (体力バー用など)
        this.boss.setData('isInvulnerable', false); // ★ 無敵状態フラグ (ダメージ後などに使用)
        console.log(`Boss created with health: ${this.boss.getData('health')}`);
        this.updateBossSize(); // ★ サイズと当たり判定を設定 (既存のメソッド呼び出し)
+
+       // --- ▼ 8の字パスを作成 ▼ ---
+       const path = new Phaser.Curves.Path(startX, startY); // 開始点
+       // 右の円 (楕円)
+       path.ellipseTo(BOSS_PATH_RADIUS_X, BOSS_PATH_RADIUS_Y, 180, 360, false, 0); // 半径X, 半径Y, 開始角度, 終了角度, 時計回りか, 回転
+       // 左の円 (楕円) - 反対方向
+       path.ellipseTo(BOSS_PATH_RADIUS_X, BOSS_PATH_RADIUS_Y, 180, 360, true, 0); // 時計回りを true に
+       // --- ▲ 8の字パスを作成 ▲ ---
+
+       // --- ▼ パスフォロワーを設定して追従開始 ▼ ---
+        // this.boss.pathFollower = this.add.follower(path, startX, startY, 'bossStand'); // 物理を使わない場合
+        this.boss.pathFollower = this.physics.add.follower(path, startX, startY, 'bossStand'); // 物理エンジンを使う場合
+        this.boss.pathFollower.setVisible(false); // フォロワー自体は見えなくて良い
+
+        // ボス本体をフォロワーに追従させる設定
+        this.physics.world.enable(this.boss); // 物理ボディを確認
+        this.boss.body.setAllowGravity(false); // 重力の影響を受けないように
+
+        // 追従を開始
+        this.boss.pathFollower.startFollow({
+            positionOnPath: true, // パス上の位置にオブジェクトを配置
+            duration: BOSS_MOVE_DURATION, // 一周の時間
+            repeat: -1, // 無限ループ
+            rotateToPath: false, // パスの向きに合わせて回転しない
+            verticalAdjust: true // Y座標をパスに合わせる
+            // ease: 'Linear' // 一定速度
+        });
+        console.log("Boss path following started.");
+        // --- ▲ パスフォロワーを設定して追従開始 ▲ ---
 
        // 子機グループ生成 (中身はまだ)
        this.orbiters = this.physics.add.group({ immovable: true });
@@ -686,6 +726,8 @@ hitPaddle(paddle, ball) {
         this.safeDestroy(this.attackBricks, "attackBricks group", true);
         this.safeDestroy(this.bossContainer, "bossContainer");
         this.safeDestroy(this.gameOverText, "gameOverText");
+        this.safeDestroy(this.boss.pathFollower, "boss path follower"); // ★ フォロワーも破棄
+        // ...
 
         // 参照クリア
         this.paddle = null; this.balls = null; this.boss = null; this.orbiters = null; this.attackBricks = null; this.bossContainer = null; this.gameOverText = null;
