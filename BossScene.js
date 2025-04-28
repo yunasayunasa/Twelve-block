@@ -4,7 +4,7 @@ import {
     PADDLE_WIDTH_RATIO, PADDLE_HEIGHT, PADDLE_Y_OFFSET, BALL_RADIUS, PHYSICS_BALL_RADIUS,
     BALL_INITIAL_VELOCITY_Y, BALL_INITIAL_VELOCITY_X_RANGE, NORMAL_BALL_SPEED, AUDIO_KEYS, MAX_STAGE, POWERUP_TYPES,
     POWERUP_ICON_KEYS, // ビカラ状態確認用にインポート
-    POWERUP_TYPES // ビカラ状態確認用にインポート 
+    
     // // SE_REFLECT用にPOWERUP_TYPESもインポート
     // 他にも BossScene で使う定数があれば追加
 } from './constants.js';
