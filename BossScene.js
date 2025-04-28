@@ -283,58 +283,40 @@ export default class BossScene extends Phaser.Scene {
     }
 
     spawnAttackBrick() {
-        console.log("Spawning attack brick...");
-        let spawnX;
-        const spawnY = -30; // ★ 画面上端より少し上から出現させる
+        // ... (生成位置決定ロジック spawnX, spawnY) ...
 
-        if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE) {
-            spawnX = Phaser.Math.Between(30, this.gameWidth - 30);
-        } else {
-            if (this.boss && this.boss.active) { spawnX = this.boss.x; }
-            else { spawnX = this.gameWidth / 2; }
-        }
-
-        // --- ▼ テクスチャと表示の確認 ▼ ---
-        const brickTexture = this.textures.exists('attackBrick') ? 'attackBrick' : 'whitePixel';
-        console.log(`[Spawn Debug] Using texture: ${brickTexture}`); // ★ どのテクスチャを使っているかログ
+        // --- ▼ attackBrick テクスチャを使うように修正 ▼ ---
+        // ★ テクスチャキーを 'attackBrick' に固定 (読み込み前提)
+        //    もし読み込めなかった場合のフォールバックは create でチェックする方が良いかも
+        const brickTexture = 'attackBrick';
+        console.log(`[Spawn Debug] Using texture: ${brickTexture}`);
 
         const attackBrick = this.attackBricks.create(spawnX, spawnY, brickTexture);
 
         if (attackBrick) {
             // --- ▼ 見た目の調整 ▼ ---
-            const desiredScale = 3.0; // 例: 80%スケール (この値を調整)
+            const desiredScale = 0.8; // ★ 画像に合わせた適切なスケールに調整
             attackBrick.setScale(desiredScale);
 
-            if (brickTexture === 'whitePixel') {
-                attackBrick.setTint(0xcc99ff); // 例: 紫系
-            } else {
-                attackBrick.clearTint();
-            }
-            // attackBrick.setDepth(...); // 通常不要
-            // --- ▲ 見た目の調整 ▲ ---
-
-             // ★ Depth を強制的に手前にしてみる
-             attackBrick.setDepth(50);
-             console.log(`[Spawn Debug] Depth set to 50`);
+            // ★ Tint設定は attackBrick 画像を使うので不要 → 削除
+            // if (brickTexture === 'whitePixel') {
+            //     attackBrick.setTint(0xcc99ff);
+            // } else {
+            //     attackBrick.clearTint();
+            // }
+            attackBrick.clearTint(); // 念のためクリア
 
             // --- ▼ 当たり判定を表示サイズに合わせる ▼ ---
             try {
-                // body が利用可能になるのを待つ必要は通常ないが、念のためチェック
                 if (attackBrick.body) {
-                    // ★ setDisplaySizeではなく、実際の表示サイズを使う ★
+                    // 表示サイズに合わせて当たり判定を設定
                     attackBrick.body.setSize(attackBrick.displayWidth, attackBrick.displayHeight);
-                    // setSize は中央基準なので、オフセットは通常(0,0)でOK
-                    // 必要なら attackBrick.body.setOffset(...) で微調整
+                    // 必要ならオフセット調整
                     console.log(`Attack brick body size set to: ${attackBrick.displayWidth.toFixed(0)}x${attackBrick.displayHeight.toFixed(0)}`);
-                } else {
-                     console.warn("Attack brick body not ready for size setting immediately.");
-                     // body が遅れて生成される場合、タイマーで再設定するなどの対策が必要な場合がある
-                     // this.time.delayedCall(1, () => { /* 再設定処理 */ });
-                }
-            } catch (e) {
-                 console.error("Error setting attack brick body size:", e);
-            }
+                } else { console.warn("Attack brick body not ready for size setting."); }
+            } catch (e) { console.error("Error setting attack brick body size:", e); }
             // --- ▲ 当たり判定を表示サイズに合わせる ▲ ---
+
             // 落下速度など
             attackBrick.setVelocityY(ATTACK_BRICK_VELOCITY_Y);
             attackBrick.body.setAllowGravity(false);
