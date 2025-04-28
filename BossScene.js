@@ -182,24 +182,40 @@ export default class BossScene extends Phaser.Scene {
        // --- ▲ 8の字パスを作成 ▲ ---
 
        // --- ▼ パスフォロワーを設定して追従開始 ▼ ---
-        // this.boss.pathFollower = this.add.follower(path, startX, startY, 'bossStand'); // 物理を使わない場合
-        this.boss.pathFollower = this.physics.add.follower(path, startX, startY, 'bossStand'); // 物理エンジンを使う場合
-        this.boss.pathFollower.setVisible(false); // フォロワー自体は見えなくて良い
+        // this.boss.pathFollower = this.physics.add.follower(path, startX, startY, 'bossStand'); // ← 誤り
+        // ★★★ this.add.follower を使う ★★★
+        this.boss.pathFollower = this.add.follower(path, startX, startY, 'bossStand');
+        // ★★★ physics ではなく add を使う ★★★
 
-        // ボス本体をフォロワーに追従させる設定
-        this.physics.world.enable(this.boss); // 物理ボディを確認
-        this.boss.body.setAllowGravity(false); // 重力の影響を受けないように
+        // フォロワー自体は非表示にする
+        if (this.boss.pathFollower) { // 作成されたか確認
+            this.boss.pathFollower.setVisible(false);
+        } else {
+            console.error("Failed to create path follower!");
+            // ここで処理を中断するか、フォールバックを検討
+            return; // 例: createを中断
+        }
 
-        // 追従を開始
-        this.boss.pathFollower.startFollow({
-            positionOnPath: true, // パス上の位置にオブジェクトを配置
-            duration: BOSS_MOVE_DURATION, // 一周の時間
-            repeat: -1, // 無限ループ
-            rotateToPath: false, // パスの向きに合わせて回転しない
-            verticalAdjust: true // Y座標をパスに合わせる
-            // ease: 'Linear' // 一定速度
-        });
-        console.log("Boss path following started.");
+        // ボス本体の物理設定 (これは必要)
+        this.physics.world.enable(this.boss);
+        if (this.boss.body) { // body が存在するか確認
+             this.boss.body.setAllowGravity(false);
+        } else {
+             console.error("Boss body not found after enabling physics!");
+        }
+
+
+        // 追従を開始 (pathFollower が存在する場合のみ)
+        if (this.boss.pathFollower) {
+            this.boss.pathFollower.startFollow({
+                positionOnPath: true,
+                duration: BOSS_MOVE_DURATION,
+                repeat: -1,
+                rotateToPath: false,
+                verticalAdjust: true
+            });
+            console.log("Boss path following started.");
+        }
         // --- ▲ パスフォロワーを設定して追従開始 ▲ ---
 
        // 子機グループ生成 (中身はまだ)
