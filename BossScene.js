@@ -346,11 +346,11 @@ setupAfterImageEmitter() {
         lifespan: 200, // 短い寿命 (ms)
         speed: 0, // 速度は不要 (その場に残る)
         scale: { start: this.boss.scale * 0.8, end: 0 }, // ★ ボスのスケールに合わせて開始、小さくなって消える
-        alpha: { start: 0.5, end: 0 }, // 半透明で開始し、消える
-        quantity: 1, // 一度に1つ放出
+        alpha: { start: 0.8, end: 0 }, // 半透明で開始し、消える
+        quantity: 3, // 一度に1つ放出
         frequency: 50, // 放出頻度 (ms) - 小さいほど頻繁
         blendMode: 'NORMAL', // NORMALかADDかお好みで
-        tint: 0xCCCCCC, // ★ 残像の色 (例: 少し暗い白、ボスの色に合わせても良い)
+        tint: 0xfffff, // ★ 残像の色 (例: 少し暗い白、ボスの色に合わせても良い)
         emitting: false // ★ updateで追従させるので最初は止めておく
     });
     this.bossAfterImageEmitter.setDepth(this.boss.depth - 1); // ボスより後ろに表示
