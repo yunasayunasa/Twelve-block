@@ -559,7 +559,8 @@ update(time, delta) {
         this.safeDestroy(this.ballPaddleCollider, "ballPaddleCollider");
         this.safeDestroy(this.ballBossCollider, "ballBossCollider");
         // this.safeDestroy(this.ballOrbiterCollider, "ballOrbiterCollider"); // 削除
-        this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider");
+        this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider",
+        "paddlePowerUpOverlap"); // ★ 追加
 
         // ボール vs パドル
         if (this.paddle && this.balls) { this.ballPaddleCollider = this.physics.add.collider(this.paddle, this.balls, this.hitPaddle, null, this); }
@@ -583,7 +584,19 @@ update(time, delta) {
             );
             console.log("[BossScene] Ball-AttackBrick collider added.");
         } else { console.warn("[BossScene] Cannot set Ball-AttackBrick collider."); }
-    }
+    // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
+    if (this.paddle && this.powerUps) {
+        this.paddlePowerUpOverlap = this.physics.add.overlap(
+            this.paddle,
+            this.powerUps,
+            this.collectPowerUp, // ★ アイテム取得処理
+            null,
+            this
+        );
+        console.log("[BossScene] Paddle-PowerUp overlap added.");
+   } else { console.warn("[BossScene] Cannot set Paddle-PowerUp overlap."); }
+}
+// --- ▲ setColliders メソッド修正 ▲ ---
 
     
 
@@ -636,7 +649,124 @@ update(time, delta) {
         if (currentHealth <= 0) { this.defeatBoss(boss); }
     }
 
-    // hitOrbiter(orbiter, ball) メソッド削除
+    // --- ▼ 攻撃ブロック衝突処理メソッド (実装) ▼ ---
+    hitAttackBrick(brick, ball) {
+        if (!brick || !brick.active || !ball || !ball.active) return;
+        console.log("Attack brick hit by ball!");
+
+        const brickX = brick.x;
+        const brickY = brick.y;
+        const brickColor = brick.tintTopLeft; // Tintから色を取得 (whitePixelの場合)
+
+        // --- 破壊エフェクト (GameScene流用) ---
+        try {
+            const particles = this.add.particles(0, 0, 'whitePixel', {
+                frame: 0, x: brickX, y: brickY, lifespan: 500, speed: { min: 80, max: 150 },
+                angle: { min: 0, max: 360 }, gravityY: 100, scale: { start: 0.7, end: 0 },
+                quantity: 12, blendMode: 'NORMAL', emitting: false
+            });
+           if(particles) { particles.setParticleTint(brickColor || 0xcccccc); particles.explode(12); this.time.delayedCall(600, () => { if(particles.scene) particles.destroy();});}
+        } catch (e) { console.error("Error creating attack brick destroy effect:", e); }
+
+        // --- 破壊SE (GameScene流用) ---
+        try {
+            this.sound.add(AUDIO_KEYS.SE_DESTROY).play();
+             console.log("SE_DESTROY playback attempted for attack brick.");
+        } catch (e) { console.error("Error playing SE_DESTROY:", e); }
+
+        // --- ブロックを破壊 ---
+        brick.destroy(); // destroy() はグループからも削除する
+
+        // --- アイテムドロップ判定 ---
+        if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_ITEM_DROP_RATE) {
+            // ドロップするアイテムを決定 (カオス設定に基づいてプールを作成)
+            const possibleDrops = [...ALL_POSSIBLE_POWERUPS];
+            const shuffledPool = Phaser.Utils.Array.Shuffle(possibleDrops);
+            // カオス設定の数だけ候補を選ぶ (GameSceneのsetupStage参考)
+            const currentDropPool = shuffledPool.slice(0, this.chaosSettings.count);
+
+            if (currentDropPool.length > 0) {
+                const dropType = Phaser.Utils.Array.GetRandom(currentDropPool);
+                console.log(`Dropping item: ${dropType}`);
+                this.dropSpecificPowerUp(brickX, brickY, dropType); // アイテムドロップ実行
+            } else {
+                 console.log("No items in drop pool based on chaos settings.");
+            }
+        }
+    }
+    // --- ▲ 攻撃ブロック衝突処理メソッド ▲ ---
+
+    // --- ▼ アイテムドロップメソッド (GameSceneから移植・修正) ▼ ---
+    dropSpecificPowerUp(x, y, type) {
+        if (!type) { console.warn("Attempted to drop powerup with no type."); return; }
+        if (!this.powerUps) { console.error("PowerUps group does not exist!"); return; } // グループ確認
+
+        let textureKey = POWERUP_ICON_KEYS[type] || 'whitePixel';
+        let displaySize = POWERUP_SIZE;
+        let tintColor = null;
+        if (textureKey === 'whitePixel') { tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc; } // BAISRAVA特別対応
+
+        console.log(`[BossScene] Dropping power up ${type} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+        try {
+            const powerUp = this.powerUps.create(x, y, textureKey);
+            if (powerUp) {
+                powerUp.setDisplaySize(displaySize, displaySize).setData('type', type);
+                if (tintColor !== null) { powerUp.setTint(tintColor); }
+                else { powerUp.clearTint(); }
+                if (powerUp.body) {
+                    powerUp.setVelocity(0, POWERUP_SPEED_Y);
+                    powerUp.body.setCollideWorldBounds(false);
+                    powerUp.body.setAllowGravity(false);
+                } else { powerUp.destroy(); console.error("No body for powerup!"); }
+            } else { console.error("Failed to create powerup object!"); }
+        } catch (e) { console.error("CRITICAL Error in dropSpecificPowerUp:", e); }
+    }
+    // --- ▲ アイテムドロップメソッド ▲ ---
+
+
+    // --- ▼ アイテム取得メソッド (GameSceneから移植・ボス戦用に調整) ▼ ---
+    collectPowerUp(paddle, powerUp) {
+        if (!powerUp || !powerUp.active || this.isGameOver || this.bossDefeated) return;
+        const type = powerUp.getData('type');
+        if (!type) { powerUp.destroy(); return; }
+
+        console.log(`[BossScene] Collected power up: ${type}`);
+        powerUp.destroy();
+
+        // ボイス再生 (GameScene流用)
+        const voiceKeyBase = `voice_${type}`; const upperCaseKey = voiceKeyBase.toUpperCase();
+        let actualAudioKey = AUDIO_KEYS[upperCaseKey]; if (type === POWERUP_TYPES.VAJRA) actualAudioKey = AUDIO_KEYS.VOICE_VAJRA_GET;
+        const now = this.time.now; const lastPlayed = this.lastPlayedVoiceTime[upperCaseKey] || 0;
+        if (actualAudioKey && (now - lastPlayed > this.voiceThrottleTime)) {
+            try { this.sound.play(actualAudioKey); this.lastPlayedVoiceTime[upperCaseKey] = now; }
+            catch (e) { console.error(`Error playing voice ${actualAudioKey}:`, e); }
+        } else if (!actualAudioKey) {/*console.warn(`Voice key ${upperCaseKey} not found.`);*/}
+        else { console.log(`Voice ${upperCaseKey} throttled.`); }
+
+        // ★★★ ボス戦でのパワーアップ効果 ★★★
+        // GameScene の activatePower は複雑すぎるので、ボス戦専用の効果にするか、
+        // 必要なものだけを限定的に実装するのがおすすめ。
+        // 例：単純な効果のみ有効にする
+        switch (type) {
+            case POWERUP_TYPES.KUBIRA:
+                // ボス戦でクビラ貫通を有効にする？ (ダメージ2になるだけ？)
+                // this.activateTemporaryPower(type, 5000); // 例: 5秒間だけ有効化
+                console.log("Kubira effect (Boss fight) - currently no effect");
+                break;
+            case POWERUP_TYPES.SHATORA:
+                 // ボス戦でボール加速？
+                 // this.activateTemporaryPower(type, 3000);
+                 console.log("Shatora effect (Boss fight) - currently no effect");
+                 break;
+             // 他のパワーアップも同様に、ボス戦での効果を定義・実装
+            default:
+                console.log(`Power up ${type} collected, no specific effect in boss fight yet.`);
+                break;
+        }
+    }
+    // ★ (オプション) 一時的なパワーアップ有効化メソッド (もし必要なら)
+    // activateTemporaryPower(type, duration) { ... }
+    // --- ▲ アイテム取得メソッド ▲ ---
 
     defeatBoss(boss) {
         if (this.bossDefeated) return;
@@ -894,6 +1024,12 @@ update(time, delta) {
         this.safeDestroy(this.gameOverText, "gameOverText");
         console.log("[Shutdown] Finished destroying GameObjects.");
         this.safeDestroy(this.bossAfterImageEmitter, "bossAfterImageEmitter"); // ★ エミッタも破棄
+        // ...
+        this.safeDestroy(this.powerUps, "powerUps group", true); // ★ powerUps も破棄
+        if (this.attackBrickTimer) { this.attackBrickTimer.remove(); this.attackBrickTimer = null; }
+        // ...
+        this.powerUps = null; // ★ 参照クリア
+        this.paddlePowerUpOverlap = null; // ★ 参照クリア
         // ...
         this.bossAfterImageEmitter = null; // 参照クリア
         // 参照クリア
