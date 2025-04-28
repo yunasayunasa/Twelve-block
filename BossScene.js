@@ -147,6 +147,14 @@ export default class BossScene extends Phaser.Scene {
         console.log("Setting up physics world for BossScene...");
         this.physics.world.setBoundsCollision(true, true, true, false);
         this.physics.world.off('worldbounds', this.handleWorldBounds, this); // 既存を解除
+        // --- ▼ 型確認ログを追加 ▼ ---
+    console.log("Type of this.handleWorldBounds:", typeof this.handleWorldBounds);
+    if (typeof this.handleWorldBounds !== 'function') {
+        console.error("!!! handleWorldBounds is NOT a function here !!!");
+        // ここで他のプロパティを確認するなど、デバッグ情報を追加しても良い
+        console.log("Available methods in this:", Object.getOwnPropertyNames(Object.getPrototypeOf(this)));
+    }
+    // --- ▲ 型確認ログを追加 ▲ ---
         // ★★★ ここで handleWorldBounds が関数として認識される必要がある ★★★
         this.physics.world.on('worldbounds', this.handleWorldBounds, this);
         console.log("Physics world setup complete.");
