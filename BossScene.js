@@ -12,11 +12,17 @@ import {
 // ★ ボス体力の定数を追加 (任意)
 const BOSS_MAX_HEALTH = 5;
 const BOSS_SCORE = 1000; // ボス撃破スコア
-// ★ ボスの動きに関する定数を追加 (調整用)
-const BOSS_PATH_CENTER_Y = 180; // 8の字の中心Y座標
-const BOSS_PATH_RADIUS_X = 150; // 8の字の横方向の半径（広がり具合）
-const BOSS_PATH_RADIUS_Y = 50;  // 8の字の縦方向の半径（上下の揺れ幅）
+// ★ ボスの動きに関する定数 (画面サイズ基準に修正)
+// const BOSS_PATH_CENTER_Y = 180; // 固定値ではなく割合で
+// const BOSS_PATH_RADIUS_X = 150;
+// const BOSS_PATH_RADIUS_Y = 50;
+
 const BOSS_MOVE_DURATION = 8000; // 8の字を一周する時間 (ミリ秒)
+// ★ 子機に関する定数
+const NUM_ORBITERS = 4; // 子機の数
+const ORBITER_DISTANCE = 80; // ボスからの距離
+const ORBITER_ROTATION_SPEED = 0.01; // 回転速度 (ラジアン/フレーム)
+
 
 export default class BossScene extends Phaser.Scene {
     constructor() {
@@ -39,6 +45,9 @@ export default class BossScene extends Phaser.Scene {
         this.isGameOver = false;
         this.bossDefeated = false;
         this.playerControlEnabled = true; // ★ 操作可能フラグ (登場演出などで使用)
+        this.path = null; // ★ Pathオブジェクト
+        this.pathFollower = null; // ★ Pathフォロワー (非表示)
+        this.orbiterAngle = 0; // ★ 子機の回転角度
 
         // コライダー参照
         this.ballPaddleCollider = null;
@@ -156,85 +165,100 @@ export default class BossScene extends Phaser.Scene {
         this.events.on('shutdown', this.shutdownScene, this);
 
 
-       // --- ▼ ボス関連の初期化 ▼ ---
-       console.log("Initializing boss elements...");
-       this.boss = this.physics.add.image(this.gameWidth / 2, 150, 'bossStand')
+       // --- ▼ ボス関連の初期化 (コンテナ使用) ▼ ---
+       console.log("Initializing boss elements with container...");
+
+       // ★ パスパラメータを画面サイズに基づいて決定
+       const pathCenterX = this.gameWidth / 2;
+       const pathCenterY = this.gameHeight * 0.25; // 画面上部1/4あたり
+       const pathRadiusX = this.gameWidth * 0.25; // 画面幅の1/4程度
+       const pathRadiusY = this.gameHeight * 0.08; // 画面高さの8%程度
+       const startX = pathCenterX - pathRadiusX;
+       const startY = pathCenterY;
+
+       // ★ ボスと子機を入れるコンテナを作成 (初期位置はパスの開始点)
+       this.bossContainer = this.add.container(startX, startY);
+
+       // ボス本体をコンテナ内に追加 (コンテナ基準の座標は 0, 0)
+       this.boss = this.physics.add.image(0, 0, 'bossStand')
             .setImmovable(true);
-
-            // ★ パスの開始点を計算 (8の字の中心の少し左)
-        const startX = this.gameWidth / 2 - BOSS_PATH_RADIUS_X;
-        const startY = BOSS_PATH_CENTER_Y;
-
-        this.boss = this.physics.add.image(startX, startY, 'bossStand') // ★ 初期位置をパスの開始点に
-       // ★★★ ボスに体力を設定 ★★★
+       this.bossContainer.add(this.boss); // ★ コンテナに追加
        this.boss.setData('health', BOSS_MAX_HEALTH);
-       this.boss.setData('maxHealth', BOSS_MAX_HEALTH); // 最大体力も保持 (体力バー用など)
-       this.boss.setData('isInvulnerable', false); // ★ 無敵状態フラグ (ダメージ後などに使用)
-       console.log(`Boss created with health: ${this.boss.getData('health')}`);
-       this.updateBossSize(); // ★ サイズと当たり判定を設定 (既存のメソッド呼び出し)
+       this.boss.setData('maxHealth', BOSS_MAX_HEALTH);
+       this.boss.setData('isInvulnerable', false);
+       this.updateBossSize(); // ★ サイズと当たり判定設定 (中でbossプロパティ参照)
+       console.log(`Boss added to container at (0, 0) relative`);
 
-       // --- ▼ 8の字パスを作成 ▼ ---
-       const path = new Phaser.Curves.Path(startX, startY); // 開始点
-       // 右の円 (楕円)
-       path.ellipseTo(BOSS_PATH_RADIUS_X, BOSS_PATH_RADIUS_Y, 180, 360, false, 0); // 半径X, 半径Y, 開始角度, 終了角度, 時計回りか, 回転
-       // 左の円 (楕円) - 反対方向
-       path.ellipseTo(BOSS_PATH_RADIUS_X, BOSS_PATH_RADIUS_Y, 180, 360, true, 0); // 時計回りを true に
-       // --- ▲ 8の字パスを作成 ▲ ---
-
-       // --- ▼ パスフォロワーを設定して追従開始 ▼ ---
-        // this.boss.pathFollower = this.physics.add.follower(path, startX, startY, 'bossStand'); // ← 誤り
-        // ★★★ this.add.follower を使う ★★★
-        this.boss.pathFollower = this.add.follower(path, startX, startY, 'bossStand');
-        // ★★★ physics ではなく add を使う ★★★
-
-        // フォロワー自体は非表示にする
-        if (this.boss.pathFollower) { // 作成されたか確認
-            this.boss.pathFollower.setVisible(false);
-        } else {
-            console.error("Failed to create path follower!");
-            // ここで処理を中断するか、フォールバックを検討
-            return; // 例: createを中断
-        }
-
-        // ボス本体の物理設定 (これは必要)
-        this.physics.world.enable(this.boss);
-        if (this.boss.body) { // body が存在するか確認
-             this.boss.body.setAllowGravity(false);
-        } else {
-             console.error("Boss body not found after enabling physics!");
-        }
-
-
-        // 追従を開始 (pathFollower が存在する場合のみ)
-        if (this.boss.pathFollower) {
-            this.boss.pathFollower.startFollow({
-                positionOnPath: true,
-                duration: BOSS_MOVE_DURATION,
-                repeat: -1,
-                rotateToPath: false,
-                verticalAdjust: true
-            });
-            console.log("Boss path following started.");
-        }
-        // --- ▲ パスフォロワーを設定して追従開始 ▲ ---
-
-       // 子機グループ生成 (中身はまだ)
-       this.orbiters = this.physics.add.group({ immovable: true });
+       // 子機グループ生成 (物理特性は不要かも？当たり判定は付ける)
+       this.orbiters = this.add.group(); // ★ 表示グループに変更？ or Physics Groupのまま？ -> Physicsのまま当たり判定つける
+       // this.orbiters = this.physics.add.group({ immovable: true }); // 物理のまま
        console.log("Orbiters group created.");
 
-       // 攻撃ブロックグループ生成 (中身はまだ)
-       this.attackBricks = this.physics.add.group();
-       console.log("Attack bricks group created.");
+       // 子機を生成してコンテナに追加
+       for (let i = 0; i < NUM_ORBITERS; i++) {
+           const angle = (Math.PI * 2 / NUM_ORBITERS) * i; // 等間隔に配置
+           const orbiterX = Math.cos(angle) * ORBITER_DISTANCE;
+           const orbiterY = Math.sin(angle) * ORBITER_DISTANCE;
+           const orbiter = this.physics.add.image(orbiterX, orbiterY, 'orbiter') // 子機画像使用
+               .setImmovable(true)
+               .setCircle(16); // ★ 仮の当たり判定 (半径16pxの円) - 画像サイズに合わせて調整
+           orbiter.setScale(0.5); // ★ 仮のスケール - 画像に合わせて調整
+           this.orbiters.add(orbiter); // 物理グループに追加
+           this.bossContainer.add(orbiter); // ★ コンテナにも追加 (ボスと一緒に動かすため)
+           console.log(`Orbiter ${i} added to container and group`);
+       }
 
-       // ★ 登場演出は後で実装
+       // 攻撃ブロックグループ (変更なし)
+       this.attackBricks = this.physics.add.group();
+
+       // --- ▼ 8の字パスと非表示フォロワーを作成 ▼ ---
+       this.path = new Phaser.Curves.Path(startX, startY);
+       this.path.ellipseTo(pathRadiusX, pathRadiusY, 180, 360, false, 0);
+       this.path.ellipseTo(pathRadiusX, pathRadiusY, 180, 360, true, 0);
+
+       // ★ 非表示のフォロワーを作成 (テクスチャ不要) ★
+       this.pathFollower = this.add.follower(this.path, startX, startY);
+       this.pathFollower.setVisible(false); // 見えないようにする
+
+       // 追従を開始
+       if (this.pathFollower) {
+           this.pathFollower.startFollow({
+               positionOnPath: true,
+               duration: BOSS_MOVE_DURATION,
+               repeat: -1,
+               rotateToPath: false,
+               verticalAdjust: true
+           });
+           console.log("Path follower started.");
+       } else {
+            console.error("Failed to create path follower!");
+       }
+       // --- ▲ 8の字パスと非表示フォロワーを作成 ▲ ---
+
        // --- ▲ ボス関連の初期化 ▲ ---
 
-
         // --- 衝突判定設定 ---
-        console.log("Setting colliders including boss...");
-        this.setColliders(); // ★ 更新された setColliders を呼び出す
+        console.log("Setting colliders including boss and orbiters...");
+        this.setColliders();
         console.log("Colliders set.");
         // --- ▲ 衝突判定設定 ▲ ---
+
+        // --- ▼ コンテナの位置をフォロワーに合わせる ▼ ---
+        if (this.bossContainer && this.pathFollower && this.pathFollower.active) {
+            this.bossContainer.setPosition(this.pathFollower.x, this.pathFollower.y);
+        }
+        // --- ▲ コンテナの位置をフォロワーに合わせる ▲ ---
+
+        // --- ▼ 子機の回転処理 ▼ ---
+        this.orbiterAngle += ORBITER_ROTATION_SPEED; // 回転角度を更新
+        Phaser.Actions.RotateAroundDistance( // グループ内の要素を回転
+            this.orbiters.getChildren(), // 対象オブジェクトの配列
+            { x: 0, y: 0 },             // 回転の中心 (コンテナ内の(0,0)=ボスの位置)
+            ORBITER_ROTATION_SPEED,     // 回転量 (毎フレーム)
+            ORBITER_DISTANCE            // 中心からの距離 (一定に保つ)
+        );
+        // --- ▲ 子機の回転処理 ▲ ---
+
 
         console.log("BossScene Create End");
     }
