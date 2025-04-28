@@ -78,6 +78,34 @@ export default class BossScene extends Phaser.Scene {
         console.log("BossScene Preload");
     }
 
+    // BossScene.js クラス定義の内側にあるべきメソッド
+
+    playBossBgm() {
+        this.stopBgm();
+        const bossBgmKey = AUDIO_KEYS.BGM2; // 後半用BGMを使う
+        console.log(`Playing Boss BGM (Using ${bossBgmKey})`);
+        this.currentBgm = this.sound.add(bossBgmKey, { loop: true, volume: 0.5 });
+        try {
+            this.currentBgm.play();
+        } catch (e) {
+            console.error("Error playing boss BGM:", e);
+        }
+    }
+
+    // stopBgmメソッドもクラス内にある必要があります
+    stopBgm() {
+        if (this.currentBgm) {
+            console.log("Stopping Boss BGM");
+            try {
+                 this.currentBgm.stop();
+                 this.sound.remove(this.currentBgm);
+            } catch (e) {
+                 console.error("Error stopping BGM:", e);
+            }
+            this.currentBgm = null;
+        }
+    }
+
     create() {
         console.log("BossScene Create Start");
         this.gameWidth = this.scale.width;
