@@ -325,22 +325,29 @@ export default class BossScene extends Phaser.Scene {
         const pathCenterX = this.gameWidth / 2;
         const pathCenterY = this.gameHeight * 0.25;
 
-        this.bossMoveTween = this.tweens.createTimeline();
+        // --- ▼ this.tweens.timeline() を使用する ▼ ---
+        this.bossMoveTween = this.tweens.timeline({
+            // targets: this.boss, // タイムライン全体のデフォルトターゲットはここに書けるが、addごとでもOK
 
-        // 始点: pathCenterX - pathRadiusX, pathCenterY (現在のボスの位置から開始)
+            tweens: [ // ★ tweens 配列の中に個別の Tween 設定を記述
+                // 1. 右上へ
+                { targets: this.boss, x: pathCenterX, y: pathCenterY - pathRadiusY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.Out' },
+                // 2. 右下へ
+                { targets: this.boss, x: pathCenterX + pathRadiusX, y: pathCenterY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.In' },
+                // 3. 左下へ
+                { targets: this.boss, x: pathCenterX, y: pathCenterY + pathRadiusY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.Out' },
+                // 4. 左上 (始点付近) へ
+                { targets: this.boss, x: pathCenterX - pathRadiusX, y: pathCenterY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.In' }
+            ],
 
-        // 1. 右上へ
-        this.bossMoveTween.add({ targets: this.boss, x: pathCenterX, y: pathCenterY - pathRadiusY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.Out' });
-        // 2. 右下へ
-        this.bossMoveTween.add({ targets: this.boss, x: pathCenterX + pathRadiusX, y: pathCenterY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.In' });
-        // 3. 左下へ
-        this.bossMoveTween.add({ targets: this.boss, x: pathCenterX, y: pathCenterY + pathRadiusY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.Out' });
-        // 4. 左上 (始点付近) へ
-        this.bossMoveTween.add({ targets: this.boss, x: pathCenterX - pathRadiusX, y: pathCenterY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.In' });
+            loop: -1 // ★ ループ設定は timeline の設定オブジェクト内で行う
+        });
+        // --- ▲ this.tweens.timeline() を使用する ▲ ---
 
-        this.bossMoveTween.loop = -1;
-        this.bossMoveTween.play();
-        console.log("Boss movement tween playing.");
+        // .play() は不要 (timeline() は自動で再生開始されることが多い、必要なら残す)
+        // this.bossMoveTween.play(); // ← 不要な場合が多い
+
+        console.log("Boss movement timeline created and potentially playing.");
     }
     // --- ▲ ボスの動きメソッド ▲ ---
 
