@@ -467,7 +467,7 @@ export default class BossScene extends Phaser.Scene {
         const texture = this.boss.texture;
         const originalWidth = texture.source[0].width;
         const originalHeight = texture.source[0].height;
-        const targetWidthRatio = 0.20;
+        const targetWidthRatio = 0.30て;
         const targetBossWidth = this.scale.width * targetWidthRatio;
         let desiredScale = targetBossWidth / originalWidth;
         desiredScale = Phaser.Math.Clamp(desiredScale, 0.1, 1.0);
@@ -475,7 +475,7 @@ export default class BossScene extends Phaser.Scene {
         // 当たり判定調整
         const hitboxWidth = originalWidth * desiredScale;
         const blockWidth = this.scale.width * BRICK_WIDTH_RATIO;
-        const hitboxHeight = blockWidth * 4;
+        const hitboxHeight = blockWidth * 12;
         this.boss.body.setSize(hitboxWidth, hitboxHeight);
         console.log(`Boss size updated. Scale: ${desiredScale.toFixed(2)}, Hitbox: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)}`);
     }
