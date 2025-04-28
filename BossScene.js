@@ -7,10 +7,10 @@ import {
 } from './constants.js';
 
 // --- ボス戦用定数 ---
-const BOSS_MAX_HEALTH = 100;
+const BOSS_MAX_HEALTH = 5;
 const BOSS_SCORE = 1000;
 // ▼ ボスの動き設定 (左右往復) ▼
-const BOSS_MOVE_RANGE_X_RATIO = 0.6; // 画面幅の60%を往復
+const BOSS_MOVE_RANGE_X_RATIO = 1.0; // 画面幅の60%を往復
 const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
 // --- ▲ ボスの動き設定 ▲ ---
 
@@ -475,7 +475,7 @@ export default class BossScene extends Phaser.Scene {
         // 当たり判定調整
         const hitboxWidth = originalWidth * desiredScale;
         const blockWidth = this.scale.width * BRICK_WIDTH_RATIO;
-        const hitboxHeight = blockWidth * 4;
+        const hitboxHeight = blockWidth * 8;
         this.boss.body.setSize(hitboxWidth, hitboxHeight);
         console.log(`Boss size updated. Scale: ${desiredScale.toFixed(2)}, Hitbox: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)}`);
     }
