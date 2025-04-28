@@ -276,27 +276,39 @@ updateBossSize() {
     const texture = this.boss.texture;
     const originalWidth = texture.source[0].width;
     const originalHeight = texture.source[0].height;
-
-    const targetWidthRatio = 0.30; // ★ 画面幅の20%
+    
+    // --- ▼ スケールと当たり判定サイズ・オフセットを調整 ▼ ---
+    const targetWidthRatio = 0.30; // ★ ボス見た目のサイズ画面幅の30%
     const targetBossWidth = this.scale.width * targetWidthRatio;
     let desiredScale = targetBossWidth / originalWidth;
     desiredScale = Phaser.Math.Clamp(desiredScale, 0.1, 1.0); // 上下限制限
 
     this.boss.setScale(desiredScale); // スケール適用
 
-    // 当たり判定調整
+    // 当たり判定サイズを計算 (表示サイズに合わせるか、意図的にずらすか)
+    // 例1: 見た目の横幅全体、高さは見た目の80%
     const hitboxWidth = originalWidth * desiredScale;
-    // 横2x縦4ブロック相当の高さにするための調整 (例)
-    // ブロック1つの幅 = this.scale.width * BRICK_WIDTH_RATIO (constants.jsから)
-    // ボスの当たり判定高さ = ブロック幅 * 4
+    // 例2: 横2ブロック分 x 縦4ブロック分 (GameScene参考)
+    // const blockWidth = this.scale.width * 0.095; // BRICK_WIDTH_RATIO
+    // const hitboxWidth = blockWidth * 2;
+    // const hitboxHeight = blockWidth * 4; // 縦横比注意
+
+    // ★★★ ここで hitboxWidth, hitboxHeight の計算を調整 ★★★
+    // 物理デバッグ表示を見ながら調整してください
     const blockWidth = this.scale.width * 0.095; // 仮: BRICK_WIDTH_RATIOを直接使うか定数インポート
     const targetHitboxHeightRatio = 4; // 縦4ブロック分
     const hitboxHeight = blockWidth * targetHitboxHeightRatio;
 
     // setSizeは中央基準で幅・高さを設定
     this.boss.body.setSize(hitboxWidth, hitboxHeight);
-    // オフセットは通常不要だが、必要なら調整
+    // ★★★ 必要であればオフセットを調整 ★★★
+    // オフセットは、物理ボディの左上が画像の中心からどれだけズレるか
+    // (setSizeで中央基準にサイズ変更した場合、通常オフセット調整は不要なことが多い)
+    // 例えば、当たり判定を少し下にずらしたい場合:
+    // const offsetX = 0; // Xはずらさない
+    // const offsetY = (originalHeight * desiredScale - hitboxHeight) * 0.8; // 例: 高さの差分の下側80%にオフセット
     // this.boss.body.setOffset(offsetX, offsetY);
+    // デフォルトで setSize は中央に合わせるので、オフセットは(0, 0)で良いことが多い
 
     console.log(`Boss size updated. Scale: ${desiredScale.toFixed(2)}, Hitbox: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)}`);
 }
@@ -438,19 +450,40 @@ hitBoss(boss, ball) {
     boss.setData('health', currentHealth);
     console.log(`[hitBoss] Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
 
-    // --- ダメージリアクション (一時的に色を変える & 短い無敵時間) ---
+    // --- ▼ ダメージリアクション ▼ ---
     boss.setTint(0xff0000); // 赤く光る
-    boss.setData('isInvulnerable', true); // 短い無敵状態に
-    // 効果音再生 (仮)
+    boss.setData('isInvulnerable', true); // 無敵開始
+
+    // ★★★ 左右に揺れる Tween を追加 ★★★
+    const shakeDuration = 60; // 揺れ1往復の時間 (ms)
+    const shakeAmount = boss.displayWidth * 0.03; // 揺れ幅 (表示幅の3%程度)
+    this.tweens.add({
+        targets: boss,
+        x: boss.x + shakeAmount, // 右に移動
+        duration: shakeDuration / 2,
+        ease: 'Sine.easeInOut',
+        yoyo: true, // 行って戻る
+        repeat: 1, // 1往復 (計2回揺れる)
+        onComplete: () => { // アニメーション完了時
+            // 念のためX座標を元に戻す
+            if (boss.active) { // ボスがまだ存在すれば
+                boss.x = this.gameWidth / 2; // ★本来の位置に戻す (もしボスが動くならその時の位置を基準に)
+            }
+        }
+    });
+    // ★★★ 左右に揺れる Tween を追加 ★★★
+
+    // 効果音再生
     // try { this.sound.add('seBossHit').play(); } catch(e) {}
 
-    // 一定時間後に色と無敵状態を戻すタイマー
-    this.time.delayedCall(150, () => { // 0.15秒後
-         if (boss.active) { // ボスがまだ存在すれば
-             boss.clearTint(); // 色を戻す
-             boss.setData('isInvulnerable', false); // 無敵解除
+    // 色と無敵状態を戻すタイマー
+    this.time.delayedCall(150, () => { // 無敵時間
+         if (boss.active) {
+             boss.clearTint();
+             boss.setData('isInvulnerable', false);
          }
     });
+    // --- ▲ ダメージリアクション ▲ ---
 
     // --- ボールを跳ね返す処理 ---
     // colliderが自動で処理してくれるはずだが、念のため手動でも設定可能
