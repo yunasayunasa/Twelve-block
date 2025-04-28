@@ -268,45 +268,64 @@ export default class BossScene extends Phaser.Scene {
     }*/
     // --- ▲ ボスの動きメソッド 元に戻す用▲ ---*/
 
-// BossScene.js の startBossMovement メソッド (中央開始 - yoyo/onComplete方式)
+// BossScene.js の startBossMovement メソッド (中央開始 - Tween連結方式)
 
 startBossMovement() {
     if (!this.boss || !this.boss.active) { console.warn("Cannot start movement, boss not ready."); return; }
-    if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; }
+    // 既存のTweenがあれば停止・削除
+    if (this.bossMoveTween) {
+         if (this.tweens.getTweensOf(this.boss).length > 0) { // 念のため対象のTweenか確認
+             this.tweens.killTweensOf(this.boss); // 対象オブジェクトのTweenを全て停止・削除
+         }
+        this.bossMoveTween = null;
+    }
 
-    console.log("Starting boss horizontal movement tween (Center Start - Yoyo/OnComplete)...");
+    console.log("Starting boss horizontal movement (Center Start - Chained Tweens)...");
     const moveWidth = this.gameWidth * BOSS_MOVE_RANGE_X_RATIO / 2;
     const leftX = this.gameWidth / 2 - moveWidth;
     const rightX = this.gameWidth / 2 + moveWidth;
-    const initialX = this.gameWidth / 2; // 開始位置は中央
+    const startX = this.gameWidth / 2; // 開始位置
 
-    // ★ 初期位置を中央に設定
-    this.boss.setX(initialX);
+    this.boss.setX(startX); // 初期位置を中央に
 
-    this.bossMoveTween = this.tweens.add({
-        targets: this.boss,
-        x: rightX,              // ★ 最初の目標は右端
-        duration: BOSS_MOVE_DURATION, // ★ 片道の時間
-        ease: 'Sine.easeInOut',
-        yoyo: true,             // 折り返す
-        repeat: -1,             // 無限繰り返し
+    // --- ▼ 関数を定義して Tween を繋げる ▼ ---
+    const moveToRight = () => {
+        console.log("Tween: Moving to Right");
+        this.bossMoveTween = this.tweens.add({
+            targets: this.boss,
+            x: rightX,
+            duration: BOSS_MOVE_DURATION,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                // 右端に着いたら左へ移動する Tween を開始
+                if (this.boss && this.boss.active && !this.isGameOver && !this.bossDefeated) { // シーンやボスが有効か確認
+                    moveToLeft();
+                }
+            }
+        });
+    };
 
-        // ★ コールバックを追加 ★
-        onYoyo: (tween, target) => {
-            // 折り返し時 (右端 -> 左端 に向かう直前)
-            console.log("Tween Yoyo: moving towards leftX");
-            // 次の目標値を明示的に設定する必要はない (yoyoが自動で行う)
-            // ただし、必要ならここで何か処理できる
-        },
-        onRepeat: (tween, target) => {
-            // 1ループ完了時 (左端 -> 右端 に向かう直前)
-            console.log("Tween Repeat: moving towards rightX");
-            // yoyoがあるので、これも目標値を明示的に設定する必要はない
-        }
-        // onComplete は repeat: -1 のため呼ばれない
-    });
+    const moveToLeft = () => {
+        console.log("Tween: Moving to Left");
+        this.bossMoveTween = this.tweens.add({
+            targets: this.boss,
+            x: leftX,
+            duration: BOSS_MOVE_DURATION,
+            ease: 'Sine.easeInOut',
+            onComplete: () => {
+                // 左端に着いたら右へ移動する Tween を開始
+                 if (this.boss && this.boss.active && !this.isGameOver && !this.bossDefeated) {
+                    moveToRight();
+                }
+            }
+        });
+    };
+    // --- ▲ 関数を定義して Tween を繋げる ▲ ---
 
-    console.log("Simple boss movement tween with yoyo started.");
+    // 最初に右へ移動する Tween を開始
+    moveToRight();
+
+    console.log("Chained boss movement tweens initiated.");
 }
 
 
