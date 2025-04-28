@@ -343,12 +343,12 @@ setupAfterImageEmitter() {
         // frame: 'bossStand', // 画像を使う場合はフレーム指定
         x: { min: -5, max: 5 }, // X座標を少しばらつかせる
         y: { min: -5, max: 5 }, // Y座標を少しばらつかせる
-        lifespan: 200, // 短い寿命 (ms)
+        lifespan: 1000, // 短い寿命 (ms)
         speed: 0, // 速度は不要 (その場に残る)
         scale: { start: this.boss.scale * 0.8, end: 0 }, // ★ ボスのスケールに合わせて開始、小さくなって消える
         alpha: { start: 0.8, end: 0 }, // 半透明で開始し、消える
         quantity: 3, // 一度に1つ放出
-        frequency: 50, // 放出頻度 (ms) - 小さいほど頻繁
+        frequency: 10, // 放出頻度 (ms) - 小さいほど頻繁
         blendMode: 'NORMAL', // NORMALかADDかお好みで
         tint: 0xfffff, // ★ 残像の色 (例: 少し暗い白、ボスの色に合わせても良い)
         emitting: false // ★ updateで追従させるので最初は止めておく
@@ -368,24 +368,23 @@ update(time, delta) {
         return;
     }
 
-    // --- ▼ 残像エミッタの位置をボスに追従 & 放出制御 ▼ ---
-    if (this.bossAfterImageEmitter && this.boss && this.boss.body) { // エミッタとボスが存在するか確認
-        // ボスの物理ボディが動いている（速度がある）時だけ残像を出す
-        const bossVelocityX = Math.abs(this.boss.body.velocity.x); // ボスの現在のX速度（Tween中も物理速度はあるはず）
-        const threshold = 1; // 速度がこの値より大きい時だけ放出
-
-        if (bossVelocityX > threshold && !this.bossAfterImageEmitter.emitting) {
-            // 動き始めたら放出開始
-            this.bossAfterImageEmitter.start();
-        } else if (bossVelocityX <= threshold && this.bossAfterImageEmitter.emitting) {
-            // 止まったら放出停止
-            this.bossAfterImageEmitter.stop();
-        }
-
-        // エミッタ自体の位置をボスの中心に合わせる
+    // --- ▼ 残像エミッタの位置追従 & 強制放出 (デバッグ用) ▼ ---
+    if (this.bossAfterImageEmitter && this.boss && this.boss.active) {
+        // 位置を常にボスに合わせる
         this.bossAfterImageEmitter.setPosition(this.boss.x, this.boss.y);
+
+        // ★★★ デバッグのため、常にエミッタを開始してみる ★★★
+        if (!this.bossAfterImageEmitter.emitting) {
+             console.log("[DEBUG AfterImage] Force starting emitter in update.");
+             this.bossAfterImageEmitter.start();
+        }
+        // --- ▲ 速度チェックを外して、常にstart()を試みる ---
+    } else {
+         // オブジェクトが存在しない場合のログ (デバッグ用)
+         // if (!this.bossAfterImageEmitter) console.warn("[AfterImage Update] Emitter not ready.");
+         // if (!this.boss) console.warn("[AfterImage Update] Boss not ready.");
     }
-    // --- ▲ 残像エミッタの位置をボスに追従 & 放出制御 ▲ ---
+    // --- ▲ 残像エミッタの位置追従 & 強制放出 (デバッグ用) ▲ ---
     this.updateBallFall();
     this.updateAttackBricks();
     // updateOrbiters は削除済み
