@@ -5,7 +5,7 @@ import {
     BALL_INITIAL_VELOCITY_Y, BALL_INITIAL_VELOCITY_X_RANGE, NORMAL_BALL_SPEED, AUDIO_KEYS, MAX_STAGE, POWERUP_TYPES,
     ALL_POSSIBLE_POWERUPS, // アイテムドロップで使う可能性
     POWERUP_ICON_KEYS, // アイテムドロップで使う可能性
-    BRICK_WIDTH_RATIO
+    BRICK_WIDTH_RATIO, POWERUP_SIZE, POWERUP_SPEED_Y
 } from './constants.js';
 
 // --- ボス戦用定数 ---
@@ -47,11 +47,18 @@ export default class BossScene extends Phaser.Scene {
         this.bossMoveTween = null;
         this.bossAfterImageEmitter = null; // ★ 残像用エミッタのプロパテ
         this.attackBrickTimer = null; // ★ 攻撃ブロック生成タイマー用
+        this.powerUps = null; // ★ パワーアップグループ用プロパティ追加
+        
 
         // コライダー参照
         this.ballPaddleCollider = null;
         this.ballBossCollider = null;
         this.ballAttackBrickCollider = null; // 子機削除
+        this.ballAttackBrickCollider = null;
+         this.paddlePowerUpOverlap = null; // ★ パドルとアイテムのオーバーラップ参照
+         // ...
+         this.lastPlayedVoiceTime = {}; // ★ ボイス再生抑制用 (GameSceneからコピー)
+         this.voiceThrottleTime = 500;  // ★ ボイス再生抑制用 (GameSceneからコピー)
 
         // UI連携用
         this.uiScene = null;
@@ -104,9 +111,11 @@ export default class BossScene extends Phaser.Scene {
         this.createBoss();
         this.createAttackBricksGroup();
         this.setupAfterImageEmitter(); // ★ 残像エミッタのセットアップ呼び出
+        this.createPowerUpsGroup(); // ★ パワーアップグループ作成呼び出
 
         // --- 4. 衝突判定の設定 ---
         this.setColliders();
+        this.setColliders(); // ★ 衝突判定にアイテム取得も追加
 
         // --- 5. ゲームオーバーテキスト ---
         this.createGameOverText();
@@ -196,7 +205,13 @@ export default class BossScene extends Phaser.Scene {
         console.log(`Boss created with health: ${this.boss.getData('health')}`);
     }
 
-    // createOrbiters() メソッド削除
+     // ★ パワーアップグループ作成メソッド (新規追加)
+     createPowerUpsGroup() {
+        console.log("Creating power ups group...");
+        if (this.powerUps) { this.powerUps.destroy(true); }
+        this.powerUps = this.physics.add.group();
+        console.log("Power ups group created.");
+    }
 
     createAttackBricksGroup() {
         console.log("Creating attack bricks group...");
