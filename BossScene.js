@@ -301,28 +301,40 @@ export default class BossScene extends Phaser.Scene {
         const attackBrick = this.attackBricks.create(spawnX, spawnY, brickTexture);
 
         if (attackBrick) {
-            // ★ スケールを一旦大きくしてみる
-            attackBrick.setScale(1.0); // 例: 2倍サイズで強制表示
-            console.log(`[Spawn Debug] Scale set to 2.0`);
+            // --- ▼ 見た目の調整 ▼ ---
+            const desiredScale = 0.8; // 例: 80%スケール (この値を調整)
+            attackBrick.setScale(desiredScale);
 
             if (brickTexture === 'whitePixel') {
-                // ★ Tintを強制的に明るい色（黄色）にしてみる
-                attackBrick.setTint(0xffff00);
-                console.log(`[Spawn Debug] Tint set to yellow`);
+                attackBrick.setTint(0xcc99ff); // 例: 紫系
             } else {
-                 // ちゃんと attackBrick テクスチャが使われている場合
-                 attackBrick.clearTint(); // 念のためTintをクリア
-                 console.log(`[Spawn Debug] Tint cleared for texture`);
+                attackBrick.clearTint();
             }
+            // attackBrick.setDepth(...); // 通常不要
+            // --- ▲ 見た目の調整 ▲ ---
 
              // ★ Depth を強制的に手前にしてみる
              attackBrick.setDepth(50);
              console.log(`[Spawn Debug] Depth set to 50`);
 
-            // ★ 当たり判定サイズも固定で大きくしてみる (デバッグ用)
-            attackBrick.body.setSize(50, 50); // 50x50ピクセルに固定
-            console.log(`[Spawn Debug] Body size set to 50x50`);
-
+            // --- ▼ 当たり判定を表示サイズに合わせる ▼ ---
+            try {
+                // body が利用可能になるのを待つ必要は通常ないが、念のためチェック
+                if (attackBrick.body) {
+                    // ★ setDisplaySizeではなく、実際の表示サイズを使う ★
+                    attackBrick.body.setSize(attackBrick.displayWidth, attackBrick.displayHeight);
+                    // setSize は中央基準なので、オフセットは通常(0,0)でOK
+                    // 必要なら attackBrick.body.setOffset(...) で微調整
+                    console.log(`Attack brick body size set to: ${attackBrick.displayWidth.toFixed(0)}x${attackBrick.displayHeight.toFixed(0)}`);
+                } else {
+                     console.warn("Attack brick body not ready for size setting immediately.");
+                     // body が遅れて生成される場合、タイマーで再設定するなどの対策が必要な場合がある
+                     // this.time.delayedCall(1, () => { /* 再設定処理 */ });
+                }
+            } catch (e) {
+                 console.error("Error setting attack brick body size:", e);
+            }
+            // --- ▲ 当たり判定を表示サイズに合わせる ▲ ---
             // 落下速度など
             attackBrick.setVelocityY(ATTACK_BRICK_VELOCITY_Y);
             attackBrick.body.setAllowGravity(false);
