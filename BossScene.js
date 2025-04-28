@@ -467,7 +467,7 @@ export default class BossScene extends Phaser.Scene {
         const texture = this.boss.texture;
         const originalWidth = texture.source[0].width;
         const originalHeight = texture.source[0].height;
-        const targetWidthRatio = 0.30て;
+        const targetWidthRatio = 0.30;
         const targetBossWidth = this.scale.width * targetWidthRatio;
         let desiredScale = targetBossWidth / originalWidth;
         desiredScale = Phaser.Math.Clamp(desiredScale, 0.1, 1.0);
