@@ -660,9 +660,10 @@ update(time, delta) {
             // ドロップするアイテムを決定 (カオス設定に基づいてプールを作成)
             const possibleDrops = [...ALL_POSSIBLE_POWERUPS];
             const shuffledPool = Phaser.Utils.Array.Shuffle(possibleDrops);
-            // カオス設定の数だけ候補を選ぶ (GameSceneのsetupStage参考)
-            const currentDropPool = shuffledPool.slice(0, this.chaosSettings.count);
-
+            const countToSlice = this.chaosSettings?.count ?? 0; // 安全に値を取得
+        console.log(`[Drop Logic] Slicing pool with count: ${countToSlice}`); // ★ スライス数をログに
+        const currentDropPool = shuffledPool.slice(0, countToSlice);
+        console.log(`[Drop Logic] Created drop pool: [${currentDropPool.join(',')}] (Length: ${currentDropPool.length})`); // ★ プール内容と長さをログに
             if (currentDropPool.length > 0) {
                 const dropType = Phaser.Utils.Array.GetRandom(currentDropPool);
                 console.log(`Dropping item: ${dropType}`);
