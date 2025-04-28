@@ -131,6 +131,33 @@ export default class BossScene extends Phaser.Scene {
         // ★ ここで攻撃ブロック生成ロジック呼び出し (後で実装)
     }
 
+
+    // BGM再生 (ボス戦用)
+    playBossBgm() {
+        this.stopBgm(); // 既存のBGMがあれば停止
+        console.log("Playing Boss BGM (Using BGM2 for now)"); // どのBGMを使っているかログ表示
+        this.currentBgm = this.sound.add(AUDIO_KEYS.BGM2, { loop: true, volume: 0.5 }); // ★ ボス戦用BGMキーに変更 (必要なら)
+        try {
+            this.currentBgm.play(); // 再生
+        } catch (e) {
+            console.error("Error playing boss BGM:", e); // エラー処理
+        }
+    }
+
+    // stopBgmメソッドも必要です (GameSceneからコピー)
+    stopBgm() {
+        if (this.currentBgm) {
+            console.log("Stopping Boss BGM");
+            try {
+                 this.currentBgm.stop();
+                 this.sound.remove(this.currentBgm); // removeもtry-catch内が安全
+            } catch (e) {
+                 console.error("Error stopping BGM:", e);
+            }
+            this.currentBgm = null;
+        }
+    }
+
     // --- ▼ Create ヘルパーメソッド ▼ ---
 
     setupUI() {
