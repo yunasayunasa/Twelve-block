@@ -284,6 +284,24 @@ export default class BossScene extends Phaser.Scene {
 
     spawnAttackBrick() {
         // ... (生成位置決定ロジック spawnX, spawnY) ...
+        console.log("Spawning attack brick...");
+        let spawnX; // ★★★ この行を追加 ★★★
+        const spawnY = -30;
+
+        // --- 生成位置を決定 ---
+        if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE) {
+            spawnX = Phaser.Math.Between(30, this.gameWidth - 30);
+            console.log("Spawning from top random position.");
+        } else {
+            if (this.boss && this.boss.active) {
+                spawnX = this.boss.x;
+                console.log("Spawning from boss position.");
+            } else {
+                console.log("Boss not available, spawning at center top.");
+                spawnX = this.gameWidth / 2;
+            }
+        }
+        // --- 生成位置決定終わり ---
 
         // --- ▼ attackBrick テクスチャを使うように修正 ▼ ---
         // ★ テクスチャキーを 'attackBrick' に固定 (読み込み前提)
