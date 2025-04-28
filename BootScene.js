@@ -24,7 +24,7 @@ export default class BootScene extends Phaser.Scene {
         // --- ▼ ボス関連アセット読み込み ▼ ---
         console.log("Loading boss assets...");
         this.load.image('bossStand', 'assets/boss_stand.png');   // ★ ボス立ち絵 (必須)
-        this.load.image('orbiter', 'assets/orbiter.png');         // ★ 子機画像 (必須)
+       // this.load.image('orbiter', 'assets/orbiter.png');         // ★ 子機画像 (必須)
         // 以下のファイルはまだ無くてもOK (後で追加)
         // this.load.image('bossDamage', 'assets/boss_damage.png'); // ダメージ絵
         // this.load.image('attackBrick', 'assets/attack_brick.png'); // 攻撃ブロック

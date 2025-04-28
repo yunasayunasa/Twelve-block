@@ -1,20 +1,18 @@
-// BossScene.js (修正版2 - 省略なし完全コード)
+// BossScene.js (修正版4 - 省略なし完全コード - 子機削除、単純Tween)
 
 import {
     PADDLE_WIDTH_RATIO, PADDLE_HEIGHT, PADDLE_Y_OFFSET, BALL_RADIUS, PHYSICS_BALL_RADIUS,
     BALL_INITIAL_VELOCITY_Y, BALL_INITIAL_VELOCITY_X_RANGE, NORMAL_BALL_SPEED, AUDIO_KEYS, MAX_STAGE, POWERUP_TYPES,
-    BRICK_WIDTH_RATIO // 当たり判定計算用にインポート
+    BRICK_WIDTH_RATIO
 } from './constants.js';
 
 // --- ボス戦用定数 ---
 const BOSS_MAX_HEALTH = 100;
 const BOSS_SCORE = 1000;
-const BOSS_MOVE_DURATION_HALF = 4000;
-const NUM_ORBITERS = 4;
-const ORBITER_DISTANCE = 90;
-const ORBITER_ROTATION_SPEED = 0.015;
-const ORBITER_SCALE = 0.4;
-const ORBITER_HITBOX_RADIUS = 20;
+// ▼ ボスの動き設定 (左右往復) ▼
+const BOSS_MOVE_RANGE_X_RATIO = 0.6; // 画面幅の60%を往復
+const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
+// --- ▲ ボスの動き設定 ▲ ---
 
 export default class BossScene extends Phaser.Scene {
     constructor() {
@@ -24,8 +22,7 @@ export default class BossScene extends Phaser.Scene {
         this.paddle = null;
         this.balls = null;
         this.boss = null;
-        this.orbiters = null;
-        this.attackBricks = null;
+        this.attackBricks = null; // 子機は削除
 
         this.lives = 3;
         this.score = 0;
@@ -36,14 +33,12 @@ export default class BossScene extends Phaser.Scene {
         this.isGameOver = false;
         this.bossDefeated = false;
         this.playerControlEnabled = true;
-        this.orbiterAngle = 0;
         this.bossMoveTween = null;
 
         // コライダー参照
         this.ballPaddleCollider = null;
         this.ballBossCollider = null;
-        this.ballOrbiterCollider = null;
-        this.ballAttackBrickCollider = null;
+        this.ballAttackBrickCollider = null; // 子機削除
 
         // UI連携用
         this.uiScene = null;
@@ -61,13 +56,11 @@ export default class BossScene extends Phaser.Scene {
         this.chaosSettings = data.chaosSettings || { count: 4, rate: 0.5 };
         console.log(`BossScene Initialized with Lives: ${this.lives}, Score: ${this.score}`);
 
-        // 状態リセット
         this.isBallLaunched = false;
         this.isGameOver = false;
         this.bossDefeated = false;
         this.playerControlEnabled = true;
         this.currentBgm = null;
-        this.orbiterAngle = 0;
         if (this.bossMoveTween) {
             this.bossMoveTween.stop();
             this.bossMoveTween = null;
@@ -78,34 +71,6 @@ export default class BossScene extends Phaser.Scene {
         console.log("BossScene Preload");
     }
 
-    // BossScene.js クラス定義の内側にあるべきメソッド
-
-    playBossBgm() {
-        this.stopBgm();
-        const bossBgmKey = AUDIO_KEYS.BGM2; // 後半用BGMを使う
-        console.log(`Playing Boss BGM (Using ${bossBgmKey})`);
-        this.currentBgm = this.sound.add(bossBgmKey, { loop: true, volume: 0.5 });
-        try {
-            this.currentBgm.play();
-        } catch (e) {
-            console.error("Error playing boss BGM:", e);
-        }
-    }
-
-    // stopBgmメソッドもクラス内にある必要があります
-    stopBgm() {
-        if (this.currentBgm) {
-            console.log("Stopping Boss BGM");
-            try {
-                 this.currentBgm.stop();
-                 this.sound.remove(this.currentBgm);
-            } catch (e) {
-                 console.error("Error stopping BGM:", e);
-            }
-            this.currentBgm = null;
-        }
-    }
-
     create() {
         console.log("BossScene Create Start");
         this.gameWidth = this.scale.width;
@@ -114,9 +79,9 @@ export default class BossScene extends Phaser.Scene {
         // --- 1. 基本的なシーン設定 ---
         this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground3')
             .setOrigin(0.5, 0.5).setDisplaySize(this.gameWidth, this.gameHeight).setDepth(-1);
-        //this.playBossBgm(); // ★ BGM再生
+        this.playBossBgm();
         this.setupUI();
-        this.setupPhysics(); // ★ 物理設定 (内部で handleWorldBounds を参照)
+        this.setupPhysics();
 
         // --- 2. パドルとボールの生成 ---
         this.createPaddle();
@@ -124,7 +89,6 @@ export default class BossScene extends Phaser.Scene {
 
         // --- 3. ボス関連オブジェクトの生成 ---
         this.createBoss();
-        this.createOrbiters();
         this.createAttackBricksGroup();
 
         // --- 4. 衝突判定の設定 ---
@@ -147,15 +111,14 @@ export default class BossScene extends Phaser.Scene {
 
         this.updateBallFall();
         this.updateAttackBricks();
-        this.updateOrbiters(time, delta);
+        // updateOrbiters 削除
     }
 
     // --- ▼ Create ヘルパーメソッド ▼ ---
 
     setupUI() {
         console.log("Launching UIScene for Boss...");
-        // 他のシーンを停止せずに起動
-        if (!this.scene.isActive('UIScene')) { // まだ起動していなければ
+        if (!this.scene.isActive('UIScene')) {
              this.scene.launch('UIScene');
         }
         this.uiScene = this.scene.get('UIScene');
@@ -174,8 +137,7 @@ export default class BossScene extends Phaser.Scene {
     setupPhysics() {
         console.log("Setting up physics world for BossScene...");
         this.physics.world.setBoundsCollision(true, true, true, false);
-        this.physics.world.off('worldbounds', this.handleWorldBounds, this); // 既存を解除
-        // ★★★ ここで handleWorldBounds が関数として認識される必要がある ★★★
+        this.physics.world.off('worldbounds', this.handleWorldBounds, this);
         this.physics.world.on('worldbounds', this.handleWorldBounds, this);
         console.log("Physics world setup complete.");
     }
@@ -216,25 +178,7 @@ export default class BossScene extends Phaser.Scene {
         console.log(`Boss created with health: ${this.boss.getData('health')}`);
     }
 
-    createOrbiters() {
-        console.log("Creating orbiters...");
-        if (this.orbiters) { this.orbiters.destroy(true); this.orbiters = null; }
-        this.orbiters = this.physics.add.group({ immovable: true });
-        const bossStartX = this.boss?.x || this.gameWidth / 2;
-        const bossStartY = this.boss?.y || this.gameHeight * 0.25;
-        for (let i = 0; i < NUM_ORBITERS; i++) {
-            const angle = (Math.PI * 2 / NUM_ORBITERS) * i;
-            const orbiterX = bossStartX + Math.cos(angle) * ORBITER_DISTANCE;
-            const orbiterY = bossStartY + Math.sin(angle) * ORBITER_DISTANCE;
-            const orbiter = this.orbiters.create(orbiterX, orbiterY, 'orbiter')
-                .setImmovable(true)
-                .setCircle(ORBITER_HITBOX_RADIUS)
-                .setScale(ORBITER_SCALE)
-                .setCollideWorldBounds(true);
-            console.log(`Orbiter ${i} created at (${orbiterX.toFixed(0)}, ${orbiterY.toFixed(0)})`);
-        }
-        console.log("Orbiters created.");
-    }
+    // createOrbiters() メソッド削除
 
     createAttackBricksGroup() {
         console.log("Creating attack bricks group...");
@@ -296,86 +240,55 @@ export default class BossScene extends Phaser.Scene {
         });
     }
 
-    updateOrbiters(time, delta) {
-        if (!this.boss || !this.boss.active || !this.orbiters || !this.orbiters.active) return;
-        this.orbiterAngle += ORBITER_ROTATION_SPEED * (delta / 16.66); // delta考慮
-        this.orbiters.getChildren().forEach((orbiter, index) => {
-            if (orbiter.active) {
-                const angle = this.orbiterAngle + (Math.PI * 2 / NUM_ORBITERS) * index;
-                orbiter.x = this.boss.x + Math.cos(angle) * ORBITER_DISTANCE;
-                orbiter.y = this.boss.y + Math.sin(angle) * ORBITER_DISTANCE;
-                if (orbiter.body) { // ボディがあれば位置をリセット
-                    orbiter.body.reset(orbiter.x, orbiter.y);
-                }
-            }
-        });
-    }
+    // updateOrbiters(time, delta) メソッド削除
 
     // --- ▲ Update ヘルパーメソッド ▲ ---
 
 
-    // BossScene.js の startBossMovement メソッド
-
+    // --- ▼ ボスの動きメソッド ▼ ---
     startBossMovement() {
         if (!this.boss || !this.boss.active) { console.warn("Cannot start movement, boss not ready."); return; }
         if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; }
 
-        console.log("Starting boss movement tween...");
-        const pathRadiusX = this.gameWidth * 0.25;
-        const pathRadiusY = this.gameHeight * 0.08;
-        const pathCenterX = this.gameWidth / 2;
-        const pathCenterY = this.gameHeight * 0.25;
+        console.log("Starting simple boss horizontal movement tween...");
+        const moveWidth = this.gameWidth * BOSS_MOVE_RANGE_X_RATIO / 2;
+        const leftX = this.gameWidth / 2 - moveWidth;
+        const rightX = this.gameWidth / 2 + moveWidth;
 
-        // --- ▼ createTimeline() に戻し、add() で設定 ▼ ---
-        this.bossMoveTween = this.tweens.createTimeline(); // ★ createTimeline() を使う
-
-        // 1. 右上へ
-        this.bossMoveTween.add({ targets: this.boss, x: pathCenterX, y: pathCenterY - pathRadiusY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.Out' });
-        // 2. 右下へ
-        this.bossMoveTween.add({ targets: this.boss, x: pathCenterX + pathRadiusX, y: pathCenterY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.In' });
-        // 3. 左下へ
-        this.bossMoveTween.add({ targets: this.boss, x: pathCenterX, y: pathCenterY + pathRadiusY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.Out' });
-        // 4. 左上 (始点付近) へ
-        this.bossMoveTween.add({ targets: this.boss, x: pathCenterX - pathRadiusX, y: pathCenterY, duration: BOSS_MOVE_DURATION_HALF / 2, ease: 'Sine.In' });
-
-        this.bossMoveTween.loop = -1; // ループ設定
-        this.bossMoveTween.play();   // ★ 再生開始
-        // --- ▲ createTimeline() に戻し、add() で設定 ▲ ---
-
-        console.log("Boss movement timeline created and playing.");
+        this.bossMoveTween = this.tweens.add({
+            targets: this.boss,
+            x: rightX,
+            duration: BOSS_MOVE_DURATION,
+            ease: 'Sine.easeInOut',
+            yoyo: true,
+            repeat: -1,
+            delay: 500
+        });
+        console.log("Simple boss movement tween started.");
     }
+    // --- ▲ ボスの動きメソッド ▲ ---
 
 
     // --- ▼ 当たり判定・ダメージ処理など ▼ ---
     setColliders() {
-        console.log("[BossScene] Setting colliders...");
+        console.log("[BossScene] Setting colliders (No Orbiters)...");
         // 既存コライダー破棄
         this.safeDestroy(this.ballPaddleCollider, "ballPaddleCollider");
         this.safeDestroy(this.ballBossCollider, "ballBossCollider");
-        this.safeDestroy(this.ballOrbiterCollider, "ballOrbiterCollider");
+        // this.safeDestroy(this.ballOrbiterCollider, "ballOrbiterCollider"); // 削除
         this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider");
 
         // ボール vs パドル
-        if (this.paddle && this.balls) {
-            this.ballPaddleCollider = this.physics.add.collider(this.paddle, this.balls, this.hitPaddle, null, this);
-        } else { console.warn("Cannot set Ball-Paddle collider."); }
+        if (this.paddle && this.balls) { this.ballPaddleCollider = this.physics.add.collider(this.paddle, this.balls, this.hitPaddle, null, this); }
+        else { console.warn("Cannot set Ball-Paddle collider."); }
 
         // ボール vs ボス本体
-        if (this.boss && this.balls) {
-            this.ballBossCollider = this.physics.add.collider(this.boss, this.balls, this.hitBoss, (boss, ball) => !boss.getData('isInvulnerable'), this);
-            console.log("[BossScene] Ball-Boss collider added.");
-        } else { console.warn("Cannot set Ball-Boss collider."); }
+        if (this.boss && this.balls) { this.ballBossCollider = this.physics.add.collider(this.boss, this.balls, this.hitBoss, (boss, ball) => !boss.getData('isInvulnerable'), this); }
+        else { console.warn("Cannot set Ball-Boss collider."); }
 
-        // ボール vs 子機
-        if (this.orbiters && this.balls) {
-            this.ballOrbiterCollider = this.physics.add.collider(this.orbiters, this.balls, this.hitOrbiter, null, this);
-            console.log("[BossScene] Ball-Orbiter collider added.");
-        } else { console.warn("Cannot set Ball-Orbiter collider."); }
+        // ボール vs 子機 // 削除
 
         // ★ ボール vs 攻撃ブロック の判定を追加 (後で)
-        // if (this.attackBricks && this.balls) {
-        //    this.ballAttackBrickCollider = this.physics.add.collider(this.attackBricks, this.balls, this.hitAttackBrick, null, this);
-        // }
     }
 
     hitPaddle(paddle, ball) {
@@ -399,50 +312,35 @@ export default class BossScene extends Phaser.Scene {
         try {
             const impactPointY = ball.y + BALL_RADIUS * 0.8;
             const impactPointX = ball.x;
-            const particles = this.add.particles(0, 0, 'whitePixel', {
-                x: impactPointX, y: impactPointY, lifespan: 150, speed: { min: 100, max: 200 }, angle: { min: 240, max: 300 }, gravityY: 300, scale: { start: 0.4, end: 0 }, quantity: 5, blendMode: 'ADD', emitting: false
-             });
+            const particles = this.add.particles(0, 0, 'whitePixel', { x: impactPointX, y: impactPointY, lifespan: 150, speed: { min: 100, max: 200 }, angle: { min: 240, max: 300 }, gravityY: 300, scale: { start: 0.4, end: 0 }, quantity: 5, blendMode: 'ADD', emitting: false });
             if(particles) { particles.setParticleTint(0xffffcc); particles.explode(5); this.time.delayedCall(200, () => { if (particles && particles.scene) particles.destroy(); }); }
         } catch (e) { console.error("Error creating paddle hit particle effect:", e); }
     }
 
     hitBoss(boss, ball) {
-        if (!boss || !ball || !boss.active || !ball.active || boss.getData('isInvulnerable')) { return; }
+        if (!boss || !ball || !boss.active || !ball.active || boss.getData('isInvulnerable')) return;
         console.log("[hitBoss] Boss hit by ball.");
         let damage = 1;
         const lastPower = ball.getData('lastActivatedPower');
         const isBikara = lastPower === POWERUP_TYPES.BIKARA;
         const bikaraState = ball.getData('bikaraState');
         const isPenetrating = ball.getData('isPenetrating');
-
         if (isPenetrating || (isBikara && bikaraState === 'yang')) { damage = 2; console.log("[hitBoss] Penetrating/Bikara Yang hit! Damage: 2"); }
         else if (isBikara && bikaraState === 'yin') { damage = 1; console.log("[hitBoss] Bikara Yin hit. Damage: 1 (Simple Rule)"); }
         else { console.log("[hitBoss] Normal hit. Damage: 1"); }
-
         let currentHealth = boss.getData('health') - damage;
         boss.setData('health', currentHealth);
         console.log(`[hitBoss] Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
         // ダメージリアクション
         boss.setTint(0xff0000); boss.setData('isInvulnerable', true);
         const shakeDuration = 60; const shakeAmount = boss.displayWidth * 0.03;
-        this.tweens.add({ targets: boss, x: boss.x + shakeAmount, duration: shakeDuration / 2, ease: 'Sine.easeInOut', yoyo: true, repeat: 1 });
+        this.tweens.add({ targets: boss, props: { x: { value: `+=${shakeAmount}`, duration: shakeDuration / 4, yoyo: true, ease: 'Sine.InOut' } }, repeat: 1 });
         // try { this.sound.add('seBossHit').play(); } catch(e) {}
         this.time.delayedCall(150, () => { if (boss.active) { boss.clearTint(); boss.setData('isInvulnerable', false); } });
-        // 体力ゼロ判定
         if (currentHealth <= 0) { this.defeatBoss(boss); }
     }
 
-    hitOrbiter(orbiter, ball) {
-        if (!orbiter || !orbiter.active || !ball || !ball.active) return;
-        console.log("Ball hit orbiter");
-        try { this.sound.add(AUDIO_KEYS.SE_REFLECT).play(); } catch (e) {}
-        try {
-            const particles = this.add.particles(0, 0, 'whitePixel', { x: ball.x, y: ball.y, lifespan: 100, speed: 100, scale: { start: 0.3, end: 0 }, quantity: 3, blendMode: 'ADD', emitting: false });
-           if(particles){ particles.setParticleTint(0xaaaaaa); particles.explode(3); this.time.delayedCall(150, () => {if (particles && particles.scene) particles.destroy(); });}
-        } catch (e) {}
-    }
-
-    // ★ hitAttackBrick メソッド (後で作成)
+    // hitOrbiter(orbiter, ball) メソッド削除
 
     defeatBoss(boss) {
         if (this.bossDefeated) return;
@@ -453,12 +351,12 @@ export default class BossScene extends Phaser.Scene {
         boss.disableBody(true, true);
         this.score += BOSS_SCORE;
         if (this.uiScene?.scene.isActive()) { this.uiScene.events.emit('updateScore', this.score); }
-        if (this.orbiters) this.orbiters.clear(true, true);
+        // if (this.orbiters) this.orbiters.clear(true, true); // 削除
         if (this.attackBricks) this.attackBricks.clear(true, true);
         this.time.delayedCall(1500, () => { this.gameComplete(); });
     }
 
-    // --- ▼ ゲーム進行メソッド ▼ ---
+    // --- ▼ ゲーム進行メソッド (省略なし) ▼ ---
     loseLife() {
         if (this.isGameOver || this.bossDefeated) return;
         console.log(`[BossScene] Losing life. Lives remaining: ${this.lives - 1}`);
@@ -513,7 +411,33 @@ export default class BossScene extends Phaser.Scene {
          window.location.reload();
     }
 
-    // --- ▼ ユーティリティメソッド ▼ ---
+    // --- ▼ BGMメソッド (省略なし) ▼ ---
+    playBossBgm() {
+        this.stopBgm();
+        const bossBgmKey = AUDIO_KEYS.BGM2; // 後半用BGMキーを使用
+        console.log(`Playing Boss BGM (Using ${bossBgmKey})`);
+        this.currentBgm = this.sound.add(bossBgmKey, { loop: true, volume: 0.5 });
+        try {
+            this.currentBgm.play();
+        } catch (e) {
+            console.error("Error playing boss BGM:", e);
+        }
+    }
+
+    stopBgm() {
+        if (this.currentBgm) {
+            console.log("Stopping Boss BGM");
+            try {
+                 this.currentBgm.stop();
+                 this.sound.remove(this.currentBgm);
+            } catch (e) {
+                 console.error("Error stopping BGM:", e);
+            }
+            this.currentBgm = null;
+        }
+    }
+
+    // --- ▼ ユーティリティメソッド (省略なし) ▼ ---
     updatePaddleSize() {
         if (!this.paddle) return;
         const newWidth = this.scale.width * this.paddle.getData('originalWidthRatio');
@@ -529,9 +453,9 @@ export default class BossScene extends Phaser.Scene {
         this.gameHeight = gameSize.height;
         this.updatePaddleSize();
         if (this.boss) {
-            this.updateBossSize(); // ボスサイズも更新
-            // ボス移動Tweenも更新/再起動が必要な場合がある
-            // this.startBossMovement(); // 例：リサイズ時に動きを再開
+            this.updateBossSize();
+            // ボス移動Tweenを再開/調整する必要があるか？
+            // this.startBossMovement(); // サイズ変更後に動きを再開
         }
         if (this.uiScene && this.uiScene.scene.isActive()) {
             this.uiScene.events.emit('gameResize');
@@ -623,16 +547,13 @@ export default class BossScene extends Phaser.Scene {
         } else { console.log("Cannot launch ball."); }
     }
 
-    // --- ▼ handleWorldBounds (エラー修正後) ▼ ---
     handleWorldBounds(body, up, down, left, right) {
-        const gameObject = body.gameObject; // body.gameObjectでPhaserオブジェクト取得
-        // ボールかどうか、アクティブかなどを判定
+        const gameObject = body.gameObject;
         if (!gameObject || !(gameObject instanceof Phaser.Physics.Arcade.Image) || !this.balls?.contains(gameObject) || !gameObject.active) {
             return;
         }
-        const ball = gameObject; // ballとして扱う
+        const ball = gameObject;
 
-        // 上左右の壁に当たった場合
         if (up || left || right) {
             // 壁ヒットエフェクト
             try {
@@ -643,12 +564,8 @@ export default class BossScene extends Phaser.Scene {
                 const particles = this.add.particles(0, 0, 'whitePixel', { x: impactPointX, y: impactPointY, lifespan: 150, speed: { min: 100, max: 200 }, angle: { min: angleMin, max: angleMax }, gravityY: 100, scale: { start: 0.4, end: 0 }, quantity: 4, blendMode: 'ADD', emitting: false });
                 if(particles) { particles.setParticleTint(0xffffff); particles.explode(4); this.time.delayedCall(200, () => { if (particles && particles.scene) particles.destroy(); });}
             } catch (e) { console.error("Error creating wall hit particle effect:", e); }
-
-            // 壁反射音 (鳴らさないならコメントアウト)
-            // try { this.sound.add(AUDIO_KEYS.SE_REFLECT).play(); } catch(e) { console.error("Error playing SE_REFLECT (wall):", e); }
         }
     }
-    // --- ▲ handleWorldBounds (エラー修正後) ▲ ---
 
     // --- ▼ クリーンアップ (省略なし) ▼ ---
     shutdownScene() {
@@ -669,13 +586,13 @@ export default class BossScene extends Phaser.Scene {
         this.safeDestroy(this.paddle, "paddle");
         this.safeDestroy(this.balls, "balls group", true);
         this.safeDestroy(this.boss, "boss");
-        this.safeDestroy(this.orbiters, "orbiters group", true);
+        // this.safeDestroy(this.orbiters, "orbiters group", true); // 削除
         this.safeDestroy(this.attackBricks, "attackBricks group", true);
         this.safeDestroy(this.gameOverText, "gameOverText");
         console.log("[Shutdown] Finished destroying GameObjects.");
         // 参照クリア
-        this.paddle = null; this.balls = null; this.boss = null; this.orbiters = null; this.attackBricks = null; this.gameOverText = null;
-        this.uiScene = null; this.ballPaddleCollider = null; this.ballBossCollider = null; this.ballOrbiterCollider = null; this.ballAttackBrickCollider = null;
+        this.paddle = null; this.balls = null; this.boss = null; /*this.orbiters = null;*/ this.attackBricks = null; this.gameOverText = null;
+        this.uiScene = null; this.ballPaddleCollider = null; this.ballBossCollider = null; /*this.ballOrbiterCollider = null;*/ this.ballAttackBrickCollider = null;
         console.log("BossScene shutdown complete.");
     }
 
@@ -689,7 +606,7 @@ export default class BossScene extends Phaser.Scene {
                 console.error(`[Shutdown] Error destroying ${name}:`, e.message);
             }
         } else {
-            // console.log(`[Shutdown] ${name} was null or already destroyed.`); // This log can be noisy
+            // console.log(`[Shutdown] ${name} was null or already destroyed.`);
         }
     }
     // --- ▲ クリーンアップ ▲ ---
