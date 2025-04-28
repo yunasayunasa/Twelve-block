@@ -245,28 +245,97 @@ export default class BossScene extends Phaser.Scene {
     // --- ▲ Update ヘルパーメソッド ▲ ---
 
 
-    // --- ▼ ボスの動きメソッド ▼ ---
+    // BossScene.js の startBossMovement メソッド (8の字 - Timeline方式)
+
     startBossMovement() {
         if (!this.boss || !this.boss.active) { console.warn("Cannot start movement, boss not ready."); return; }
         if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; }
 
-        console.log("Starting simple boss horizontal movement tween...");
-        const moveWidth = this.gameWidth * BOSS_MOVE_RANGE_X_RATIO / 2;
-        const leftX = this.gameWidth / 2 - moveWidth;
-        const rightX = this.gameWidth / 2 + moveWidth;
+        console.log("Starting boss 8-shape movement timeline...");
+        const pathRadiusX = this.gameWidth * 0.25;  // 横の広がり具合
+        const pathRadiusY = this.gameHeight * 0.08; // 縦の揺れ幅
+        const pathCenterX = this.gameWidth / 2;
+        const pathCenterY = this.gameHeight * 0.25; // 中心Y座標
+        const durationPerLoop = BOSS_MOVE_DURATION_HALF * 2; // 8の字1周の時間
 
-        this.bossMoveTween = this.tweens.add({
+        // Timeline を作成
+        this.bossMoveTween = this.tweens.createTimeline();
+
+        // --- 8の字の動きを定義 ---
+        // Tween を分割して滑らかに見せる (4分割 + 4分割 = 8ステップ)
+
+        // 初期位置: 左端 (centerX - radiusX, centerY)
+
+        // 1. 右上へ (45度)
+        this.bossMoveTween.add({
             targets: this.boss,
-            x: rightX,
-            duration: BOSS_MOVE_DURATION,
-            ease: 'Sine.easeInOut',
-            yoyo: true,
-            repeat: -1,
-            delay: 500
+            x: pathCenterX,
+            y: pathCenterY - pathRadiusY,
+            duration: durationPerLoop / 8,
+            ease: 'Sine.Out'
         });
-        console.log("Simple boss movement tween started.");
+        // 2. 右中央へ (90度)
+        this.bossMoveTween.add({
+            targets: this.boss,
+            x: pathCenterX + pathRadiusX,
+            y: pathCenterY,
+            duration: durationPerLoop / 8,
+            ease: 'Sine.In'
+        });
+        // 3. 右下へ (135度)
+        this.bossMoveTween.add({
+            targets: this.boss,
+            x: pathCenterX,
+            y: pathCenterY + pathRadiusY,
+            duration: durationPerLoop / 8,
+            ease: 'Sine.Out'
+        });
+        // 4. 中央下へ (180度) - ここで右ループ完了
+        this.bossMoveTween.add({
+            targets: this.boss,
+            x: pathCenterX - pathRadiusX, // 左端へ戻る準備
+            y: pathCenterY,             // Yは中心へ
+            duration: durationPerLoop / 8,
+            ease: 'Sine.In'
+        });
+        // 5. 左下へ (225度)
+        this.bossMoveTween.add({
+            targets: this.boss,
+            x: pathCenterX,
+            y: pathCenterY + pathRadiusY,
+            duration: durationPerLoop / 8,
+            ease: 'Sine.Out'
+        });
+        // 6. 左中央へ (270度)
+        this.bossMoveTween.add({
+            targets: this.boss,
+            x: pathCenterX - pathRadiusX,
+            y: pathCenterY,
+            duration: durationPerLoop / 8,
+            ease: 'Sine.In'
+        });
+        // 7. 左上へ (315度)
+        this.bossMoveTween.add({
+            targets: this.boss,
+            x: pathCenterX,
+            y: pathCenterY - pathRadiusY,
+            duration: durationPerLoop / 8,
+            ease: 'Sine.Out'
+        });
+        // 8. 中央上へ (360度/0度) - ここで左ループ完了、始点付近へ
+         this.bossMoveTween.add({
+            targets: this.boss,
+            x: pathCenterX - pathRadiusX, // 左端へ戻る
+            y: pathCenterY,             // Yは中心へ
+            duration: durationPerLoop / 8,
+            ease: 'Sine.In'
+        });
+
+        this.bossMoveTween.loop = -1; // 無限ループ
+        this.bossMoveTween.play();   // 再生開始
+
+        console.log("Boss 8-shape movement timeline created and playing.");
     }
-    // --- ▲ ボスの動きメソッド ▲ ---
 
 
     // --- ▼ 当たり判定・ダメージ処理など ▼ ---
