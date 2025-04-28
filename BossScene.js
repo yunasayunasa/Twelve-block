@@ -2,9 +2,16 @@
 
 import {
     PADDLE_WIDTH_RATIO, PADDLE_HEIGHT, PADDLE_Y_OFFSET, BALL_RADIUS, PHYSICS_BALL_RADIUS,
-    BALL_INITIAL_VELOCITY_Y, BALL_INITIAL_VELOCITY_X_RANGE, NORMAL_BALL_SPEED, AUDIO_KEYS, MAX_STAGE, POWERUP_TYPES // SE_REFLECT用にPOWERUP_TYPESもインポート
+    BALL_INITIAL_VELOCITY_Y, BALL_INITIAL_VELOCITY_X_RANGE, NORMAL_BALL_SPEED, AUDIO_KEYS, MAX_STAGE, POWERUP_TYPES,
+    POWERUP_ICON_KEYS, // ビカラ状態確認用にインポート
+    POWERUP_TYPES // ビカラ状態確認用にインポート 
+    // // SE_REFLECT用にPOWERUP_TYPESもインポート
     // 他にも BossScene で使う定数があれば追加
 } from './constants.js';
+
+// ★ ボス体力の定数を追加 (任意)
+const BOSS_MAX_HEALTH = 100;
+const BOSS_SCORE = 1000; // ボス撃破スコア
 
 export default class BossScene extends Phaser.Scene {
     constructor() {
@@ -144,32 +151,33 @@ export default class BossScene extends Phaser.Scene {
         this.events.on('shutdown', this.shutdownScene, this);
 
 
-        // --- ▼ ボス関連の初期化 ▼ ---
-        console.log("Initializing boss elements...");
-        // ボス本体生成 (仮表示)
-        this.boss = this.physics.add.image(this.gameWidth / 2, 150, 'bossStand')
-             .setImmovable(true); // 物理的には動かない
-        console.log("Boss object created (initial).");
-        this.updateBossSize(); // ★ サイズ更新用メソッド呼び出し
-        // ★ ここにボスの体力、当たり判定設定などを追加
+       // --- ▼ ボス関連の初期化 ▼ ---
+       console.log("Initializing boss elements...");
+       this.boss = this.physics.add.image(this.gameWidth / 2, 150, 'bossStand')
+            .setImmovable(true);
+       // ★★★ ボスに体力を設定 ★★★
+       this.boss.setData('health', BOSS_MAX_HEALTH);
+       this.boss.setData('maxHealth', BOSS_MAX_HEALTH); // 最大体力も保持 (体力バー用など)
+       this.boss.setData('isInvulnerable', false); // ★ 無敵状態フラグ (ダメージ後などに使用)
+       console.log(`Boss created with health: ${this.boss.getData('health')}`);
+       this.updateBossSize(); // ★ サイズと当たり判定を設定 (既存のメソッド呼び出し)
 
-        // 子機グループ生成
-        this.orbiters = this.physics.add.group({ immovable: true });
-        console.log("Orbiters group created.");
-        // ★ ここに子機生成処理を追加
+       // 子機グループ生成 (中身はまだ)
+       this.orbiters = this.physics.add.group({ immovable: true });
+       console.log("Orbiters group created.");
 
-        // 攻撃ブロックグループ生成
-        this.attackBricks = this.physics.add.group();
-        console.log("Attack bricks group created.");
+       // 攻撃ブロックグループ生成 (中身はまだ)
+       this.attackBricks = this.physics.add.group();
+       console.log("Attack bricks group created.");
 
-        // ★ ここにボス登場演出処理を追加
-        // --- ▲ ボス関連の初期化 ▲ ---
+       // ★ 登場演出は後で実装
+       // --- ▲ ボス関連の初期化 ▲ ---
 
 
         // --- 衝突判定設定 ---
-        console.log("Setting initial colliders...");
-        this.setColliders();
-        console.log("Initial colliders set.");
+        console.log("Setting colliders including boss...");
+        this.setColliders(); // ★ 更新された setColliders を呼び出す
+        console.log("Colliders set.");
         // --- ▲ 衝突判定設定 ▲ ---
 
         console.log("BossScene Create End");
@@ -361,22 +369,130 @@ updateBossSize() {
         ball.clearTint();
     }
 
+    // --- ▼ setColliders メソッド修正 ▼ ---
     setColliders() {
-        console.log("[BossScene] Setting basic colliders...");
+        console.log("[BossScene] Setting colliders...");
         // 既存コライダー破棄
-        if (this.ballPaddleCollider) this.ballPaddleCollider.destroy();
-        if (this.ballWallCollider) this.ballWallCollider.destroy(); // 壁とのColliderも念のため
+        this.safeDestroy(this.ballPaddleCollider, "ballPaddleCollider");
+        this.safeDestroy(this.ballBossCollider, "ballBossCollider"); // ★ ボス用コライダー参照を追加
+        // 他にもあれば破棄 (例: ballOrbiterCollider, ballAttackBrickCollider)
 
         // ボール vs パドル
         if (this.paddle && this.balls) {
             this.ballPaddleCollider = this.physics.add.collider(this.paddle, this.balls, this.hitPaddle, null, this);
-            console.log("[BossScene] Ball-Paddle collider added.");
-        } else { console.warn("[BossScene] Cannot set Ball-Paddle collider."); }
+        }
 
-        // ボール vs ワールド境界 (上左右) - これは worldbounds イベントで処理するので明示的なColliderは不要かも
+        // ★★★ ボール vs ボス本体 ★★★
+        if (this.boss && this.balls) {
+            this.ballBossCollider = this.physics.add.collider(
+                this.boss,
+                this.balls,
+                this.hitBoss, // ★ 衝突時に hitBoss メソッドを呼び出す
+                (boss, ball) => { // ProcessCallback: 衝突を有効にするか判定
+                    // ボスが無敵状態でない場合のみ衝突を有効にする
+                    return !boss.getData('isInvulnerable');
+                },
+                this // context
+            );
+            console.log("[BossScene] Ball-Boss collider added.");
+        } else {
+             console.warn("[BossScene] Cannot set Ball-Boss collider.");
+        }
 
-        // ★★★ ここに ボール vs ボス, ボール vs 子機, ボール vs 攻撃ブロック の Collider/Overlap を追加 ★★★
+        // ★★★ ここに ボール vs 子機, ボール vs 攻撃ブロック の Collider/Overlap を後で追加 ★★★
     }
+    // --- ▲ setColliders メソッド修正 ▲ ---
+
+// --- ▼ hitBoss メソッド新規作成 ▼ ---
+hitBoss(boss, ball) {
+    // 無敵状態なら何もしない (ColliderのprocessCallbackでもチェックしているが念のため)
+    if (!boss || !ball || !boss.active || !ball.active || boss.getData('isInvulnerable')) {
+        return;
+    }
+
+    console.log("[hitBoss] Boss hit by ball.");
+    let damage = 1; // 基本ダメージ
+
+    // --- ボールの状態に応じたダメージ計算 ---
+    const lastPower = ball.getData('lastActivatedPower');
+    const isBikara = lastPower === POWERUP_TYPES.BIKARA;
+    const bikaraState = ball.getData('bikaraState');
+    const isPenetrating = ball.getData('isPenetrating'); // クビラなど
+
+    if (isPenetrating || (isBikara && bikaraState === 'yang')) {
+         // 貫通 または ビカラ陽 の場合はダメージ2
+        damage = 2;
+        console.log("[hitBoss] Penetrating/Bikara Yang hit! Damage: 2");
+    } else if (isBikara && bikaraState === 'yin') {
+         // ビカラ陰 は通常ダメージ (シンプル案)
+         damage = 1;
+         console.log("[hitBoss] Bikara Yin hit. Damage: 1 (Simple Rule)");
+         // ここにマーキング処理を追加することも可能
+    } else {
+         console.log("[hitBoss] Normal hit. Damage: 1");
+    }
+
+    // --- ボスの体力を減らす ---
+    let currentHealth = boss.getData('health');
+    currentHealth -= damage;
+    boss.setData('health', currentHealth);
+    console.log(`[hitBoss] Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
+
+    // --- ダメージリアクション (一時的に色を変える & 短い無敵時間) ---
+    boss.setTint(0xff0000); // 赤く光る
+    boss.setData('isInvulnerable', true); // 短い無敵状態に
+    // 効果音再生 (仮)
+    // try { this.sound.add('seBossHit').play(); } catch(e) {}
+
+    // 一定時間後に色と無敵状態を戻すタイマー
+    this.time.delayedCall(150, () => { // 0.15秒後
+         if (boss.active) { // ボスがまだ存在すれば
+             boss.clearTint(); // 色を戻す
+             boss.setData('isInvulnerable', false); // 無敵解除
+         }
+    });
+
+    // --- ボールを跳ね返す処理 ---
+    // colliderが自動で処理してくれるはずだが、念のため手動でも設定可能
+    // ball.setVelocity(ball.body.velocity.x, -Math.abs(ball.body.velocity.y * 0.8)); // 少し減速させて上に跳ね返すなど
+
+    // --- 体力ゼロ判定 ---
+    if (currentHealth <= 0) {
+        console.log("[hitBoss] Boss health reached zero!");
+        this.defeatBoss(boss); // 撃破処理へ
+    }
+}
+// --- ▲ hitBoss メソッド新規作成 ▲ ---
+
+// --- ▼ defeatBoss メソッド新規作成 ▼ ---
+defeatBoss(boss) {
+    if (this.bossDefeated) return; // 既に倒されていれば何もしない
+    console.log("[defeatBoss] Boss defeated!");
+    this.bossDefeated = true;
+
+    // ★ ここに撃破演出（点滅、消滅など）を追加
+
+    // とりあえずボスを非表示・物理無効化
+    boss.disableBody(true, true);
+
+    // スコア加算
+    this.score += BOSS_SCORE;
+    if (this.uiScene && this.uiScene.scene.isActive()) {
+         this.uiScene.events.emit('updateScore', this.score);
+    }
+
+    // 子機や攻撃ブロックも消す？ (必要なら)
+    if (this.orbiters) this.orbiters.clear(true, true);
+    if (this.attackBricks) this.attackBricks.clear(true, true);
+
+    // 少し待ってからゲームクリア処理へ
+    this.time.delayedCall(1500, () => { // 1.5秒待つ (演出時間)
+        this.gameComplete();
+    });
+}
+// --- ▲ defeatBoss メソッド新規作成 ▲ ---
+
+
 
     // BossScene.js の hitPaddle メソッド
 
