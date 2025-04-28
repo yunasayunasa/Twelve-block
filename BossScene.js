@@ -669,21 +669,25 @@ update(time, delta) {
         // --- ブロックを破壊 ---
         brick.destroy(); // destroy() はグループからも削除する
 
-        // --- アイテムドロップ判定 ---
-        // ★ ドロップ率は固定値か、chaosSettings.rate を使うか？ -> ひとまず固定値のまま
-        if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_ITEM_DROP_RATE) {
+        // --- ▼ アイテムドロップ判定 (ドロップ率を chaosSettings から取得) ▼ ---
+        // ★ 固定値ではなく this.chaosSettings.rate を使う ★
+        const dropRate = this.chaosSettings?.rate ?? ATTACK_BRICK_ITEM_DROP_RATE; // 安全に取得 (なければ定数をフォールバック)
+        console.log(`[Drop Logic] Checking drop against rate: ${dropRate.toFixed(2)}`); // 現在のレートをログ表示
 
-            // ★★★ this.bossDropPool を使うように変更 ★★★
+        if (Phaser.Math.FloatBetween(0, 1) < dropRate) { // ★ dropRate で判定
+
             if (this.bossDropPool && this.bossDropPool.length > 0) {
-                // const currentDropPool = shuffledPool.slice(0, countToSlice); // ← 削除
-                // console.log(`[Drop Logic] Created drop pool: ...`);          // ← 削除
-                const dropType = Phaser.Utils.Array.GetRandom(this.bossDropPool); // ★ 作成済みのプールから選ぶ
-                console.log(`[Drop Logic] Dropping item: ${dropType} (From fixed pool: [${this.bossDropPool.join(',')}])`); // ログ変更
-                this.dropSpecificPowerUp(brickX, brickY, dropType);
+                const dropType = Phaser.Utils.Array.GetRandom(this.bossDropPool);
+                console.log(`[Drop Logic] Dropping item: ${dropType} (From fixed pool: [${this.bossDropPool.join(',')}])`);
+                this.dropSpecificPowerUp(brick.x, brick.y, dropType);
             } else {
-                 console.log("No items in boss drop pool (count=0 or pool not set).");
+                 console.log("No items in boss drop pool.");
             }
+        } else {
+             console.log("[Drop Logic] No item drop based on rate."); // ドロップしなかった場合のログ
         }
+        // --- ▲ アイテムドロップ判定 (ドロップ率を chaosSettings から取得) ▲ ---
+        
     }
     // --- ▲ hitAttackBrick メソッド修正 ▲ ---
 
