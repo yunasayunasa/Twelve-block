@@ -345,7 +345,7 @@ export default class BossScene extends Phaser.Scene {
         // --- ▲ this.tweens.timeline() を使用する ▲ ---
 
         // .play() は不要 (timeline() は自動で再生開始されることが多い、必要なら残す)
-        // this.bossMoveTween.play(); // ← 不要な場合が多い
+        this.bossMoveTween.play(); // ← 不要な場合が多い
 
         console.log("Boss movement timeline created and potentially playing.");
     }
