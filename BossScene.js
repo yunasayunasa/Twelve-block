@@ -315,9 +315,9 @@ startBossMovement() {
             duration: BOSS_MOVE_DURATION,
             // --- ▼ Easeを変更してみる ▼ ---
                 // ease: 'Sine.easeInOut', // 滑らか (元のコード)
-                ease: 'Expo.easeInOut', // 加速して減速 (サッ→ピタッに近いかも)
+                //ease: 'Expo.easeInOut', // 加速して減速 (サッ→ピタッに近いかも)
                 // ease: 'Quad.easeInOut', // Sineより少しメリハリがある
-                // ease: 'Power2.easeInOut' // さらにメリハリ
+                 ease: 'Power2.easeInOut' // さらにメリハリ
                 // --- ▲ Easeを変更してみる ▲ ---
             onComplete: () => {
                 // 左端に着いたら右へ移動する Tween を開始
