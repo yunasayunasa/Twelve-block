@@ -10,9 +10,9 @@ import {
 const BOSS_MAX_HEALTH = 100; // またはテスト用: 5
 const BOSS_SCORE = 1000;
 // ▼ ボスの動き設定 ▼
-const BOSS_MOVE_DURATION_HALF = 4000; // ★ 8の字の片ループ時間(ms) - これが必要
-const durationPerLoop = BOSS_MOVE_DURATION_HALF * 2; // ★ 1周の時間も定義 (追加)
-// const BOSS_MOVE_DURATION = 4000; // ← 単純往復用だったので削除またはコメントアウト
+////const BOSS_MOVE_DURATION_HALF = 4000; // ★ 8の字の片ループ時間(ms) - これが必要
+//const durationPerLoop = BOSS_MOVE_DURATION_HALF * 2; // ★ 1周の時間も定義 (追加)
+ const BOSS_MOVE_DURATION = 4000; // ← 単純往復用だったので削除またはコメントアウト
 // --- ▲ ボスの動き設定 ▲ ---
 export default class BossScene extends Phaser.Scene {
     constructor() {
