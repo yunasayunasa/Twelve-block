@@ -245,8 +245,8 @@ export default class BossScene extends Phaser.Scene {
     // --- ▲ Update ヘルパーメソッド ▲ ---
 
 
-    // --- ▼ ボスの動きメソッド ▼ ---
-    startBossMovement() {
+    //* --- ▼ ボスの動きメソッド ▼ ---
+   /* startBossMovement() {
         if (!this.boss || !this.boss.active) { console.warn("Cannot start movement, boss not ready."); return; }
         if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; }
 
@@ -265,8 +265,49 @@ export default class BossScene extends Phaser.Scene {
             delay: 500
         });
         console.log("Simple boss movement tween started.");
-    }
-    // --- ▲ ボスの動きメソッド ▲ ---
+    }*/
+    // --- ▲ ボスの動きメソッド 元に戻す用▲ ---*/
+
+// BossScene.js の startBossMovement メソッド (中央開始 - yoyo/onComplete方式)
+
+startBossMovement() {
+    if (!this.boss || !this.boss.active) { console.warn("Cannot start movement, boss not ready."); return; }
+    if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; }
+
+    console.log("Starting boss horizontal movement tween (Center Start - Yoyo/OnComplete)...");
+    const moveWidth = this.gameWidth * BOSS_MOVE_RANGE_X_RATIO / 2;
+    const leftX = this.gameWidth / 2 - moveWidth;
+    const rightX = this.gameWidth / 2 + moveWidth;
+    const initialX = this.gameWidth / 2; // 開始位置は中央
+
+    // ★ 初期位置を中央に設定
+    this.boss.setX(initialX);
+
+    this.bossMoveTween = this.tweens.add({
+        targets: this.boss,
+        x: rightX,              // ★ 最初の目標は右端
+        duration: BOSS_MOVE_DURATION, // ★ 片道の時間
+        ease: 'Sine.easeInOut',
+        yoyo: true,             // 折り返す
+        repeat: -1,             // 無限繰り返し
+
+        // ★ コールバックを追加 ★
+        onYoyo: (tween, target) => {
+            // 折り返し時 (右端 -> 左端 に向かう直前)
+            console.log("Tween Yoyo: moving towards leftX");
+            // 次の目標値を明示的に設定する必要はない (yoyoが自動で行う)
+            // ただし、必要ならここで何か処理できる
+        },
+        onRepeat: (tween, target) => {
+            // 1ループ完了時 (左端 -> 右端 に向かう直前)
+            console.log("Tween Repeat: moving towards rightX");
+            // yoyoがあるので、これも目標値を明示的に設定する必要はない
+        }
+        // onComplete は repeat: -1 のため呼ばれない
+    });
+
+    console.log("Simple boss movement tween with yoyo started.");
+}
 
 
     // --- ▼ 当たり判定・ダメージ処理など ▼ ---
