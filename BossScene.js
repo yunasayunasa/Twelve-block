@@ -313,7 +313,7 @@ export default class BossScene extends Phaser.Scene {
 
         if (attackBrick) {
             // --- ▼ 見た目の調整 ▼ ---
-            const desiredScale = 0.8; // ★ 画像に合わせた適切なスケールに調整
+            const desiredScale = 0.4; // ★ 画像に合わせた適切なスケールに調整
             attackBrick.setScale(desiredScale);
 
             // ★ Tint設定は attackBrick 画像を使うので不要 → 削除
