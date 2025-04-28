@@ -372,7 +372,7 @@ update(time, delta) {
     if (this.bossAfterImageEmitter && this.boss && this.boss.body) { // エミッタとボスが存在するか確認
         // ボスの物理ボディが動いている（速度がある）時だけ残像を出す
         const bossVelocityX = Math.abs(this.boss.body.velocity.x); // ボスの現在のX速度（Tween中も物理速度はあるはず）
-        const threshold = 10; // 速度がこの値より大きい時だけ放出
+        const threshold = 1; // 速度がこの値より大きい時だけ放出
 
         if (bossVelocityX > threshold && !this.bossAfterImageEmitter.emitting) {
             // 動き始めたら放出開始
