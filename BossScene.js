@@ -467,6 +467,7 @@ updateBossSize() {
         // 既存コライダー破棄
         this.safeDestroy(this.ballPaddleCollider, "ballPaddleCollider");
         this.safeDestroy(this.ballBossCollider, "ballBossCollider"); // ★ ボス用コライダー参照を追加
+        this.safeDestroy(this.ballOrbiterCollider, "ballOrbiterCollider"); // ★ 子機用コライダー参照追加
         // 他にもあれば破棄 (例: ballOrbiterCollider, ballAttackBrickCollider)
 
         // ボール vs パドル
@@ -491,7 +492,30 @@ updateBossSize() {
              console.warn("[BossScene] Cannot set Ball-Boss collider.");
         }
 
-        // ★★★ ここに ボール vs 子機, ボール vs 攻撃ブロック の Collider/Overlap を後で追加 ★★★
+        // ★★★ ボール vs 子機 (跳ね返すだけ) ★★★
+        if (this.orbiters && this.balls) {
+            this.ballOrbiterCollider = this.physics.add.collider(
+                this.orbiters,
+                this.balls,
+                (orbiter, ball) => { // 衝突時のコールバック
+                    console.log("Ball hit orbiter");
+                    // 簡単な跳ね返り音
+                    try { this.sound.add(AUDIO_KEYS.SE_REFLECT).play(); } catch (e) {}
+                    // 簡単なエフェクト (パドルヒット流用)
+                    try {
+                        const particles = this.add.particles(0, 0, 'whitePixel', { x: ball.x, y: ball.y, lifespan: 100, speed: 100, scale: { start: 0.3, end: 0 }, quantity: 3, blendMode: 'ADD', emitting: false });
+                        particles.setParticleTint(0xaaaaaa); particles.explode(3);
+                        this.time.delayedCall(150, () => particles.destroy());
+                    } catch (e) {}
+                    // 子機は immovable なのでボールだけ跳ね返るはず
+                },
+                null, // processCallback は不要
+                this
+            );
+            console.log("[BossScene] Ball-Orbiter collider added.");
+        } else { console.warn("[BossScene] Cannot set Ball-Orbiter collider."); }
+
+        // ★★★ ここに ボール vs 攻撃ブロック の Collider/Overlap を後で追加 ★★★
     }
     // --- ▲ setColliders メソッド修正 ▲ ---
 
@@ -767,6 +791,8 @@ hitPaddle(paddle, ball) {
         this.safeDestroy(this.bossContainer, "bossContainer");
         this.safeDestroy(this.gameOverText, "gameOverText");
         this.safeDestroy(this.boss.pathFollower, "boss path follower"); // ★ フォロワーも破棄
+        this.safeDestroy(this.bossContainer, "bossContainer"); // ★ コンテナ破棄
+        this.safeDestroy(this.pathFollower, "path follower"); // ★ フォロワー破棄
         // ...
 
         // 参照クリア
