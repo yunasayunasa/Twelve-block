@@ -245,51 +245,29 @@ export default class BossScene extends Phaser.Scene {
     // --- ▲ Update ヘルパーメソッド ▲ ---
 
 
-    // BossScene.js の startBossMovement メソッド (再修正)
+    // BossScene.js の startBossMovement メソッド (単純な左右往復)
 
     startBossMovement() {
         if (!this.boss || !this.boss.active) { console.warn("Cannot start movement, boss not ready."); return; }
-        if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; }
+        if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; } // 既存Tween停止
 
-        console.log("Starting boss 8-shape movement timeline (using this.tweens.timeline)...");
-        const pathRadiusX = this.gameWidth * 0.25;
-        const pathRadiusY = this.gameHeight * 0.08;
-        const pathCenterX = this.gameWidth / 2;
-        const pathCenterY = this.gameHeight * 0.25;
-        const durationPerLoop = BOSS_MOVE_DURATION_HALF * 2; // 1周の時間
+        console.log("Starting simple boss horizontal movement tween...");
+        const moveWidth = this.gameWidth * BOSS_MOVE_RANGE_X_RATIO / 2; // 画面幅の30%を左右に移動
+        const leftX = this.gameWidth / 2 - moveWidth;
+        const rightX = this.gameWidth / 2 + moveWidth;
 
-        // --- ▼ this.tweens.timeline() を使う (再挑戦) ▼ ---
-        this.bossMoveTween = this.tweens.timeline({
-            // 全体のデフォルトターゲット (add内で個別に指定してもOK)
-            // targets: this.boss,
-
-            // tweens 配列で連続する Tween を定義
-            tweens: [
-                // 1. 右上へ
-                { targets: this.boss, x: pathCenterX, y: pathCenterY - pathRadiusY, duration: durationPerLoop / 8, ease: 'Sine.Out' },
-                // 2. 右中央へ
-                { targets: this.boss, x: pathCenterX + pathRadiusX, y: pathCenterY, duration: durationPerLoop / 8, ease: 'Sine.In' },
-                // 3. 右下へ
-                { targets: this.boss, x: pathCenterX, y: pathCenterY + pathRadiusY, duration: durationPerLoop / 8, ease: 'Sine.Out' },
-                // 4. 中央下へ
-                { targets: this.boss, x: pathCenterX - pathRadiusX, y: pathCenterY, duration: durationPerLoop / 8, ease: 'Sine.In' },
-                // 5. 左下へ
-                { targets: this.boss, x: pathCenterX, y: pathCenterY + pathRadiusY, duration: durationPerLoop / 8, ease: 'Sine.Out' }, // Y座標は再確認 (3と同じで良いはず)
-                // 6. 左中央へ
-                { targets: this.boss, x: pathCenterX - pathRadiusX, y: pathCenterY, duration: durationPerLoop / 8, ease: 'Sine.In' },
-                // 7. 左上へ
-                { targets: this.boss, x: pathCenterX, y: pathCenterY - pathRadiusY, duration: durationPerLoop / 8, ease: 'Sine.Out' },
-                // 8. 中央上へ (始点付近)
-                 { targets: this.boss, x: pathCenterX - pathRadiusX, y: pathCenterY, duration: durationPerLoop / 8, ease: 'Sine.In' }
-            ],
-
-            loop: -1 // 無限ループ
-            // loopDelay: 100 // ループ間の遅延 (任意)
+        // ★ this.tweens.add を使った単純な往復 Tween ★
+        this.bossMoveTween = this.tweens.add({
+            targets: this.boss,       // 対象はボス
+            x: rightX,              // 目標X座標 (右端)
+            duration: BOSS_MOVE_DURATION, // 片道にかかる時間
+            ease: 'Sine.easeInOut',   // 滑らかな動き
+            yoyo: true,             // trueにすると元の位置(左端)に自動で戻る
+            repeat: -1,             // 無限に繰り返す
+            delay: 500              // 開始までの遅延 (任意)
         });
-        // --- ▲ this.tweens.timeline() を使う (再挑戦) ▲ ---
 
-        // timeline() は自動で再生開始するはず
-        console.log("Boss movement timeline created.");
+        console.log("Simple boss movement tween started.");
     }
 
 
