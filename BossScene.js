@@ -328,7 +328,7 @@ export default class BossScene extends Phaser.Scene {
             try {
                 if (attackBrick.body) {
                     // ★ 当たり判定の倍率を設定 ★
-                    const hitboxScaleMultiplier = 1.8; // 例: 見た目の1.8倍の当たり判定サイズにする
+                    const hitboxScaleMultiplier = 3.8; // 例: 見た目の1.8倍の当たり判定サイズにする
 
                     const hitboxWidth = attackBrick.displayWidth * hitboxScaleMultiplier;
                     const hitboxHeight = attackBrick.displayHeight * hitboxScaleMultiplier;
