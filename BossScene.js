@@ -379,33 +379,7 @@ export default class BossScene extends Phaser.Scene {
         }
     }
 
-    // 攻撃ブロックがボールに当たった時の処理 (後で実装)
-    hitAttackBrick(brick, ball) {
-        console.log("Attack brick hit by ball!");
-        // ★ ここでブロック破壊、エフェクト、SE、アイテムドロップ処理
-
-        // 例: ブロック破壊
-        brick.destroy();
-
-        // 例: アイテムドロップ判定
-        if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_ITEM_DROP_RATE) {
-            // ドロップするアイテム決定 (ボス戦専用プール？ or カオス設定？)
-            const dropType = Phaser.Utils.Array.GetRandom(ALL_POSSIBLE_POWERUPS); // 仮に全体から
-            console.log(`Dropping item: ${dropType}`);
-            // ★ GameSceneの dropSpecificPowerUp のようなメソッドをBossSceneにも用意するか、呼び出す
-            this.dropSpecificPowerUp(brick.x, brick.y, dropType); // 仮呼び出し
-        }
-    }
-    // ★ アイテムドロップ用のメソッド (GameSceneから移植/修正)
-    dropSpecificPowerUp(x, y, type) {
-        // ★ GameSceneの同名メソッドを参考に実装
-        console.log(`[BossScene] Dropping power up ${type} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
-        // ... (アイテム生成、落下処理) ...
-        // ボス戦で拾うアイテムは一時的な効果が良いかも？
-    }
-
-
-    // --- ▲ 攻撃ブロック生成関連メソッド ▲ ---
+    
 
     //* --- ▼ ボスの動きメソッド ▼ ---
    /* startBossMovement() {
