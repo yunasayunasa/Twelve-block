@@ -324,16 +324,28 @@ export default class BossScene extends Phaser.Scene {
             // }
             attackBrick.clearTint(); // 念のためクリア
 
-            // --- ▼ 当たり判定を表示サイズに合わせる ▼ ---
+            // // --- ▼ 当たり判定を表示サイズより大きくする ▼ ---
             try {
                 if (attackBrick.body) {
-                    // 表示サイズに合わせて当たり判定を設定
-                    attackBrick.body.setSize(attackBrick.displayWidth, attackBrick.displayHeight);
-                    // 必要ならオフセット調整
-                    console.log(`Attack brick body size set to: ${attackBrick.displayWidth.toFixed(0)}x${attackBrick.displayHeight.toFixed(0)}`);
+                    // ★ 当たり判定の倍率を設定 ★
+                    const hitboxScaleMultiplier = 1.8; // 例: 見た目の1.8倍の当たり判定サイズにする
+
+                    const hitboxWidth = attackBrick.displayWidth * hitboxScaleMultiplier;
+                    const hitboxHeight = attackBrick.displayHeight * hitboxScaleMultiplier;
+
+                    attackBrick.body.setSize(hitboxWidth, hitboxHeight);
+
+                    // ★ setSize で中央基準に拡大されるため、オフセットは通常不要 ★
+                    // もしズレる場合は調整:
+                    // const offsetX = (attackBrick.displayWidth - hitboxWidth) / 2;
+                    // const offsetY = (attackBrick.displayHeight - hitboxHeight) / 2;
+                    // attackBrick.body.setOffset(offsetX, offsetY);
+
+                    console.log(`Attack brick body size set to: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)} (Multiplier: ${hitboxScaleMultiplier})`);
                 } else { console.warn("Attack brick body not ready for size setting."); }
             } catch (e) { console.error("Error setting attack brick body size:", e); }
-            // --- ▲ 当たり判定を表示サイズに合わせる ▲ ---
+            // --- ▲ 当たり判定を表示サイズより大きくする ▲ ---
+
 
             // 落下速度など
             attackBrick.setVelocityY(ATTACK_BRICK_VELOCITY_Y);
