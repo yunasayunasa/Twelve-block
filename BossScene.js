@@ -3,6 +3,8 @@
 import {
     PADDLE_WIDTH_RATIO, PADDLE_HEIGHT, PADDLE_Y_OFFSET, BALL_RADIUS, PHYSICS_BALL_RADIUS,
     BALL_INITIAL_VELOCITY_Y, BALL_INITIAL_VELOCITY_X_RANGE, NORMAL_BALL_SPEED, AUDIO_KEYS, MAX_STAGE, POWERUP_TYPES,
+    ALL_POSSIBLE_POWERUPS, // アイテムドロップで使う可能性
+    POWERUP_ICON_KEYS, // アイテムドロップで使う可能性
     BRICK_WIDTH_RATIO
 } from './constants.js';
 
@@ -13,6 +15,15 @@ const BOSS_SCORE = 1000;
 const BOSS_MOVE_RANGE_X_RATIO = 0.8; // 画面幅の60%を往復
 const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
 // --- ▲ ボスの動き設定 ▲ ---
+// ★ 攻撃ブロック関連の定数
+const ATTACK_BRICK_VELOCITY_Y = 150; // 落下速度
+const ATTACK_BRICK_SPAWN_DELAY_MIN = 800; // 最短生成間隔 (ms)
+const ATTACK_BRICK_SPAWN_DELAY_MAX = 2500; // 最長生成間隔 (ms)
+const ATTACK_BRICK_SCALE = 0.8; // ブロックの表示スケール (仮)
+const ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE = 0.6; // 上から降ってくる確率 (60%)
+const ATTACK_BRICK_ITEM_DROP_RATE = 0.4; // 破壊時にアイテムを落とす確率 (40%)
+
+
 
 export default class BossScene extends Phaser.Scene {
     constructor() {
@@ -35,6 +46,7 @@ export default class BossScene extends Phaser.Scene {
         this.playerControlEnabled = true;
         this.bossMoveTween = null;
         this.bossAfterImageEmitter = null; // ★ 残像用エミッタのプロパテ
+        this.attackBrickTimer = null; // ★ 攻撃ブロック生成タイマー用
 
         // コライダー参照
         this.ballPaddleCollider = null;
@@ -56,7 +68,7 @@ export default class BossScene extends Phaser.Scene {
         this.score = data.score || 0;
         this.chaosSettings = data.chaosSettings || { count: 4, rate: 0.5 };
         console.log(`BossScene Initialized with Lives: ${this.lives}, Score: ${this.score}`);
-
+        
         this.isBallLaunched = false;
         this.isGameOver = false;
         this.bossDefeated = false;
@@ -104,6 +116,10 @@ export default class BossScene extends Phaser.Scene {
 
         // --- 7. ボスの動きを開始 ---
         this.startBossMovement();
+
+        // --- ▼ 攻撃ブロック生成タイマーを開始 ▼ ---
+        this.scheduleNextAttackBrick();
+        // --- ▲ 攻撃ブロック生成タイマーを開始 ▲ ---
 
         console.log("BossScene Create End");
     }
@@ -246,6 +262,106 @@ export default class BossScene extends Phaser.Scene {
 
     // --- ▲ Update ヘルパーメソッド ▲ ---
 
+    // --- ▼ 攻撃ブロック生成関連メソッド (新規・修正) ▼ ---
+
+    // 次の攻撃ブロック生成を予約するメソッド
+    scheduleNextAttackBrick() {
+        // 既存のタイマーがあれば削除
+        if (this.attackBrickTimer) {
+            this.attackBrickTimer.remove();
+        }
+        // ランダムな遅延時間を計算
+        const nextDelay = Phaser.Math.Between(ATTACK_BRICK_SPAWN_DELAY_MIN, ATTACK_BRICK_SPAWN_DELAY_MAX);
+        console.log(`Scheduling next attack brick in ${nextDelay}ms`);
+
+        this.attackBrickTimer = this.time.addEvent({
+            delay: nextDelay,
+            callback: this.spawnAttackBrick, // 生成関数を呼び出す
+            callbackScope: this,
+            loop: false // ループはせず、コールバック内で再度スケジュールする
+        });
+    }
+
+    // 攻撃ブロックを生成するメソッド
+    spawnAttackBrick() {
+        console.log("Spawning attack brick...");
+        let spawnX;
+        const spawnY = 0; // 画面上端から
+
+        // 生成位置を決定 (ボス or 上部ランダム)
+        if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE) {
+            // 画面上部ランダム
+            spawnX = Phaser.Math.Between(30, this.gameWidth - 30); // 左右端すぎないように
+            console.log("Spawning from top random position.");
+        } else {
+            // ボスの現在位置から
+            if (this.boss && this.boss.active) {
+                spawnX = this.boss.x;
+                 console.log("Spawning from boss position.");
+            } else {
+                console.log("Boss not available, spawning at center top.");
+                spawnX = this.gameWidth / 2; // ボスがいない場合のフォールバック
+            }
+        }
+
+        // ★ attackBrick 画像がない場合は whitePixel で代用
+        const brickTexture = this.textures.exists('attackBrick') ? 'attackBrick' : 'whitePixel';
+        const attackBrick = this.attackBricks.create(spawnX, spawnY, brickTexture);
+
+        if (attackBrick) {
+            attackBrick.setScale(ATTACK_BRICK_SCALE); // スケール設定
+            // whitePixel の場合は色を設定
+            if (brickTexture === 'whitePixel') {
+                attackBrick.setTint(Phaser.Display.Color.RandomRGB().color); // ランダム色
+            }
+            // 当たり判定サイズ設定 (画像に合わせるか、固定サイズ)
+            attackBrick.body.setSize(attackBrick.width * ATTACK_BRICK_SCALE, attackBrick.height * ATTACK_BRICK_SCALE);
+            // 落下速度を設定
+            attackBrick.setVelocityY(ATTACK_BRICK_VELOCITY_Y);
+            // 重力の影響は受けない
+            attackBrick.body.setAllowGravity(false);
+            // ワールド境界で跳ね返らない (下に行ったら消える)
+            attackBrick.body.setCollideWorldBounds(false);
+
+            console.log(`Attack brick spawned at (${spawnX.toFixed(0)}, ${spawnY}) with texture '${brickTexture}'`);
+
+            // ★ 次のブロック生成をスケジュールする ★
+            this.scheduleNextAttackBrick();
+
+        } else {
+            console.error("Failed to create attack brick object!");
+             // エラー発生時も次の生成を試みる (無限ループ防止のため遅延を入れる)
+             this.time.delayedCall(ATTACK_BRICK_SPAWN_DELAY_MAX, this.scheduleNextAttackBrick, [], this);
+        }
+    }
+
+    // 攻撃ブロックがボールに当たった時の処理 (後で実装)
+    hitAttackBrick(brick, ball) {
+        console.log("Attack brick hit by ball!");
+        // ★ ここでブロック破壊、エフェクト、SE、アイテムドロップ処理
+
+        // 例: ブロック破壊
+        brick.destroy();
+
+        // 例: アイテムドロップ判定
+        if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_ITEM_DROP_RATE) {
+            // ドロップするアイテム決定 (ボス戦専用プール？ or カオス設定？)
+            const dropType = Phaser.Utils.Array.GetRandom(ALL_POSSIBLE_POWERUPS); // 仮に全体から
+            console.log(`Dropping item: ${dropType}`);
+            // ★ GameSceneの dropSpecificPowerUp のようなメソッドをBossSceneにも用意するか、呼び出す
+            this.dropSpecificPowerUp(brick.x, brick.y, dropType); // 仮呼び出し
+        }
+    }
+    // ★ アイテムドロップ用のメソッド (GameSceneから移植/修正)
+    dropSpecificPowerUp(x, y, type) {
+        // ★ GameSceneの同名メソッドを参考に実装
+        console.log(`[BossScene] Dropping power up ${type} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+        // ... (アイテム生成、落下処理) ...
+        // ボス戦で拾うアイテムは一時的な効果が良いかも？
+    }
+
+
+    // --- ▲ 攻撃ブロック生成関連メソッド ▲ ---
 
     //* --- ▼ ボスの動きメソッド ▼ ---
    /* startBossMovement() {
@@ -411,8 +527,21 @@ update(time, delta) {
 
         // ボール vs 子機 // 削除
 
-        // ★ ボール vs 攻撃ブロック の判定を追加 (後で)
+        // ★★★ ボール vs 攻撃ブロック ★★★
+        this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider"); // 既存を破棄
+        if (this.attackBricks && this.balls) {
+            this.ballAttackBrickCollider = this.physics.add.collider(
+                this.attackBricks,
+                this.balls,
+                this.hitAttackBrick, // 衝突時のコールバック
+                null, // processCallback は不要
+                this
+            );
+            console.log("[BossScene] Ball-AttackBrick collider added.");
+        } else { console.warn("[BossScene] Cannot set Ball-AttackBrick collider."); }
     }
+
+    
 
     hitPaddle(paddle, ball) {
         if (!paddle || !ball || !ball.active || !ball.body) return;
@@ -704,6 +833,13 @@ update(time, delta) {
             this.events.removeAllListeners();
              console.log("[Shutdown] Event listeners removed.");
         } catch (e) { console.error("[Shutdown] Error removing event listeners:", e); }
+        // ★ 攻撃ブロックタイマーも停止
+        if (this.attackBrickTimer) {
+            this.attackBrickTimer.remove();
+            this.attackBrickTimer = null;
+        
+            console.log("[Shutdown] Attack brick timer removed.");
+        }
         // オブジェクト破棄
         console.log("[Shutdown] Destroying GameObjects...");
         this.safeDestroy(this.paddle, "paddle");
