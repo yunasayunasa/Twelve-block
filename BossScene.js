@@ -10,7 +10,7 @@ import {
 const BOSS_MAX_HEALTH = 5;
 const BOSS_SCORE = 1000;
 // ▼ ボスの動き設定 (左右往復) ▼
-const BOSS_MOVE_RANGE_X_RATIO = 1.0; // 画面幅の60%を往復
+const BOSS_MOVE_RANGE_X_RATIO = 0.8; // 画面幅の60%を往復
 const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
 // --- ▲ ボスの動き設定 ▲ ---
 
