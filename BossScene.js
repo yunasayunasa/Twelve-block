@@ -282,51 +282,56 @@ export default class BossScene extends Phaser.Scene {
         });
     }
 
-    // 攻撃ブロックを生成するメソッド
     spawnAttackBrick() {
         console.log("Spawning attack brick...");
         let spawnX;
-        const spawnY = 0; // 画面上端から
+        const spawnY = -30; // ★ 画面上端より少し上から出現させる
 
-        // 生成位置を決定 (ボス or 上部ランダム)
         if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE) {
-            // 画面上部ランダム
-            spawnX = Phaser.Math.Between(30, this.gameWidth - 30); // 左右端すぎないように
-            console.log("Spawning from top random position.");
+            spawnX = Phaser.Math.Between(30, this.gameWidth - 30);
         } else {
-            // ボスの現在位置から
-            if (this.boss && this.boss.active) {
-                spawnX = this.boss.x;
-                 console.log("Spawning from boss position.");
-            } else {
-                console.log("Boss not available, spawning at center top.");
-                spawnX = this.gameWidth / 2; // ボスがいない場合のフォールバック
-            }
+            if (this.boss && this.boss.active) { spawnX = this.boss.x; }
+            else { spawnX = this.gameWidth / 2; }
         }
 
-        // ★ attackBrick 画像がない場合は whitePixel で代用
+        // --- ▼ テクスチャと表示の確認 ▼ ---
         const brickTexture = this.textures.exists('attackBrick') ? 'attackBrick' : 'whitePixel';
+        console.log(`[Spawn Debug] Using texture: ${brickTexture}`); // ★ どのテクスチャを使っているかログ
+
         const attackBrick = this.attackBricks.create(spawnX, spawnY, brickTexture);
 
         if (attackBrick) {
-            attackBrick.setScale(ATTACK_BRICK_SCALE); // スケール設定
-            // whitePixel の場合は色を設定
+            // ★ スケールを一旦大きくしてみる
+            attackBrick.setScale(2.0); // 例: 2倍サイズで強制表示
+            console.log(`[Spawn Debug] Scale set to 2.0`);
+
             if (brickTexture === 'whitePixel') {
-                attackBrick.setTint(Phaser.Display.Color.RandomRGB().color); // ランダム色
+                // ★ Tintを強制的に明るい色（黄色）にしてみる
+                attackBrick.setTint(0xffff00);
+                console.log(`[Spawn Debug] Tint set to yellow`);
+            } else {
+                 // ちゃんと attackBrick テクスチャが使われている場合
+                 attackBrick.clearTint(); // 念のためTintをクリア
+                 console.log(`[Spawn Debug] Tint cleared for texture`);
             }
-            // 当たり判定サイズ設定 (画像に合わせるか、固定サイズ)
-            attackBrick.body.setSize(attackBrick.width * ATTACK_BRICK_SCALE, attackBrick.height * ATTACK_BRICK_SCALE);
-            // 落下速度を設定
+
+             // ★ Depth を強制的に手前にしてみる
+             attackBrick.setDepth(50);
+             console.log(`[Spawn Debug] Depth set to 50`);
+
+            // ★ 当たり判定サイズも固定で大きくしてみる (デバッグ用)
+            attackBrick.body.setSize(50, 50); // 50x50ピクセルに固定
+            console.log(`[Spawn Debug] Body size set to 50x50`);
+
+            // 落下速度など
             attackBrick.setVelocityY(ATTACK_BRICK_VELOCITY_Y);
-            // 重力の影響は受けない
             attackBrick.body.setAllowGravity(false);
-            // ワールド境界で跳ね返らない (下に行ったら消える)
             attackBrick.body.setCollideWorldBounds(false);
 
-            console.log(`Attack brick spawned at (${spawnX.toFixed(0)}, ${spawnY}) with texture '${brickTexture}'`);
-
-            // ★ 次のブロック生成をスケジュールする ★
+            console.log(`Attack brick spawned at (${spawnX.toFixed(0)}, ${spawnY})`);
             this.scheduleNextAttackBrick();
+
+    
 
         } else {
             console.error("Failed to create attack brick object!");
