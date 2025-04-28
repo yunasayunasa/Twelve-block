@@ -48,6 +48,7 @@ export default class BossScene extends Phaser.Scene {
         this.bossAfterImageEmitter = null; // ★ 残像用エミッタのプロパテ
         this.attackBrickTimer = null; // ★ 攻撃ブロック生成タイマー用
         this.powerUps = null; // ★ パワーアップグループ用プロパティ追加
+        this.bossDropPool = []; // ★ ボス戦用ドロッププールプロパティ追加
         
 
         // コライダー参照
@@ -75,7 +76,7 @@ export default class BossScene extends Phaser.Scene {
         this.score = data.score || 0;
         this.chaosSettings = data.chaosSettings || { count: 4, rate: 0.5 };
         console.log(`BossScene Initialized with Lives: ${this.lives}, Score: ${this.score}`);
-        
+        this.bossDropPool = []; // ★ initでも初期化
         this.isBallLaunched = false;
         this.isGameOver = false;
         this.bossDefeated = false;
@@ -114,7 +115,9 @@ export default class BossScene extends Phaser.Scene {
         this.createPowerUpsGroup(); // ★ パワーアップグループ作成呼び出
 
         // --- 4. 衝突判定の設定 ---
-        this.setColliders();
+// --- ▼ ボス戦用ドロッププールを設定 ▼ ---
+this.setupBossDropPool();
+// --- ▲ ボス戦用ドロッププールを設定 ▲ ---        
         this.setColliders(); // ★ 衝突判定にアイテム取得も追加
 
         // --- 5. ゲームオーバーテキスト ---
@@ -160,6 +163,17 @@ export default class BossScene extends Phaser.Scene {
             } else { console.warn("UIScene not ready for initial UI update."); }
         }, [], this);
     }
+
+    // --- ▼ Create ヘルパーメソッドに setupBossDropPool を追加 ▼ ---
+    setupBossDropPool() {
+        console.log("Setting up boss drop pool...");
+        const possibleDrops = [...ALL_POSSIBLE_POWERUPS];
+        const shuffledPool = Phaser.Utils.Array.Shuffle(possibleDrops);
+        const countToUse = this.chaosSettings?.count ?? 0; // 安全に取得
+        this.bossDropPool = shuffledPool.slice(0, countToUse);
+        console.log(`Boss Drop Pool (Count: ${countToUse}): [${this.bossDropPool.join(',')}]`);
+    }
+    // --- ▲ Create ヘルパーメソッドに setupBossDropPool を追加 ▲ ---
 
     setupPhysics() {
         console.log("Setting up physics world for BossScene...");
@@ -656,24 +670,23 @@ update(time, delta) {
         brick.destroy(); // destroy() はグループからも削除する
 
         // --- アイテムドロップ判定 ---
+        // ★ ドロップ率は固定値か、chaosSettings.rate を使うか？ -> ひとまず固定値のまま
         if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_ITEM_DROP_RATE) {
-            // ドロップするアイテムを決定 (カオス設定に基づいてプールを作成)
-            const possibleDrops = [...ALL_POSSIBLE_POWERUPS];
-            const shuffledPool = Phaser.Utils.Array.Shuffle(possibleDrops);
-            const countToSlice = this.chaosSettings?.count ?? 0; // 安全に値を取得
-        console.log(`[Drop Logic] Slicing pool with count: ${countToSlice}`); // ★ スライス数をログに
-        const currentDropPool = shuffledPool.slice(0, countToSlice);
-        console.log(`[Drop Logic] Created drop pool: [${currentDropPool.join(',')}] (Length: ${currentDropPool.length})`); // ★ プール内容と長さをログに
-            if (currentDropPool.length > 0) {
-                const dropType = Phaser.Utils.Array.GetRandom(currentDropPool);
-                console.log(`Dropping item: ${dropType}`);
-                this.dropSpecificPowerUp(brickX, brickY, dropType); // アイテムドロップ実行
+
+            // ★★★ this.bossDropPool を使うように変更 ★★★
+            if (this.bossDropPool && this.bossDropPool.length > 0) {
+                // const currentDropPool = shuffledPool.slice(0, countToSlice); // ← 削除
+                // console.log(`[Drop Logic] Created drop pool: ...`);          // ← 削除
+                const dropType = Phaser.Utils.Array.GetRandom(this.bossDropPool); // ★ 作成済みのプールから選ぶ
+                console.log(`[Drop Logic] Dropping item: ${dropType} (From fixed pool: [${this.bossDropPool.join(',')}])`); // ログ変更
+                this.dropSpecificPowerUp(brickX, brickY, dropType);
             } else {
-                 console.log("No items in drop pool based on chaos settings.");
+                 console.log("No items in boss drop pool (count=0 or pool not set).");
             }
         }
     }
-    // --- ▲ 攻撃ブロック衝突処理メソッド ▲ ---
+    // --- ▲ hitAttackBrick メソッド修正 ▲ ---
+
 
     // --- ▼ アイテムドロップメソッド (GameSceneから移植・修正) ▼ ---
     dropSpecificPowerUp(x, y, type) {
