@@ -290,17 +290,26 @@ startBossMovement() {
 
     this.boss.setX(startX); // 初期位置を中央に
 
-    // --- ▼ 関数を定義して Tween を繋げる ▼ ---
+    // ★ 利用するイージング関数の名前リスト
+    const easeFunctions = [
+        'Sine.easeInOut',
+        'Quad.easeInOut',
+        'Cubic.easeInOut',
+        'Quart.easeInOut', // Sineより急→緩やか→急
+        'Expo.easeInOut',  // 最初と最後が非常に急 (サッピタッに近い)
+        'Circ.easeInOut'   // 円曲線的な滑らかさ
+    ];
+
     const moveToRight = () => {
-        console.log("Tween: Moving to Right");
+        const randomEase = Phaser.Utils.Array.GetRandom(easeFunctions); // ★ ランダム選択
+        console.log(`Tween: Moving to Right (Ease: ${randomEase})`);
         this.bossMoveTween = this.tweens.add({
             targets: this.boss,
             x: rightX,
             duration: BOSS_MOVE_DURATION,
-            ease: 'Sine.easeInOut',
+            ease: randomEase, // ★ ランダムなEaseを適用
             onComplete: () => {
-                // 右端に着いたら左へ移動する Tween を開始
-                if (this.boss && this.boss.active && !this.isGameOver && !this.bossDefeated) { // シーンやボスが有効か確認
+                if (this.boss?.active && !this.isGameOver && !this.bossDefeated) {
                     moveToLeft();
                 }
             }
@@ -308,31 +317,23 @@ startBossMovement() {
     };
 
     const moveToLeft = () => {
-        console.log("Tween: Moving to Left");
+        const randomEase = Phaser.Utils.Array.GetRandom(easeFunctions); // ★ ランダム選択
+        console.log(`Tween: Moving to Left (Ease: ${randomEase})`);
         this.bossMoveTween = this.tweens.add({
             targets: this.boss,
             x: leftX,
             duration: BOSS_MOVE_DURATION,
-            // --- ▼ Easeを変更してみる ▼ ---
-                // ease: 'Sine.easeInOut', // 滑らか (元のコード)
-                //ease: 'Expo.easeInOut', // 加速して減速 (サッ→ピタッに近いかも)
-                // ease: 'Quad.easeInOut', // Sineより少しメリハリがある
-                 ease: 'Power2.easeInOut',// さらにメリハリ
-                // --- ▲ Easeを変更してみる ▲ ---
+            ease: randomEase, // ★ ランダムなEaseを適用
             onComplete: () => {
-                // 左端に着いたら右へ移動する Tween を開始
-                 if (this.boss && this.boss.active && !this.isGameOver && !this.bossDefeated) {
+                 if (this.boss?.active && !this.isGameOver && !this.bossDefeated) {
                     moveToRight();
                 }
             }
         });
     };
-    // --- ▲ 関数を定義して Tween を繋げる ▲ ---
 
-    // 最初に右へ移動する Tween を開始
-    moveToRight();
-
-    console.log("Chained boss movement tweens initiated.");
+    moveToRight(); // 開始
+    console.log("Chained boss movement tweens with random ease initiated.");
 }
 
 // --- ▼ 残像エミッタ設定メソッド (新規追加) ▼ ---
