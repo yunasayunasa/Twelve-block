@@ -156,8 +156,13 @@ export default class BossScene extends Phaser.Scene {
     }
     // --- ▲ 型確認ログを追加 ▲ ---
         // ★★★ ここで handleWorldBounds が関数として認識される必要がある ★★★
-        this.physics.world.on('worldbounds', this.handleWorldBounds, this);
-        console.log("Physics world setup complete.");
+        try { // try-catch は残しておく
+            this.physics.world.on('worldbounds', this.handleWorldBounds, this);
+            console.log("Physics world setup complete.");
+        } catch (error) {
+             console.error("Error setting worldbounds listener:", error); // エラーログをより具体的に
+             console.error("Listener function was:", this.handleWorldBounds); // リスナー関数自体も表示
+        }
     }
 
     createPaddle() {
