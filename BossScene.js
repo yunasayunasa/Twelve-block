@@ -7,13 +7,13 @@ import {
 } from './constants.js';
 
 // --- ボス戦用定数 ---
-const BOSS_MAX_HEALTH = 100; // またはテスト用: 5
+const BOSS_MAX_HEALTH = 100;
 const BOSS_SCORE = 1000;
-// ▼ ボスの動き設定 ▼
-////const BOSS_MOVE_DURATION_HALF = 4000; // ★ 8の字の片ループ時間(ms) - これが必要
-//const durationPerLoop = BOSS_MOVE_DURATION_HALF * 2; // ★ 1周の時間も定義 (追加)
- const BOSS_MOVE_DURATION = 4000; // ← 単純往復用だったので削除またはコメントアウト
+// ▼ ボスの動き設定 (左右往復) ▼
+const BOSS_MOVE_RANGE_X_RATIO = 0.6; // 画面幅の60%を往復
+const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
 // --- ▲ ボスの動き設定 ▲ ---
+
 export default class BossScene extends Phaser.Scene {
     constructor() {
         super('BossScene');
@@ -245,30 +245,28 @@ export default class BossScene extends Phaser.Scene {
     // --- ▲ Update ヘルパーメソッド ▲ ---
 
 
-    // BossScene.js の startBossMovement メソッド (単純な左右往復)
-
+    // --- ▼ ボスの動きメソッド ▼ ---
     startBossMovement() {
         if (!this.boss || !this.boss.active) { console.warn("Cannot start movement, boss not ready."); return; }
-        if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; } // 既存Tween停止
+        if (this.bossMoveTween) { this.bossMoveTween.stop(); this.bossMoveTween = null; }
 
         console.log("Starting simple boss horizontal movement tween...");
-        const moveWidth = this.gameWidth * BOSS_MOVE_RANGE_X_RATIO / 2; // 画面幅の30%を左右に移動
+        const moveWidth = this.gameWidth * BOSS_MOVE_RANGE_X_RATIO / 2;
         const leftX = this.gameWidth / 2 - moveWidth;
         const rightX = this.gameWidth / 2 + moveWidth;
 
-        // ★ this.tweens.add を使った単純な往復 Tween ★
         this.bossMoveTween = this.tweens.add({
-            targets: this.boss,       // 対象はボス
-            x: rightX,              // 目標X座標 (右端)
-            duration: BOSS_MOVE_DURATION, // 片道にかかる時間
-            ease: 'Sine.easeInOut',   // 滑らかな動き
-            yoyo: true,             // trueにすると元の位置(左端)に自動で戻る
-            repeat: -1,             // 無限に繰り返す
-            delay: 500              // 開始までの遅延 (任意)
+            targets: this.boss,
+            x: rightX,
+            duration: BOSS_MOVE_DURATION,
+            ease: 'Sine.easeInOut',
+            yoyo: true,
+            repeat: -1,
+            delay: 500
         });
-
         console.log("Simple boss movement tween started.");
     }
+    // --- ▲ ボスの動きメソッド ▲ ---
 
 
     // --- ▼ 当たり判定・ダメージ処理など ▼ ---
@@ -469,7 +467,7 @@ export default class BossScene extends Phaser.Scene {
         const texture = this.boss.texture;
         const originalWidth = texture.source[0].width;
         const originalHeight = texture.source[0].height;
-        const targetWidthRatio = 0.30;
+        const targetWidthRatio = 0.20;
         const targetBossWidth = this.scale.width * targetWidthRatio;
         let desiredScale = targetBossWidth / originalWidth;
         desiredScale = Phaser.Math.Clamp(desiredScale, 0.1, 1.0);
@@ -477,7 +475,7 @@ export default class BossScene extends Phaser.Scene {
         // 当たり判定調整
         const hitboxWidth = originalWidth * desiredScale;
         const blockWidth = this.scale.width * BRICK_WIDTH_RATIO;
-        const hitboxHeight = blockWidth * 12;
+        const hitboxHeight = blockWidth * 4;
         this.boss.body.setSize(hitboxWidth, hitboxHeight);
         console.log(`Boss size updated. Scale: ${desiredScale.toFixed(2)}, Hitbox: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)}`);
     }
