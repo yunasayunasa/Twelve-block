@@ -296,7 +296,7 @@ updateBossSize() {
     // ★★★ ここで hitboxWidth, hitboxHeight の計算を調整 ★★★
     // 物理デバッグ表示を見ながら調整してください
     const blockWidth = this.scale.width * 0.095; // 仮: BRICK_WIDTH_RATIOを直接使うか定数インポート
-    const targetHitboxHeightRatio = 8; // 縦8ブロック分
+    const targetHitboxHeightRatio = 12; // 縦8ブロック分
     const hitboxHeight = blockWidth * targetHitboxHeightRatio;
 
     // setSizeは中央基準で幅・高さを設定
