@@ -687,7 +687,6 @@ update(time, delta) {
              console.log("[Drop Logic] No item drop based on rate."); // ドロップしなかった場合のログ
         }
         // --- ▲ アイテムドロップ判定 (ドロップ率を chaosSettings から取得) ▲ ---
-        
     }
     // --- ▲ hitAttackBrick メソッド修正 ▲ ---
 
