@@ -10,7 +10,7 @@ import {
 } from './constants.js';
 
 // ★ ボス体力の定数を追加 (任意)
-const BOSS_MAX_HEALTH = 100;
+const BOSS_MAX_HEALTH = 5;
 const BOSS_SCORE = 1000; // ボス撃破スコア
 
 export default class BossScene extends Phaser.Scene {
