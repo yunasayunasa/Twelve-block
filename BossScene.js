@@ -1157,13 +1157,11 @@ update(time, delta) {
 
     // BossScene.js の hitBoss メソッド (修正後)
 
-    // BossScene.js の hitBoss メソッド (修正後)
-
+    // hitBoss メソッドは applyBossDamage を呼ぶだけ (前回修正通り)
     hitBoss(boss, ball) {
         if (!boss || !ball || !boss.active || !ball.active || boss.getData('isInvulnerable')) return;
         console.log("[hitBoss] Boss hit by ball.");
-        let damage = 1; // 基本ダメージ
-
+        let damage = 1;
         const lastPower = ball.getData('lastActivatedPower');
         const isBikara = lastPower === POWERUP_TYPES.BIKARA;
         const bikaraState = ball.getData('bikaraState');
@@ -1200,15 +1198,57 @@ update(time, delta) {
         // 例: ball.setVelocity(ball.body.velocity.x, -Math.abs(ball.body.velocity.y)); // 単純に上に跳ね返す
     }
 
-    // applyBossDamage メソッドは前回のままでOK
+     // ★ ボスにダメージを与え、リアクションを実行する共通メソッド ★
     applyBossDamage(boss, damage, source = "Unknown") {
-        if (!boss || !boss.active || boss.getData('isInvulnerable')) { /* ... */ return; }
+        // 無敵チェック
+        if (!boss || !boss.active || boss.getData('isInvulnerable')) {
+             console.log(`Damage (${damage} from ${source}) blocked: Boss inactive or invulnerable.`);
+             return; // ダメージ無効
+        }
+
+        // 体力計算
         let currentHealth = boss.getData('health') - damage;
+        // 体力がマイナスにならないように (任意)
+        // currentHealth = Math.max(0, currentHealth);
         boss.setData('health', currentHealth);
         console.log(`[Boss Damage] ${damage} damage dealt by ${source}. Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
-        // ダメージリアクション (Tint, 無敵, 揺れ)
-        // ...
-        if (currentHealth <= 0) { this.defeatBoss(boss); }
+
+        // --- ▼▼▼ ダメージリアクション (ここが重要) ▼▼▼
+        boss.setTint(0xff0000); // 赤く光る
+        boss.setData('isInvulnerable', true); // 無敵開始
+
+        // 左右に揺れる Tween
+        const shakeDuration = 60;
+        const shakeAmount = boss.displayWidth * 0.03;
+        try { // Tween生成もtry-catchで囲む
+            this.tweens.add({
+                targets: boss,
+                props: {
+                    x: { value: `+=${shakeAmount}`, duration: shakeDuration / 4, yoyo: true, ease: 'Sine.InOut' },
+                },
+                repeat: 1
+            });
+        } catch (e) {
+             console.error("[applyBossDamage] Error creating shake tween:", e);
+        }
+
+
+        // ダメージSE再生 (もしあれば)
+        // try { this.sound.add('seBossHit').play(); } catch(e) {}
+
+        // 無敵解除タイマー
+        this.time.delayedCall(150, () => {
+             if (boss.active) { // ボスがまだ存在すれば
+                 boss.clearTint(); // 色を戻す
+                 boss.setData('isInvulnerable', false); // 無敵解除
+             }
+        });
+        // --- ▲▲▲ ダメージリアクション ▲▲▲ ---
+
+        // 体力ゼロ判定
+        if (currentHealth <= 0) {
+            this.defeatBoss(boss); // 撃破処理へ
+        }
     }
 
     // --- ▼ 攻撃ブロック衝突処理メソッド (実装) ▼ ---
