@@ -293,33 +293,33 @@ this.setupBossDropPool();
 
 // --- ▼ 見た目更新ヘルパー (優先順位考慮) ▼ ---
 updateBallAppearance(ball) {
-    if (!ball || !ball.active || !ball.getData) return; // getDataも確認
+    if (!ball || !ball.active || !ball.getData) return;
     let textureKey = 'ball_image'; // デフォルト
     const lastPower = ball.getData('lastActivatedPower');
-    const activePowers = ball.getData('activePowers') || new Set(); // なければ空のSet
+    const activePowers = ball.getData('activePowers') || new Set();
+    const isKubiraActive = ball.getData('isKubiraActive') === true; // クビラフラグ取得
 
-    // ★★★ 表示優先順位をつけてテクスチャを決定 ★★★
-    // 例: ビカラ > シンダラ合体後 > クビラ > マキラ > その他lastPower の順
-    if (activePowers.has(POWERUP_TYPES.BIKARA)) {
-         // const bikaraState = ball.getData('bikaraState');
-         // textureKey = bikaraState === 'yang' ? POWERUP_ICON_KEYS.BIKARA_YANG : POWERUP_ICON_KEYS.BIKARA;
-         // → まだbikaraStateフラグを設定していないので、今はlastPowerに任せる
-    } else if (activePowers.has(POWERUP_TYPES.SINDARA) /* && isSuperSindara(ball) */) { // 合体後などの条件
-         // textureKey = POWERUP_ICON_KEYS.SINDARA_SUPER;
-    } else if (activePowers.has(POWERUP_TYPES.KUBIRA)) { // ★ クビラ状態か？
+    // ★★★ 見た目の優先順位を見直し ★★★
+    // (例: クビラ > マキラ > その他 lastPower)
+
+    if (isKubiraActive) { // ★ クビラがアクティブならクビラアイコン
         textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA] || 'ball_image';
-    } else if (activePowers.has(POWERUP_TYPES.MAKIRA)) {
+    } else if (activePowers.has(POWERUP_TYPES.MAKIRA)) { // 次にマキラ
          textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.MAKIRA] || 'ball_image';
-    } else if (lastPower && POWERUP_ICON_KEYS[lastPower]) { // ★ その他の有効な最後のパワーアップ
+    // } else if (activePowers.has(POWERUP_TYPES.SHATORA)) { // 今後追加する場合
+    //      textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.SHATORA] || 'ball_image';
+    // } else if (activePowers.has(POWERUP_TYPES.HAILA)) { // 今後追加する場合
+    //      textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.HAILA] || 'ball_image';
+    } else if (lastPower && POWERUP_ICON_KEYS[lastPower]) { // 他に有効なものがなければlastPower基準
          textureKey = POWERUP_ICON_KEYS[lastPower];
     }
-    // 必要に応じて isFast, isSlow なども考慮
+    // --- ビカラなどの他の見た目変更もここに追加 ---
 
     if (ball.texture.key !== textureKey) {
         ball.setTexture(textureKey);
         console.log(`Ball texture set to: ${textureKey} based on power state`);
     }
-    ball.clearTint(); // Tintは基本的に使わない
+    ball.clearTint();
 }
 // --- ▲ 見た目更新ヘルパー ▲ ---
 
@@ -1444,23 +1444,46 @@ update(time, delta) {
     loseLife() {
         if (this.isGameOver || this.bossDefeated) return;
         console.log(`[BossScene] Losing life. Lives remaining: ${this.lives - 1}`);
+
+        // ★★★ ライフ減少時にマキラ効果を停止 ★★★
+        this.deactivateMakira();
+        // ★★★ ライフ減少時にマキラ効果を停止 ★★★
+
+        // ★★★ 他の持続系パワーアップも停止する方が自然 ★★★
+        // (ボールがリセットされるため効果もリセットするのが一般的)
+        Object.values(this.powerUpTimers).forEach(timer => timer?.remove());
+        this.powerUpTimers = {};
+        // ボールの状態もリセット (activateTemporaryEffect で管理している場合)
+        this.balls?.getChildren().forEach(ball => {
+             if(ball?.active) {
+                 ball.setData('activePowers', new Set()); // 全パワー解除
+                 ball.setData('lastActivatedPower', null);
+                 ball.setData('isKubiraActive', false);
+                 ball.setData('isFast', false);
+                 ball.setData('isSlow', false);
+                 // 他のフラグもリセット
+             }
+        });
+        this.updateBallAndPaddleAppearance(); // 見た目もリセット
+        // ★★★ 他の持続系パワーアップも停止 ★★★
+
+
         this.lives--;
         if (this.uiScene && this.uiScene.scene.isActive()) {
             this.uiScene.events.emit('updateLives', this.lives);
         }
         this.isBallLaunched = false;
-        if (this.balls) { this.balls.clear(true, true); }
+        if (this.balls) { this.balls.clear(true, true); } // 古いボールクリア
 
         if (this.lives > 0) {
              this.time.delayedCall(500, this.resetForNewLife, [], this);
         } else {
             console.log("[BossScene] Game Over condition met.");
-            try { this.sound.add(AUDIO_KEYS.SE_GAME_OVER).play(); } catch(e) { console.error("Error playing SE_GAME_OVER:", e); }
+            try { this.sound.add(AUDIO_KEYS.SE_GAME_OVER).play(); } catch(e) { /*...*/ }
             this.stopBgm();
             this.time.delayedCall(500, this.gameOver, [], this);
         }
     }
-
     resetForNewLife() {
         if (this.isGameOver || this.bossDefeated) return;
         console.log("[BossScene] Resetting for new life...");
