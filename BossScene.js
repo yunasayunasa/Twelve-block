@@ -167,14 +167,28 @@ this.setupBossDropPool();
 
         this.updateBallFall();
         this.updateAttackBricks();
-        // --- ▼ マキラファミリア位置更新 ▼ ---
+        // --- ▼ マキラファミリア位置更新 (GameScene参考に戻す) ▼ ---
         if (this.isMakiraActive && this.paddle && this.paddle.active && this.familiars && this.familiars.active) {
             const paddleX = this.paddle.x;
+            // ファミリアのY座標はパドルの少し上
             const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
             const children = this.familiars.getChildren();
-            // 物理ボディの位置を更新する方がスムーズな場合もある (setVelocity)
-            if (children[0]?.active) children[0].setPosition(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY);
-            if (children[1]?.active) children[1].setPosition(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY);
+
+            // ★★★ 各ファミリアの setPosition を使う ★★★
+            try { // 安全のため try-catch
+                if (children[0]?.active) { // 左ファミリア
+                     // 物理ボディではなく、表示オブジェクトの位置を直接設定
+                     children[0].setPosition(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY);
+                     // 物理ボディも同期させる (必要であれば)
+                     // if(children[0].body) children[0].body.reset(children[0].x, children[0].y);
+                }
+                if (children[1]?.active) { // 右ファミリア
+                     children[1].setPosition(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY);
+                     // if(children[1].body) children[1].body.reset(children[1].x, children[1].y);
+                }
+            } catch (e) {
+                 console.error("Error updating familiar position:", e);
+            }
         }
         // --- ▲ マキラファミリア位置更新 ▲ ---
     }
@@ -1178,35 +1192,68 @@ update(time, delta) {
 
     
 
+    // BossScene.js 内
+
+    // --- ▼ hitPaddle メソッド (速度計算修正) ▼ ---
     hitPaddle(paddle, ball) {
         if (!paddle || !ball || !ball.active || !ball.body) return;
         console.log("[BossScene] Ball hit paddle.");
+
+        // --- 反射角度計算 ---
         let diff = ball.x - paddle.x;
         const maxDiff = paddle.displayWidth / 2;
         let influence = diff / maxDiff;
         influence = Phaser.Math.Clamp(influence, -1, 1);
-        const maxVx = NORMAL_BALL_SPEED * 0.8;
+        const maxVx = NORMAL_BALL_SPEED * 0.8; // X方向の最大速度成分
         let newVx = maxVx * influence;
-        const minVy = NORMAL_BALL_SPEED * 0.5;
+        const minVy = NORMAL_BALL_SPEED * 0.5; // Y方向の最低速度
         let currentVy = ball.body.velocity.y;
-        let newVy = -Math.abs(currentVy);
-        if (Math.abs(newVy) < minVy) newVy = -minVy;
-        const targetSpeed = NORMAL_BALL_SPEED;
-        const newVelocity = new Phaser.Math.Vector2(newVx, newVy).normalize().scale(targetSpeed);
+        let newVy = -Math.abs(currentVy); // 必ず上向きに
+        if (Math.abs(newVy) < minVy) newVy = -minVy; // 最低速度保証
+
+        // --- ▼ 速度設定 (パワーアップ考慮) ▼ ---
+        let speedMultiplier = 1.0; // 通常速度倍率
+        const isFast = ball.getData('isFast') === true; // シャトラ状態か (明確にtrueか比較)
+        const isSlow = ball.getData('isSlow') === true; // ハイラ状態か (明確にtrueか比較)
+
+        if (isFast) {
+            speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.SHATORA];
+            console.log("[hitPaddle] Shatora active, applying speed multiplier:", speedMultiplier);
+        } else if (isSlow) {
+            speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.HAILA];
+            console.log("[hitPaddle] Haila active, applying speed multiplier:", speedMultiplier);
+        } else {
+            console.log("[hitPaddle] Normal speed.");
+        }
+        const targetSpeed = NORMAL_BALL_SPEED * speedMultiplier; // ★ 目標速度を計算
+
+        const newVelocity = new Phaser.Math.Vector2(newVx, newVy);
+        if (newVelocity.lengthSq() === 0) { newVelocity.set(0, -1); } // ゼロベクトル回避
+        newVelocity.normalize().scale(targetSpeed); // ★ 計算した目標速度で設定
+
+        console.log(`[hitPaddle] Setting velocity to (${newVelocity.x.toFixed(2)}, ${newVelocity.y.toFixed(2)}) with targetSpeed ${targetSpeed.toFixed(0)}`);
         ball.setVelocity(newVelocity.x, newVelocity.y);
+        // --- ▲ 速度設定 (パワーアップ考慮) ▲ ---
+
+
+        // --- SE再生 ---
         try { this.sound.add(AUDIO_KEYS.SE_REFLECT).play(); } catch (e) { console.error("Error playing SE_REFLECT (paddle):", e); }
-        // パドルヒットエフェクト
+
+        // --- パドルヒットエフェクト ---
         try {
             const impactPointY = ball.y + BALL_RADIUS * 0.8;
             const impactPointX = ball.x;
             const particles = this.add.particles(0, 0, 'whitePixel', { x: impactPointX, y: impactPointY, lifespan: 150, speed: { min: 100, max: 200 }, angle: { min: 240, max: 300 }, gravityY: 300, scale: { start: 0.4, end: 0 }, quantity: 5, blendMode: 'ADD', emitting: false });
             if(particles) { particles.setParticleTint(0xffffcc); particles.explode(5); this.time.delayedCall(200, () => { if (particles && particles.scene) particles.destroy(); }); }
         } catch (e) { console.error("Error creating paddle hit particle effect:", e); }
+
+        // ★ パドルヒットで解除される効果があればここで処理 ★
+        // 例: if (ball.getData('isIndaraActive')) { this.deactivateIndaraForBall(ball); }
     }
+    // --- ▲ hitPaddle メソッド ▲ ---
 
-    // BossScene.js の hitBoss メソッド (修正後)
 
-    // hitBoss メソッドは applyBossDamage を呼ぶだけ (前回修正通り)
+    // --- ▼ hitBoss メソッド (ボール跳ね返し処理追加) ▼ ---
     hitBoss(boss, ball) {
         if (!boss || !ball || !boss.active || !ball.active || boss.getData('isInvulnerable')) return;
         console.log("[hitBoss] Boss hit by ball.");
@@ -1217,89 +1264,67 @@ update(time, delta) {
         const isKubiraActive = ball.getData('isKubiraActive') === true;
 
         // --- ダメージ計算ロジック ---
-        if (isBikara && bikaraState === 'yang') {
-            damage = 2;
-            if (isKubiraActive) { damage += 1; console.log("[hitBoss] Bikara Yang + Kubira hit! Calculated Damage: 3"); }
-            else { console.log("[hitBoss] Bikara Yang hit! Calculated Damage: 2"); }
-        } else if (isKubiraActive) {
-            damage += 1; console.log("[hitBoss] Kubira hit! Calculated Damage: 2");
-        } else if (isBikara && bikaraState === 'yin') {
-             console.log("[hitBoss] Bikara Yin hit. Calculated Damage: 1");
-        } else {
-            console.log(`[hitBoss] Normal hit. Calculated Damage: ${damage}`);
-        }
+        if (isBikara && bikaraState === 'yang') { /* ... */ }
+        else if (isKubiraActive) { /* ... */ }
+        else if (isBikara && bikaraState === 'yin') { /* ... */ }
+        else { /* ... */ }
         // --- ダメージ計算ロジック終わり ---
 
-        // ★★★ 計算したダメージを applyBossDamage に渡す ★★★
-        this.applyBossDamage(boss, damage, "Ball Hit");
+        this.applyBossDamage(boss, damage, "Ball Hit"); // ダメージ適用とリアクション
 
-        // --- ▼▼▼ 不要なコードを削除 ▼▼▼ ---
-        // if (isPenetrating || (isBikara && bikaraState === 'yang')) { ... } // 削除
-        // else if (isBikara && bikaraState === 'yin') { ... } // 削除
-        // else { ... } // 削除
-        // let currentHealth = boss.getData('health') - damage; // 削除 (applyBossDamage内で行う)
-        // boss.setData('health', currentHealth); // 削除
-        // console.log(`[hitBoss] Boss health: ...`); // 削除
-        // --- ▲▲▲ 不要なコードを削除 ▲▲▲ ---
+        // --- ▼ ボール跳ね返し処理 (パワーアップ考慮) ▼ ---
+        if (ball && ball.active && ball.body) { // ボールがまだ有効か確認
+             console.log("[hitBoss] Calculating ball reflection velocity...");
+             let speedMultiplier = 1.0;
+             const isFast = ball.getData('isFast') === true; // isFast状態取得
+             const isSlow = ball.getData('isSlow') === true; // isSlow状態取得
+             if (isFast) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.SHATORA];
+             else if (isSlow) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.HAILA];
+             const targetSpeed = NORMAL_BALL_SPEED * speedMultiplier;
 
-        // ★ ボール跳ね返し処理は applyBossDamage の外で行う方が自然かもしれない
-        // (applyBossDamageはダメージ適用とリアクションに専念)
-        // 例: ball.setVelocity(ball.body.velocity.x, -Math.abs(ball.body.velocity.y)); // 単純に上に跳ね返す
+             // 跳ね返る方向 (単純にY方向反転)
+             let bounceVx = ball.body.velocity.x;
+             let bounceVy = -ball.body.velocity.y; // Y速度を反転
+             // 最低速度保証 (跳ね返りが弱すぎないように)
+             const minBounceSpeedY = NORMAL_BALL_SPEED * 0.3;
+             if(Math.abs(bounceVy) < minBounceSpeedY) {
+                 bounceVy = -minBounceSpeedY * Math.sign(bounceVy || -1); // 方向を維持しつつ最低速度に
+             }
+
+             const bounceVel = new Phaser.Math.Vector2(bounceVx, bounceVy).normalize().scale(targetSpeed);
+             console.log(`[hitBoss] Reflecting ball with velocity (${bounceVel.x.toFixed(2)}, ${bounceVel.y.toFixed(2)}) targetSpeed: ${targetSpeed.toFixed(0)}`);
+             ball.setVelocity(bounceVel.x, bounceVel.y);
+         }
+        // --- ▲ ボール跳ね返し処理 ▲ ---
+
+        // 体力ゼロ判定は applyBossDamage 内で行われる
     }
+    // --- ▲ hitBoss メソッド ▲ ---
 
-     // ★ ボスにダメージを与え、リアクションを実行する共通メソッド ★
+
+    // --- ▼ applyBossDamage メソッド (変更なし) ▼ ---
     applyBossDamage(boss, damage, source = "Unknown") {
-        // 無敵チェック
         if (!boss || !boss.active || boss.getData('isInvulnerable')) {
              console.log(`Damage (${damage} from ${source}) blocked: Boss inactive or invulnerable.`);
-             return; // ダメージ無効
+             return;
         }
-
-        // 体力計算
         let currentHealth = boss.getData('health') - damage;
-        // 体力がマイナスにならないように (任意)
-        // currentHealth = Math.max(0, currentHealth);
         boss.setData('health', currentHealth);
         console.log(`[Boss Damage] ${damage} damage dealt by ${source}. Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
-
-        // --- ▼▼▼ ダメージリアクション (ここが重要) ▼▼▼
-        boss.setTint(0xff0000); // 赤く光る
-        boss.setData('isInvulnerable', true); // 無敵開始
-
-        // 左右に揺れる Tween
+        // ダメージリアクション (Tint, 無敵, 揺れ)
+        boss.setTint(0xff0000);
+        boss.setData('isInvulnerable', true);
         const shakeDuration = 60;
         const shakeAmount = boss.displayWidth * 0.03;
-        try { // Tween生成もtry-catchで囲む
-            this.tweens.add({
-                targets: boss,
-                props: {
-                    x: { value: `+=${shakeAmount}`, duration: shakeDuration / 4, yoyo: true, ease: 'Sine.InOut' },
-                },
-                repeat: 1
-            });
-        } catch (e) {
-             console.error("[applyBossDamage] Error creating shake tween:", e);
-        }
-
-
-        // ダメージSE再生 (もしあれば)
+        try {
+            this.tweens.add({ targets: boss, props: { x: { value: `+=${shakeAmount}`, duration: shakeDuration / 4, yoyo: true, ease: 'Sine.InOut' } }, repeat: 1 });
+        } catch (e) { console.error("[applyBossDamage] Error creating shake tween:", e); }
         // try { this.sound.add('seBossHit').play(); } catch(e) {}
-
-        // 無敵解除タイマー
-        this.time.delayedCall(150, () => {
-             if (boss.active) { // ボスがまだ存在すれば
-                 boss.clearTint(); // 色を戻す
-                 boss.setData('isInvulnerable', false); // 無敵解除
-             }
-        });
-        // --- ▲▲▲ ダメージリアクション ▲▲▲ ---
-
+        this.time.delayedCall(150, () => { if (boss.active) { boss.clearTint(); boss.setData('isInvulnerable', false); } });
         // 体力ゼロ判定
-        if (currentHealth <= 0) {
-            this.defeatBoss(boss); // 撃破処理へ
-        }
+        if (currentHealth <= 0) { this.defeatBoss(boss); }
     }
-
+    // --- ▲ applyBossDamage メソッド ▲ ---
     // --- ▼ 攻撃ブロック衝突処理メソッド (実装) ▼ ---
     hitAttackBrick(brick, ball) {
         if (!brick || !brick.active || !ball || !ball.active) return;
