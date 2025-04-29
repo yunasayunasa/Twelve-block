@@ -162,52 +162,66 @@ this.setupBossDropPool();
         console.log("BossScene Create End");
     }
 
-    // BossScene.js の update メソッド
+    /// BossScene.js の update メソッド (最終デバッグ)
 
     update(time, delta) {
-        if (this.isGameOver || this.bossDefeated) { return; }
+        // ★ ゲームオーバー/撃破時以外の処理を一時的にコメントアウトし、マキラ追従のみ試す
+        // if (this.isGameOver || this.bossDefeated) { return; }
 
-        // --- ▼ マキラファミリア位置更新 (条件修正) ▼ ---
-        if (this.isMakiraActive) {
-             // ★★★ グループのactiveではなく、中身の存在とパドルの状態で判断 ★★★
-             if (this.paddle && this.paddle.active && this.familiars && this.familiars.getLength() > 0) { // ★ getLength() > 0 で子機の存在を確認
-                 const paddleX = this.paddle.x;
-                 const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
-                 const children = this.familiars.getChildren();
+        // --- ▼ マキラファミリア位置更新 (強制実行 & 詳細ログ) ▼ ---
+        console.log(`[Update Tick ${time.toFixed(0)}] isMakiraActive: ${this.isMakiraActive}`); // isMakiraActive の状態確認
 
-                 console.log(`[Update Familiars Tick] PaddleX: ${paddleX.toFixed(0)}, TargetY: ${familiarY.toFixed(0)}, Children: ${children.length}`); // このログが出るはず
+        if (this.isMakiraActive) { // ★ まずは isMakiraActive だけチェック
+            console.log(`  Paddle exists: ${!!this.paddle}, Paddle active: ${this.paddle?.active}, Paddle Pos: (${this.paddle?.x?.toFixed(0)}, ${this.paddle?.y?.toFixed(0)})`);
+            console.log(`  Familiars group exists: ${!!this.familiars}, Children count: ${this.familiars?.getLength()}`); // グループと子機の数
 
-                 if (children.length >= 2) {
-                     const targetXLeft = paddleX - MAKIRA_FAMILIAR_OFFSET;
-                     const targetXRight = paddleX + MAKIRA_FAMILIAR_OFFSET;
-                     try {
-                         if (children[0]?.active) {
-                             const oldX = children[0].x; const oldY = children[0].y;
-                             console.log(`  Left Familiar BEFORE: (${oldX.toFixed(0)}, ${oldY.toFixed(0)}) -> SET (${targetXLeft.toFixed(0)}, ${targetY.toFixed(0)})`);
-                             children[0].setPosition(targetXLeft, targetY);
-                             console.log(`  Left Familiar AFTER: (${children[0].x.toFixed(0)}, ${children[0].y.toFixed(0)})`);
-                         }
-                         if (children[1]?.active) {
-                             const oldX = children[1].x; const oldY = children[1].y;
-                             console.log(`  Right Familiar BEFORE: (${oldX.toFixed(0)}, ${oldY.toFixed(0)}) -> SET (${targetXRight.toFixed(0)}, ${targetY.toFixed(0)})`);
-                             children[1].setPosition(targetXRight, targetY);
-                             console.log(`  Right Familiar AFTER: (${children[1].x.toFixed(0)}, ${children[1].y.toFixed(0)})`);
-                         }
-                     } catch (e) { console.error("!!! Error inside setPosition loop:", e); }
-                 } else { console.warn("[Update Familiars] Not enough children."); }
-             } else {
-                 // 追従できない理由ログ
-                 if(this.isMakiraActive) { // isMakiraActive なのに条件満たさない場合
-                     if (!this.paddle?.active) console.warn("[Update Familiars Skipped] Paddle inactive?");
-                     if (!this.familiars || this.familiars.getLength() === 0) console.warn("[Update Familiars Skipped] Familiars group empty or missing?");
-                 }
-             }
+            if (this.paddle && this.paddle.active && this.familiars && this.familiars.getLength() >= 2) { // ★ getLength >= 2 を確認
+                const paddleX = this.paddle.x;
+                const targetY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
+                const children = this.familiars.getChildren();
+                const targetXLeft = paddleX - MAKIRA_FAMILIAR_OFFSET;
+                const targetXRight = paddleX + MAKIRA_FAMILIAR_OFFSET;
+
+                console.log(`  >>> Entering setPosition block. Target L:(${targetXLeft.toFixed(0)}, ${targetY.toFixed(0)}), R:(${targetXRight.toFixed(0)}, ${targetY.toFixed(0)})`);
+
+                try {
+                    const leftFamiliar = children[0];
+                    const rightFamiliar = children[1];
+
+                    if (leftFamiliar) { // 子機オブジェクトが存在するか
+                         console.log(`    Left Familiar current pos: (${leftFamiliar.x.toFixed(0)}, ${leftFamiliar.y.toFixed(0)})`);
+                         leftFamiliar.setPosition(targetXLeft, targetY);
+                         console.log(`    ---> Left Familiar AFTER setPosition: (${leftFamiliar.x.toFixed(0)}, ${leftFamiliar.y.toFixed(0)})`);
+                         leftFamiliar.setVisible(true); // 強制表示
+                         leftFamiliar.setAlpha(1);    // 強制不透明
+                         leftFamiliar.setActive(true); // 強制アクティブ
+                    } else { console.warn("    Left Familiar object is null/undefined!"); }
+
+                    if (rightFamiliar) {
+                         console.log(`    Right Familiar current pos: (${rightFamiliar.x.toFixed(0)}, ${rightFamiliar.y.toFixed(0)})`);
+                         rightFamiliar.setPosition(targetXRight, targetY);
+                         console.log(`    ---> Right Familiar AFTER setPosition: (${rightFamiliar.x.toFixed(0)}, ${rightFamiliar.y.toFixed(0)})`);
+                         rightFamiliar.setVisible(true);
+                         rightFamiliar.setAlpha(1);
+                         rightFamiliar.setActive(true);
+                    } else { console.warn("    Right Familiar object is null/undefined!"); }
+
+                } catch (e) { console.error("!!! Error inside setPosition block:", e); }
+
+            } else {
+                 console.log("  <<< Condition for setPosition block NOT MET."); // 条件満たさない場合のログ
+                 if (!this.paddle?.active) console.log("      Reason: Paddle inactive?");
+                 if (!this.familiars || this.familiars.getLength() < 2) console.log(`      Reason: Familiars missing or count is ${this.familiars?.getLength()}`);
+            }
+        } else {
+             // console.log("[Update Tick] Makira is NOT active."); // isMakiraActiveがfalseの場合のログ
         }
         // --- ▲ マキラファミリア位置更新 ▲ ---
 
-        this.updateBallFall();
-        this.updateAttackBricks();
-        this.updateMakiraBeams();
+        // 他のupdate処理も一旦コメントアウトしてマキラに集中
+        // this.updateBallFall();
+        // this.updateAttackBricks();
+        // this.updateMakiraBeams();
     }
     
 
