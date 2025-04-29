@@ -678,6 +678,7 @@ scheduleNextAttackBrick() {
  // --- ▼ updateBallAndPaddleAppearance (ループ確認ログ追加) ▼ ---
 updateBallAndPaddleAppearance() {
     console.log("--- updateBallAndPaddleAppearance called ---");
+    console.log("Context 'this' inside updateBallAndPaddleAppearance:", this); // ★ this の内容確認
     if (this.balls && this.balls.active) {
         const children = this.balls.getChildren(); // 先に子を取得
         console.log(`  Checking ${children.length} balls in group.`); // ★ ボールの数をログ出力
@@ -802,6 +803,20 @@ setBallPowerUpState(type, isActive) {
     // ★★★ setBallPowerUpState の最後に見た目更新を強制呼び出し ★★★
     console.log("[setBallPowerUpState] Forcing appearance update after state change.");
     this.updateBallAndPaddleAppearance(); // 変更を即時反映させるため
+// ★★★ 直接呼び出しテスト ★★★
+const firstBall = this.balls?.getFirstAlive();
+if (firstBall) {
+     console.log(">>> Attempting DIRECT call to updateBallAppearance for first ball...");
+     try {
+         this.updateBallAppearance(firstBall);
+         console.log("<<< DIRECT call finished.");
+     } catch(e) {
+          console.error("!!! ERROR during DIRECT call:", e);
+     }
+} else {
+     console.log("No active ball found for direct call test.");
+}
+ // ★★★ 直接呼び出しテスト終了 ★★★
 }
 // --- ▲ setBallPowerUpState ▲ ---
     // --- ▲ ボール状態設定ヘルパー ▲ ---
