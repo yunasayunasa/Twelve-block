@@ -206,6 +206,8 @@ update(time, delta) {
     setupUI() {
         console.log("Launching UIScene for Boss...");
         if (!this.scene.isActive('UIScene')) {
+            console.log(">>> Launching UIScene with SIMPLE STRING data..."); // ログ追加
+         this.scene.launch('UIScene', "HelloUISceneFromBoss"); // ★ 文字列を渡す
              // ▼▼▼ UIScene 起動時にデータを渡す ▼▼▼
              this.scene.launch('UIScene', { parentSceneKey: 'BossScene' });
              // ▲▲▲ UIScene 起動時にデータを渡す ▲▲▲
