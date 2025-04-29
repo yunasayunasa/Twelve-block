@@ -463,8 +463,8 @@ scheduleNextAttackBrick() {
                     // attackBrick.body.setOffset(offsetX, offsetY);
 
                   //  console.log(`Attack brick body size set to: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)} (Multiplier: ${hitboxScaleMultiplier})`);
-                } else //{ console.warn("Attack brick body not ready for size setting."); }
-            } catch (e) //{ console.error("Error setting attack brick body size:", e); }
+                } else { console.warn("Attack brick body not ready for size setting."); }
+            } catch (e) { console.error("Error setting attack brick body size:", e); }
             // --- ▲ 当たり判定を表示サイズより大きくする ▲ ---
 
 
