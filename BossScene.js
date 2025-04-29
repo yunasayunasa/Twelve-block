@@ -897,7 +897,6 @@ hitBossWithMakiraBeam(beam, boss) {
 
     // ... (他のメソッド: hitBoss, hitOrbiter(削除済), defeatBoss など) ...
 
-    // hitAttackBrick メソッド (ヴァジラゲージ増加追加)
     hitAttackBrick(brick, ball) {
         if (!brick || !brick.active || !ball || !ball.active) return;
         console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
@@ -906,7 +905,7 @@ hitBossWithMakiraBeam(beam, boss) {
         // エフェクト & SE
         try { /* ...パーティクル... */ } catch (e) { /*...*/ }
         try { this.sound.add(AUDIO_KEYS.SE_DESTROY).play(); } catch (e) { /*...*/ }
-        brick.destroy();
+        brick.destroy(); // 先にブロックを破壊
 
         // ★★★ ヴァジラゲージ増加処理を追加 ★★★
         this.increaseVajraGauge(); // 攻撃ブロック破壊でゲージ増加
@@ -938,6 +937,30 @@ hitBossWithMakiraBeam(beam, boss) {
              console.log("[Drop Logic] No item drop based on rate.");
         }
         // --- ▲ アイテムドロップ判定 (バイシュラヴァ特別判定追加) ▲ ---
+
+        // --- ▼ ボール速度を維持/再設定 ▼ ---
+        if (ball.body) { // ボディがあるか確認
+            let speedMultiplier = 1.0;
+            const isFast = ball.getData('isFast') === true;
+            const isSlow = ball.getData('isSlow') === true;
+            if (isFast) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.SHATORA];
+            else if (isSlow) speedMultiplier = BALL_SPEED_MODIFIERS[POWERUP_TYPES.HAILA];
+            const targetSpeed = NORMAL_BALL_SPEED * speedMultiplier;
+
+            // 現在の速度ベクトルを維持しつつ、速度だけ再設定
+            const currentVelocity = ball.body.velocity;
+            if (currentVelocity.lengthSq() > 0) { // 速度が0でない場合
+                currentVelocity.normalize().scale(targetSpeed); // 方向を維持して速度を適用
+                ball.setVelocity(currentVelocity.x, currentVelocity.y);
+                console.log(`[hitAttackBrick] Ball speed reset to targetSpeed: ${targetSpeed.toFixed(0)}`);
+            } else {
+                 console.warn("[hitAttackBrick] Ball velocity was zero, cannot normalize.");
+                 // 速度ゼロの場合はデフォルトで上向きに飛ばすなど検討
+                 ball.setVelocity(0, -targetSpeed);
+            }
+        }
+        // --- ▲ ボール速度を維持/再設定 ▲ ---
+
     }
 
 
