@@ -817,6 +817,15 @@ if (firstBall) {
      console.log("No active ball found for direct call test.");
 }
  // ★★★ 直接呼び出しテスト終了 ★★★
+// ★★★ 単純なテスト関数呼び出し ★★★
+console.log(">>> Attempting call to testLogFunction...");
+try {
+    this.testLogFunction("Hello from setBallPowerUpState");
+    console.log("<<< testLogFunction call finished.");
+} catch(e) {
+    console.error("!!! ERROR during testLogFunction call:", e);
+}
+ // ★★★ 単純なテスト関数呼び出し終了 ★★★
 }
 // --- ▲ setBallPowerUpState ▲ ---
     // --- ▲ ボール状態設定ヘルパー ▲ ---
@@ -1749,6 +1758,12 @@ update(time, delta) {
             this.currentBgm = null;
         }
     }
+
+    // BossScene.js 内に追加
+testLogFunction(message) {
+    console.log(">>> Entering testLogFunction. Message:", message);
+    console.log("<<< Exiting testLogFunction.");
+}
 
     // --- ▼ ユーティリティメソッド (省略なし) ▼ ---
     updatePaddleSize() {
