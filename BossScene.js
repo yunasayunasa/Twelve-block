@@ -32,7 +32,7 @@ const ATTACK_BRICK_SPAWN_DELAY_MAX = 1200; // 最長生成間隔 (ms)
 const ATTACK_BRICK_SCALE = 0.8; // ブロックの表示スケール (仮)
 const ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE = 0.6; // 上から降ってくる確率 (60%)
 const ATTACK_BRICK_ITEM_DROP_RATE = 0.4; // 破壊時にアイテムを落とす確率 (40%)
-
+const FAMILIAR_MOVE_SPEED_X = 180; // ★ 子機の左右移動速度 (追加
 
 
 export default class BossScene extends Phaser.Scene {
@@ -164,65 +164,40 @@ this.setupBossDropPool();
 
     /// BossScene.js の update メソッド (最終デバッグ)
 
-    update(time, delta) {
-        // ★ ゲームオーバー/撃破時以外の処理を一時的にコメントアウトし、マキラ追従のみ試す
-        // if (this.isGameOver || this.bossDefeated) { return; }
-
-        // --- ▼ マキラファミリア位置更新 (強制実行 & 詳細ログ) ▼ ---
-        console.log(`[Update Tick ${time.toFixed(0)}] isMakiraActive: ${this.isMakiraActive}`); // isMakiraActive の状態確認
-
-        if (this.isMakiraActive) { // ★ まずは isMakiraActive だけチェック
-            console.log(`  Paddle exists: ${!!this.paddle}, Paddle active: ${this.paddle?.active}, Paddle Pos: (${this.paddle?.x?.toFixed(0)}, ${this.paddle?.y?.toFixed(0)})`);
-            console.log(`  Familiars group exists: ${!!this.familiars}, Children count: ${this.familiars?.getLength()}`); // グループと子機の数
-
-            if (this.paddle && this.paddle.active && this.familiars && this.familiars.getLength() >= 2) { // ★ getLength >= 2 を確認
-                const paddleX = this.paddle.x;
-                const targetY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
-                const children = this.familiars.getChildren();
-                const targetXLeft = paddleX - MAKIRA_FAMILIAR_OFFSET;
-                const targetXRight = paddleX + MAKIRA_FAMILIAR_OFFSET;
-
-                console.log(`  >>> Entering setPosition block. Target L:(${targetXLeft.toFixed(0)}, ${targetY.toFixed(0)}), R:(${targetXRight.toFixed(0)}, ${targetY.toFixed(0)})`);
-
-                try {
-                    const leftFamiliar = children[0];
-                    const rightFamiliar = children[1];
-
-                    if (leftFamiliar) { // 子機オブジェクトが存在するか
-                         console.log(`    Left Familiar current pos: (${leftFamiliar.x.toFixed(0)}, ${leftFamiliar.y.toFixed(0)})`);
-                         leftFamiliar.setPosition(targetXLeft, targetY);
-                         console.log(`    ---> Left Familiar AFTER setPosition: (${leftFamiliar.x.toFixed(0)}, ${leftFamiliar.y.toFixed(0)})`);
-                         leftFamiliar.setVisible(true); // 強制表示
-                         leftFamiliar.setAlpha(1);    // 強制不透明
-                         leftFamiliar.setActive(true); // 強制アクティブ
-                    } else { console.warn("    Left Familiar object is null/undefined!"); }
-
-                    if (rightFamiliar) {
-                         console.log(`    Right Familiar current pos: (${rightFamiliar.x.toFixed(0)}, ${rightFamiliar.y.toFixed(0)})`);
-                         rightFamiliar.setPosition(targetXRight, targetY);
-                         console.log(`    ---> Right Familiar AFTER setPosition: (${rightFamiliar.x.toFixed(0)}, ${rightFamiliar.y.toFixed(0)})`);
-                         rightFamiliar.setVisible(true);
-                         rightFamiliar.setAlpha(1);
-                         rightFamiliar.setActive(true);
-                    } else { console.warn("    Right Familiar object is null/undefined!"); }
-
-                } catch (e) { console.error("!!! Error inside setPosition block:", e); }
-
-            } else {
-                 console.log("  <<< Condition for setPosition block NOT MET."); // 条件満たさない場合のログ
-                 if (!this.paddle?.active) console.log("      Reason: Paddle inactive?");
-                 if (!this.familiars || this.familiars.getLength() < 2) console.log(`      Reason: Familiars missing or count is ${this.familiars?.getLength()}`);
-            }
-        } else {
-             // console.log("[Update Tick] Makira is NOT active."); // isMakiraActiveがfalseの場合のログ
-        }
-        // --- ▲ マキラファミリア位置更新 ▲ ---
-
-        // 他のupdate処理も一旦コメントアウトしてマキラに集中
-        // this.updateBallFall();
-        // this.updateAttackBricks();
-        // this.updateMakiraBeams();
+    // BossScene.js 内
+update(time, delta) {
+    if (this.isGameOver || this.bossDefeated) {
+         if (this.bossAfterImageEmitter && this.bossAfterImageEmitter.emitting) {
+             this.bossAfterImageEmitter.stop();
+         }
+        return;
     }
+
+    // --- 残像エミッタの位置追従 ---
+    if (this.bossAfterImageEmitter && this.boss && this.boss.active) {
+        this.bossAfterImageEmitter.setPosition(this.boss.x, this.boss.y);
+        if (!this.bossAfterImageEmitter.emitting) {
+             // console.log("[DEBUG AfterImage] Force starting emitter in update."); // 必要ならデバッグログ復活
+             this.bossAfterImageEmitter.start();
+        }
+    }
+
+    // --- ▼▼▼ マキラ子機追従ロジック削除 ▼▼▼ ---
+    /*
+    // このブロック全体を削除またはコメントアウト
+    console.log(`[Update Tick ${time.toFixed(0)}] isMakiraActive: ${this.isMakiraActive}`);
+    if (this.isMakiraActive) {
+         // ... (追従のための setPosition などの処理) ...
+    } else {
+         // ...
+    }
+    */
+    // --- ▲▲▲ マキラ子機追従ロジック削除 ▲▲▲ ---
+
+    this.updateBallFall();
+    this.updateAttackBricks();
+    // updateMakiraBeams(); // このメソッドは定義されていなければ不要
+}
     
 
     // --- ▼ Create ヘルパーメソッド ▼ ---
@@ -846,28 +821,44 @@ deactivateMakira() {
     }
 }
 
+// BossScene.js 内
 createFamiliars() {
-    if (!this.paddle || !this.paddle.active || !this.familiars) return;
-    console.log("Creating familiars (non-physics or kinematic)...");
-    const paddleX = this.paddle.x;
-    const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
+    if (!this.paddle || !this.paddle.active || !this.familiars) { console.warn("Cannot create familiars."); return; }
+    console.log("Creating familiars (physics enabled for independent movement)..."); // ログ変更
+    const paddleX = this.paddle.x; // 初期位置の基準には使う
+    const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE; // Y座標はパドルの少し上
 
-    // ★ Physics Image ではなく通常の Image として生成、または Body を無効化 ★
-    const familiarLeft = this.add.image(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun') // physics.add を add に変更
-        .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2);
-    this.familiars.add(familiarLeft); // グループには追加
+    try {
+        // 左の子機
+        const familiarLeft = this.familiars.create(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun') // physics group から create
+            .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2)
+            .setCollideWorldBounds(true) // ★ ワールド境界と衝突
+            .setBounceX(1)               // ★ X方向(左右)に反射
+            .setImmovable(true);         // ★ 他からの影響を受けないように
 
-    const familiarRight = this.add.image(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun')
-        .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2);
-    this.familiars.add(familiarRight);
+        if (familiarLeft.body) {
+            familiarLeft.body.setAllowGravity(false); // 重力無効
+            familiarLeft.setVelocityX(-FAMILIAR_MOVE_SPEED_X); // ★ 左へ移動開始
+            familiarLeft.body.onWorldBounds = true; // ★ 境界衝突イベント有効化 (もし必要ならSE再生などに使える)
+        } else { console.error("Failed to create familiarLeft body!"); if(familiarLeft) familiarLeft.destroy(); }
 
-    /* または、Physics Image のままで Body を無効化する場合:
-    const familiarLeft = this.familiars.create(...) // physics.add.group().create() で生成
-    if (familiarLeft.body) familiarLeft.body.setEnable(false); // ボディを無効化
-    const familiarRight = this.familiars.create(...)
-    if (familiarRight.body) familiarRight.body.setEnable(false);
-    */
-    console.log("Familiars created (non-physics or body disabled).");
+        // 右の子機
+        const familiarRight = this.familiars.create(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun')
+            .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2)
+            .setCollideWorldBounds(true)
+            .setBounceX(1)
+            .setImmovable(true);
+
+        if (familiarRight.body) {
+            familiarRight.body.setAllowGravity(false);
+            familiarRight.setVelocityX(FAMILIAR_MOVE_SPEED_X); // ★ 右へ移動開始
+            familiarRight.body.onWorldBounds = true;
+        } else { console.error("Failed to create familiarRight body!"); if(familiarRight) familiarRight.destroy(); }
+
+        console.log(`Physics familiars created. Count: ${this.familiars.getLength()}`);
+    } catch (e) {
+        console.error("Error creating/setting up physics familiars:", e);
+    }
 }
 
 
@@ -1071,37 +1062,18 @@ hitBossWithMakiraBeam(beam, boss) {
 
 // BossScene.js の create ヘルパー
 
-createMakiraGroups() { // ★ このメソッドがあるか確認
-    console.log("Creating Makira groups...");
+// BossScene.js 内
+createMakiraGroups() {
+    console.log("Creating Makira groups (familiars as physics group)..."); // ログ変更
     if (this.familiars) { this.familiars.destroy(true); this.familiars = null; }
-    // ★★★ ファミリアは通常のグループにする ★★★
-    this.familiars = this.add.group();
+    // ★★★ ファミリアを物理グループにする ★★★
+    this.familiars = this.physics.add.group(); // physics.add.group() に変更
     if (this.makiraBeams) { this.makiraBeams.destroy(true); this.makiraBeams = null; }
-    this.makiraBeams = this.physics.add.group(); // ビームは物理
-    console.log("Makira groups created.");
+    this.makiraBeams = this.physics.add.group(); // ビームは物理のまま
+    console.log("Makira groups created (familiars as physics).");
 }
 
-createFamiliars() {
-    if (!this.paddle || !this.paddle.active || !this.familiars) { console.warn("Cannot create familiars."); return; }
-    console.log("Creating familiars (non-physics)...");
-    const paddleX = this.paddle.x;
-    const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
 
-    // ★★★ 通常の Image として生成し、add.group に追加 ★★★
-    try {
-        const familiarLeft = this.add.image(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun')
-            .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2);
-        this.familiars.add(familiarLeft); // ★ 通常グループに追加
-
-        const familiarRight = this.add.image(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun')
-            .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2);
-        this.familiars.add(familiarRight); // ★ 通常グループに追加
-
-        console.log(`Familiars created and added to group. Count: ${this.familiars.getLength()}`);
-    } catch (e) {
-        console.error("Error creating/adding familiars:", e);
-    }
-}
     
 
     //* --- ▼ ボスの動きメソッド ▼ ---

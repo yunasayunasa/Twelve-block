@@ -4,6 +4,8 @@ import { POWERUP_ICON_KEYS, AUDIO_KEYS } from './constants.js';
 export default class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
 
+    
+
     preload() {
         console.log("BootScene Preload Start");
         this.textures.generate('whitePixel', { data: ['1'], pixelWidth: 1 });
