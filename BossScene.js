@@ -833,7 +833,7 @@ try {
     // --- ▲ ボール状態設定ヘルパー ▲ ---
 
       // --- 見た目更新ヘルパー (クビラ対応) ---
-    updateBallAppearance(ball) {
+    /*updateBallAppearance(ball) {
         if (!ball || !ball.active) return;
         let textureKey = 'ball_image'; // デフォルト
         const lastPower = ball.getData('lastActivatedPower');
@@ -851,7 +851,7 @@ try {
              console.log(`Ball texture set to: ${textureKey}`);
         }
         ball.clearTint();
-    }
+    }*/
      // --- 見た目更新ヘルパー (クビラ対応) ---
 
 
