@@ -393,7 +393,7 @@ scheduleNextAttackBrick() {
         }
         // ランダムな遅延時間を計算
         const nextDelay = Phaser.Math.Between(ATTACK_BRICK_SPAWN_DELAY_MIN, ATTACK_BRICK_SPAWN_DELAY_MAX);
-        console.log(`Scheduling next attack brick in ${nextDelay}ms`);
+        //console.log(`Scheduling next attack brick in ${nextDelay}ms`);
 
         this.attackBrickTimer = this.time.addEvent({
             delay: nextDelay,
@@ -405,20 +405,20 @@ scheduleNextAttackBrick() {
 
     spawnAttackBrick() {
         // ... (生成位置決定ロジック spawnX, spawnY) ...
-        console.log("Spawning attack brick...");
+        //console.log("Spawning attack brick...");
         let spawnX; // ★★★ この行を追加 ★★★
         const spawnY = -30;
 
         // --- 生成位置を決定 ---
         if (Phaser.Math.FloatBetween(0, 1) < ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE) {
             spawnX = Phaser.Math.Between(30, this.gameWidth - 30);
-            console.log("Spawning from top random position.");
+          //  console.log("Spawning from top random position.");
         } else {
             if (this.boss && this.boss.active) {
                 spawnX = this.boss.x;
-                console.log("Spawning from boss position.");
+               // console.log("Spawning from boss position.");
             } else {
-                console.log("Boss not available, spawning at center top.");
+               // console.log("Boss not available, spawning at center top.");
                 spawnX = this.gameWidth / 2;
             }
         }
@@ -428,7 +428,7 @@ scheduleNextAttackBrick() {
         // ★ テクスチャキーを 'attackBrick' に固定 (読み込み前提)
         //    もし読み込めなかった場合のフォールバックは create でチェックする方が良いかも
         const brickTexture = 'attackBrick';
-        console.log(`[Spawn Debug] Using texture: ${brickTexture}`);
+       // console.log(`[Spawn Debug] Using texture: ${brickTexture}`);
 
         const attackBrick = this.attackBricks.create(spawnX, spawnY, brickTexture);
 
@@ -1069,7 +1069,7 @@ startBossMovement() {
         this.bossMoveTween = null;
     }
 
-    console.log("Starting boss horizontal movement (Center Start - Chained Tweens)...");
+   // console.log("Starting boss horizontal movement (Center Start - Chained Tweens)...");
     const moveWidth = this.gameWidth * BOSS_MOVE_RANGE_X_RATIO / 2;
     const leftX = this.gameWidth / 2 - moveWidth;
     const rightX = this.gameWidth / 2 + moveWidth;
@@ -1089,7 +1089,7 @@ startBossMovement() {
 
     const moveToRight = () => {
         const randomEase = Phaser.Utils.Array.GetRandom(easeFunctions); // ★ ランダム選択
-        console.log(`Tween: Moving to Right (Ease: ${randomEase})`);
+      //  console.log(`Tween: Moving to Right (Ease: ${randomEase})`);
         this.bossMoveTween = this.tweens.add({
             targets: this.boss,
             x: rightX,
@@ -1105,7 +1105,7 @@ startBossMovement() {
 
     const moveToLeft = () => {
         const randomEase = Phaser.Utils.Array.GetRandom(easeFunctions); // ★ ランダム選択
-        console.log(`Tween: Moving to Left (Ease: ${randomEase})`);
+     //   console.log(`Tween: Moving to Left (Ease: ${randomEase})`);
         this.bossMoveTween = this.tweens.add({
             targets: this.boss,
             x: leftX,
@@ -1120,7 +1120,7 @@ startBossMovement() {
     };
 
     moveToRight(); // 開始
-    console.log("Chained boss movement tweens with random ease initiated.");
+  //  console.log("Chained boss movement tweens with random ease initiated.");
 }
 
 // --- ▼ 残像エミッタ設定メソッド (新規追加) ▼ ---
