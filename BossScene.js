@@ -1810,11 +1810,11 @@ testLogFunction(message) {
         console.log(`Boss size updated. Scale: ${desiredScale.toFixed(2)}, Hitbox: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)}`);
     }
 
-    updateBallAppearance(ball) {
+    /*updateBallAppearance(ball) {
         if (!ball || !ball.active) return;
         if (ball.texture.key !== 'ball_image') { ball.setTexture('ball_image'); }
         ball.clearTint();
-    }
+    }*/
 
     createAndAddBall(x, y, vx = 0, vy = 0) {
         console.log(`Creating ball at (${x}, ${y})`);
