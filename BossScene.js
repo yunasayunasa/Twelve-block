@@ -167,27 +167,30 @@ this.setupBossDropPool();
 
         this.updateBallFall();
         this.updateAttackBricks();
-        // --- ▼ マキラファミリア位置更新 (setPosition を使う) ▼ ---
+        // --- ▼ マキラファミリア位置更新 (速度制御) ▼ ---
         if (this.isMakiraActive && this.paddle && this.paddle.active && this.familiars && this.familiars.active) {
             const paddleX = this.paddle.x;
-            const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
+            const targetY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
             const children = this.familiars.getChildren();
-            // console.log(`Updating familiars. PaddleX: ${paddleX.toFixed(0)}, TargetY: ${familiarY.toFixed(0)}`); // デバッグログ
+            const followSpeed = 1000; // ★ 追従速度 (px/sec) - 要調整
 
             try {
-                if (children[0]?.active) {
-                    children[0].setPosition(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY);
-                     // if(children[0].x !== paddleX - MAKIRA_FAMILIAR_OFFSET) console.log("Left pos not updated?"); // 位置確認ログ
+                if (children[0]?.active && children[0].body) {
+                    const targetXLeft = paddleX - MAKIRA_FAMILIAR_OFFSET;
+                    // 目標位置までの差分ベクトルから速度を設定
+                    const desiredVelX = (targetXLeft - children[0].x) * (followSpeed / 100); // 簡易的な比例制御
+                    const desiredVelY = (targetY - children[0].y) * (followSpeed / 100);
+                    children[0].body.setVelocity(desiredVelX, desiredVelY);
                 }
-                if (children[1]?.active) {
-                    children[1].setPosition(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY);
+                 if (children[1]?.active && children[1].body) {
+                    const targetXRight = paddleX + MAKIRA_FAMILIAR_OFFSET;
+                    const desiredVelX = (targetXRight - children[1].x) * (followSpeed / 100);
+                    const desiredVelY = (targetY - children[1].y) * (followSpeed / 100);
+                     children[1].body.setVelocity(desiredVelX, desiredVelY);
                 }
-            } catch (e) { console.error("Error updating familiar position:", e); }
-        } else if (this.isMakiraActive) {
-             // マキラはアクティブなのに他がない場合のログ
-             // console.warn("Makira active but paddle or familiars missing/inactive?");
+            } catch (e) { console.error("Error updating familiar velocity:", e); }
         }
-        // --- ▲ マキラファミリア位置更新 ▲ --
+        // --- ▲ マキラファミリア位置更新 ▲ ---
     }
     
 
