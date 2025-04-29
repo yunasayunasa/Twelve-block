@@ -314,7 +314,9 @@ update(time, delta) {
 // --- ▼ 見た目更新ヘルパー (優先順位考慮) ▼ ---
 // --- ▼ updateBallAppearance (ログ追加・優先順位確認) ▼ ---
 updateBallAppearance(ball) {
-    if (!ball || !ball.active || !ball.getData) return;
+    
+    console.log(`>>> Entering updateBallAppearance. Ball texture: ${ball?.texture?.key}`); // この1行だけにする
+   /* if (!ball || !ball.active || !ball.getData) return;
     let textureKey = 'ball_image';
     const lastPower = ball.getData('lastActivatedPower');
     const activePowers = ball.getData('activePowers') || new Set();
@@ -339,7 +341,7 @@ updateBallAppearance(ball) {
         console.log(`===> Ball texture CHANGED to: ${textureKey}`); // ★ 変更時ログ
     }
     ball.clearTint();
-}
+}*/
  // --- ▲ updateBallAppearance ▲ ---
 
 
