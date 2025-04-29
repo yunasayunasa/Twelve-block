@@ -7,6 +7,15 @@ import {
     POWERUP_ICON_KEYS, // アイテムドロップで使う可能性
     BRICK_WIDTH_RATIO, POWERUP_SIZE, POWERUP_SPEED_Y,
     POWERUP_DURATION, BALL_SPEED_MODIFIERS// 時間・速度関連の定数を追加
+    // --- ▼ マキラ関連の定数をインポート ▼ ---
+    MAKIRA_ATTACK_INTERVAL,
+    MAKIRA_FAMILIAR_SIZE,
+    MAKIRA_FAMILIAR_OFFSET,
+    MAKIRA_BEAM_WIDTH,
+    MAKIRA_BEAM_HEIGHT,
+    MAKIRA_BEAM_COLOR,
+    MAKIRA_BEAM_SPEED
+    // --- ▲ マキラ関連の定数をインポート ▲ ---
 } from './constants.js';
 
 // --- ボス戦用定数 ---
