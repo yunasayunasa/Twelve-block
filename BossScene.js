@@ -158,8 +158,18 @@ this.setupBossDropPool();
 
         this.updateBallFall();
         this.updateAttackBricks();
-        // updateOrbiters 削除
+        // --- ▼ マキラファミリア位置更新 ▼ ---
+        if (this.isMakiraActive && this.paddle && this.paddle.active && this.familiars && this.familiars.active) {
+            const paddleX = this.paddle.x;
+            const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
+            const children = this.familiars.getChildren();
+            // 物理ボディの位置を更新する方がスムーズな場合もある (setVelocity)
+            if (children[0]?.active) children[0].setPosition(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY);
+            if (children[1]?.active) children[1].setPosition(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY);
+        }
+        // --- ▲ マキラファミリア位置更新 ▲ ---
     }
+    
 
     // --- ▼ Create ヘルパーメソッド ▼ ---
 
@@ -461,8 +471,13 @@ this.setupBossDropPool();
         switch (type) {
             case POWERUP_TYPES.KUBIRA:
                 console.log("Activating Kubira (Boss Fight - Damage +1 for 10s)");
-                this.activateTemporaryEffect(type, POWERUP_DURATION[type] || 10000);
-                // ★ ダメージ計算は hitBoss 側でフラグを見て行う必要あり
+                // ★ 開始/終了コールバックでフラグを設定/解除 ★
+                this.activateTemporaryEffect(
+                    type,
+                    POWERUP_DURATION[type] || 10000,
+                    () => this.setBallPowerUpState(type, true), // 開始時に isKubiraActive = true
+                    () => this.setBallPowerUpState(type, false) // 終了時に isKubiraActive = false
+                );
                 break;
             case POWERUP_TYPES.SHATORA:
                 console.log("Activating Shatora (Boss Fight - Speed Up for 3s)");
@@ -515,10 +530,12 @@ this.setupBossDropPool();
                 console.log("Power up Makora collected, effect TBD (Copy Boss Ability).");
                 // ★ ここにマコラ処理 (activateMakora)
                 break;
-            case POWERUP_TYPES.MAKIRA:
-                 console.log("Power up Makira collected, effect TBD (Paddle Beam for 6.7s).");
-                 // ★ ここにマキラ処理 (activateMakira)
+                case POWERUP_TYPES.MAKIRA: // ★ マキラ呼び出し追加
+                console.log("Activating Makira (Boss Fight - Paddle Beam for 6.7s).");
+                this.activateMakira(); // ★ activateMakira を呼び出す
                 break;
+       
+       
              case POWERUP_TYPES.VAJRA:
                  console.log("Power up Vajra collected, effect TBD (Gauge System Start).");
                  // ★ ここにヴァジラゲージシステム開始処理 (activateVajra)
@@ -570,15 +587,23 @@ this.setupBossDropPool();
     setBallPowerUpState(type, isActive) {
         this.balls?.getChildren().forEach(ball => {
             if (ball?.active) { // ?.で安全アクセス
-                // 例: ball.data.values.activePowers (Setを使う場合)
+                // activePowers Set を使う (GameScene準拠)
                 let activePowers = ball.getData('activePowers');
-                if (!activePowers) activePowers = new Set(); // なければ作成
-                if (isActive) {
-                     activePowers.add(type);
-                } else {
-                     activePowers.delete(type);
+                if (!activePowers) activePowers = new Set();
+                if (isActive) activePowers.add(type);
+                else activePowers.delete(type);
+                ball.setData('activePowers', activePowers);
+
+                // ★ isKubiraActive フラグも設定/解除 (例) ★
+                if (type === POWERUP_TYPES.KUBIRA) {
+                    ball.setData('isKubiraActive', isActive);
+                    console.log(`Ball Kubira state set to: ${isActive}`);
                 }
-                 // lastActivatedPower も更新 (単純化のため、常に追加されたものを最後に)
+                // ★ isFast/isSlow フラグもここで管理 ★
+                if (type === POWERUP_TYPES.SHATORA) ball.setData('isFast', isActive);
+                if (type === POWERUP_TYPES.HAILA) ball.setData('isSlow', isActive);
+
+                // lastActivatedPower 更新
                  if (isActive) {
                      ball.setData('lastActivatedPower', type);
                  } else {
@@ -587,23 +612,134 @@ this.setupBossDropPool();
                          ball.setData('lastActivatedPower', remaining.length > 0 ? remaining[remaining.length - 1] : null);
                      }
                  }
-                 ball.setData('activePowers', activePowers); // 更新したSetを再設定
                  console.log(`Ball power state for ${type} set to ${isActive}. Current:`, Array.from(activePowers));
             }
         });
     }
+    // --- ボール状態設定ヘルパー (修正) ---
 
-     // ★ ボールやパドルの見た目を現在のパワーアップ状態に合わせて更新する関数 (仮)
-     updateBallAndPaddleAppearance() {
-         console.log("Updating ball and paddle appearance (placeholder)...");
-         this.balls?.getChildren().forEach(ball => {
-             if (ball?.active) {
-                 this.updateBallAppearance(ball); // 既存のボール見た目更新を呼ぶ
-             }
-         });
-         // パドルの見た目変更 (もしあれば)
-     }
+      // --- 見た目更新ヘルパー (クビラ対応) ---
+    updateBallAppearance(ball) {
+        if (!ball || !ball.active) return;
+        let textureKey = 'ball_image'; // デフォルト
+        const lastPower = ball.getData('lastActivatedPower');
+        const isKubiraActive = ball.getData('isKubiraActive'); // ★ クビラ状態取得
 
+        // ★ クビラ状態ならアイコンを変更 ★
+        if (isKubiraActive) {
+            textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA] || 'ball_image';
+        }
+        // ★ 他のパワーアップの見た目変更もここに追加 ★
+        // else if (ball.getData('isFast')) { textureKey = ... }
+
+        if (ball.texture.key !== textureKey) {
+            ball.setTexture(textureKey);
+             console.log(`Ball texture set to: ${textureKey}`);
+        }
+        ball.clearTint();
+    }
+     // --- 見た目更新ヘルパー (クビラ対応) ---
+
+
+// --- ▼ マキラ関連メソッド (GameSceneから移植・調整) ▼ ---
+
+activateMakira() {
+    if (!this.isMakiraActive) {
+        console.log("[BossScene] Activating Makira.");
+        this.isMakiraActive = true; // フラグを立てる
+        // ファミリアグループ準備
+        if (this.familiars) this.familiars.clear(true, true);
+        else this.familiars = this.physics.add.group(); // ★ familiarsプロパティが必要
+        this.createFamiliars(); // ファミリア生成
+        // ビームグループ準備
+        if (this.makiraBeams) this.makiraBeams.clear(true, true);
+        else this.makiraBeams = this.physics.add.group(); // ★ makiraBeamsプロパティが必要
+
+        // 攻撃タイマー開始
+        if (this.makiraAttackTimer) this.makiraAttackTimer.remove();
+        this.makiraAttackTimer = this.time.addEvent({
+            delay: MAKIRA_ATTACK_INTERVAL, // constants.js から
+            callback: this.fireMakiraBeam,
+            callbackScope: this,
+            loop: true
+        });
+        // ボール状態設定
+        this.setBallPowerUpState(POWERUP_TYPES.MAKIRA, true);
+        this.updateBallAndPaddleAppearance(); // 見た目更新
+    }
+    // 効果時間タイマー設定
+    const duration = POWERUP_DURATION[POWERUP_TYPES.MAKIRA] || 6667;
+    if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove();
+    this.powerUpTimers[POWERUP_TYPES.MAKIRA] = this.time.delayedCall(duration, () => {
+        console.log("Deactivating Makira due to duration.");
+        this.deactivateMakira();
+        this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null;
+    }, [], this);
+    // ★ 衝突判定の更新が必要 (ビーム用) ★
+    this.setColliders();
+}
+
+deactivateMakira() {
+    if (this.isMakiraActive) {
+        console.log("[BossScene] Deactivating Makira.");
+        this.isMakiraActive = false;
+        if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; }
+        if (this.powerUpTimers[POWERUP_TYPES.MAKIRA]) { this.powerUpTimers[POWERUP_TYPES.MAKIRA].remove(); this.powerUpTimers[POWERUP_TYPES.MAKIRA] = null; }
+        if (this.familiars) { this.familiars.clear(true, true); }
+        if (this.makiraBeams) { this.makiraBeams.clear(true, true); }
+        // ボール状態解除
+        this.setBallPowerUpState(POWERUP_TYPES.MAKIRA, false);
+        this.updateBallAndPaddleAppearance();
+         // ★ 衝突判定の更新 (ビーム用を解除) ★
+        this.setColliders();
+    }
+}
+
+createFamiliars() {
+    if (!this.paddle || !this.paddle.active || !this.familiars) return;
+    console.log("Creating familiars...");
+    const paddleX = this.paddle.x;
+    const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE; // 定数が必要
+    // 左
+    const familiarLeft = this.familiars.create(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun') // 定数が必要
+        .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).setImmovable(true).setCollideWorldBounds(true); // 壁抜け防止
+    if (familiarLeft.body) familiarLeft.body.setAllowGravity(false);
+    else { console.error("FamiliarLeft body creation failed."); familiarLeft.destroy(); }
+    // 右
+    const familiarRight = this.familiars.create(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY, 'joykun')
+        .setDisplaySize(MAKIRA_FAMILIAR_SIZE * 2, MAKIRA_FAMILIAR_SIZE * 2).setImmovable(true).setCollideWorldBounds(true);
+    if (familiarRight.body) familiarRight.body.setAllowGravity(false);
+    else { console.error("FamiliarRight body creation failed."); familiarRight.destroy(); }
+     console.log("Familiars created.");
+}
+
+fireMakiraBeam() {
+    if (!this.isMakiraActive || !this.familiars || this.familiars.countActive(true) === 0 || this.isGameOver || this.bossDefeated) return;
+    // SEは無しでOK
+
+    this.familiars.getChildren().forEach(familiar => {
+        if (familiar.active) {
+            const beam = this.makiraBeams.create(familiar.x, familiar.y - MAKIRA_FAMILIAR_SIZE, 'whitePixel') // 定数が必要
+                .setDisplaySize(MAKIRA_BEAM_WIDTH, MAKIRA_BEAM_HEIGHT).setTint(MAKIRA_BEAM_COLOR); // 定数が必要
+            if (beam && beam.body) {
+                beam.setVelocity(0, -MAKIRA_BEAM_SPEED); // 定数が必要
+                beam.body.setAllowGravity(false);
+                 // ★ ビームとボスの衝突判定を設定する必要あり ★
+                 //    setColliders内か、ここで毎回設定するか
+                 this.physics.add.overlap(beam, this.boss, this.hitBossWithMakiraBeam, (theBeam, boss) => !boss.getData('isInvulnerable'), this); // 例
+            } else { if (beam) beam.destroy(); }
+        }
+    });
+}
+
+// ★ マキラビームがボスに当たった時の処理 (新規追加)
+hitBossWithMakiraBeam(beam, boss) {
+     if (!beam || !boss || !beam.active || !boss.active || boss.getData('isInvulnerable')) return;
+     console.log("Makira beam hit boss!");
+     beam.destroy(); // ビームは消える
+     this.applyBossDamage(boss, 1, "Makira Beam"); // ダメージ1を与える
+}
+     
     // ★ applyBossDamage メソッド (新規追加 - hitBossを汎用化)
     applyBossDamage(boss, damage, source = "Unknown") {
         if (!boss || !boss.active || boss.getData('isInvulnerable')) {
@@ -918,7 +1054,14 @@ update(time, delta) {
         if (this.boss && this.balls) { this.ballBossCollider = this.physics.add.collider(this.boss, this.balls, this.hitBoss, (boss, ball) => !boss.getData('isInvulnerable'), this); }
         else { console.warn("Cannot set Ball-Boss collider."); }
 
-        // ボール vs 子機 // 削除
+        this.safeDestroy(this.makiraBeamBossOverlap, "makiraBeamBossOverlap"); // 参照追加
+
+         // ★ マキラビーム vs ボス (fireMakiraBeam内でoverlap設定するなら不要かも？)
+         // if (this.makiraBeams && this.boss) {
+         //     this.makiraBeamBossOverlap = this.physics.add.overlap(this.makiraBeams, this.boss, this.hitBossWithMakiraBeam, (beam, boss) => !boss.getData('isInvulnerable'), this);
+         // }
+
+         // ★ (オプション) マキラビーム vs 攻撃ブロック の判定も追加？
 
         // ★★★ ボール vs 攻撃ブロック ★★★
         this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider"); // 既存を破棄
@@ -982,6 +1125,30 @@ update(time, delta) {
         const isBikara = lastPower === POWERUP_TYPES.BIKARA;
         const bikaraState = ball.getData('bikaraState');
         const isPenetrating = ball.getData('isPenetrating');
+        const isKubiraActive = ball.getData('isKubiraActive'); // ★ クビラフラグ取得
+
+        if (isKubiraActive) {
+            // ★ クビラ効果中ならダメージ+1 ★
+            damage += 1;
+            console.log("[hitBoss] Kubira active! Damage +1.");
+        }
+
+        if (isBikara && bikaraState === 'yang') {
+            damage = 2; // ビカラ陽は固定ダメージ2 (クビラと重なると3?)
+            if(isKubiraActive) damage += 1; // クビラ重複で+1
+            console.log(`[hitBoss] Bikara Yang hit! Base Damage: 2, Final Damage: ${damage}`);
+        } else if (isBikara && bikaraState === 'yin') {
+            // damage はクビラ効果が適用されていれば既に2になっている
+            console.log(`[hitBoss] Bikara Yin hit. Damage: ${damage}`);
+        } else if (isKubiraActive) {
+            // クビラのみ有効な場合 (damage は既に 2)
+            console.log(`[hitBoss] Kubira hit. Damage: ${damage}`);
+        }
+        else {
+            console.log(`[hitBoss] Normal hit. Damage: ${damage}`); // 通常ヒットは 1
+        }
+
+        this.applyBossDamage(boss, damage, "Ball Hit"); // ★ 適用ダメージを渡す
         if (isPenetrating || (isBikara && bikaraState === 'yang')) { damage = 2; console.log("[hitBoss] Penetrating/Bikara Yang hit! Damage: 2"); }
         else if (isBikara && bikaraState === 'yin') { damage = 1; console.log("[hitBoss] Bikara Yin hit. Damage: 1 (Simple Rule)"); }
         else { console.log("[hitBoss] Normal hit. Damage: 1"); }
@@ -1386,6 +1553,12 @@ update(time, delta) {
         this.powerUps = null; // ★ 参照クリア
         this.paddlePowerUpOverlap = null; // ★ 参照クリア
         // ...
+        if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; }
+        this.safeDestroy(this.familiars, "familiars group", true);
+        this.safeDestroy(this.makiraBeams, "makiraBeams group", true);
+        // ...
+        this.familiars = null; this.makiraBeams = null; this.makiraAttackTimer = null;
+        this.safeDestroy(this.makiraBeamBossOverlap, "makiraBeamBossOverlap"); this.makiraBeamBossOverlap = null;
         this.bossAfterImageEmitter = null; // 参照クリア
         // 参照クリア
         this.paddle = null; this.balls = null; this.boss = null; /*this.orbiters = null;*/ this.attackBricks = null; this.gameOverText = null;
