@@ -206,8 +206,18 @@ update(time, delta) {
     setupUI() {
         console.log("Launching UIScene for Boss...");
         if (!this.scene.isActive('UIScene')) {
-            console.log(">>> Launching UIScene with SIMPLE STRING data..."); // ログ追加
-         this.scene.launch('UIScene', "HelloUISceneFromBoss"); // ★ 文字列を渡す
+            const dataToPass = { parentSceneKey: 'BossScene' }; // ★ 渡すデータを変数に
+        // ★★★ 渡す直前のデータの内容を詳細に出力 ★★★
+        console.log(">>> Preparing to launch UIScene. Data type:", typeof dataToPass, "Content:", JSON.stringify(dataToPass));
+        try {
+            this.scene.launch('UIScene', dataToPass); // ★ 変数を使ってデータ渡し
+            console.log("<<< UIScene launch command sent.");
+        } catch (e) {
+            console.error("!!! ERROR during UIScene launch:", e);
+        }
+    
+           // console.log(">>> Launching UIScene with SIMPLE STRING data..."); // ログ追加
+         //this.scene.launch('UIScene', "HelloUISceneFromBoss"); // ★ 文字列を渡す
              // ▼▼▼ UIScene 起動時にデータを渡す ▼▼▼
             // this.scene.launch('UIScene', { parentSceneKey: 'BossScene' });
              // ▲▲▲ UIScene 起動時にデータを渡す ▲▲▲

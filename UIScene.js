@@ -19,10 +19,24 @@ export default class UIScene extends Phaser.Scene {
         this.gameWidth = 0;
         this.gameHeight = 0;
      }
-
+     
+     init(data) {
+        console.log("--- UIScene INIT ---"); // ★ init が呼ばれたことを確認
+        console.log("Received data type in INIT:", typeof data); // ★ 型を確認
+        try {
+            console.log("Received data in INIT (stringified):", JSON.stringify(data)); // ★ 内容を確認
+        } catch (e) { console.error("Error stringifying data in INIT", e); }
+        this.parentSceneKey = data?.parentSceneKey; // ここで設定しておく
+        console.log("Parent scene key set in INIT:", this.parentSceneKey); // ★ 設定結果を確認
+        console.log("--- UIScene INIT End ---");
+    }
      create(data) { // ★ data を受け取るように変更
-        console.log("UIScene create started", data);
-        this.parentSceneKey = data?.parentSceneKey; // ★ 親キーを取得 (なければnull)
+        console.log("--- UIScene CREATE ---"); // ★ create が呼ばれたことを確認
+        // this.parentSceneKey の設定は init で行ったので、ここでは確認のみ
+        console.log("parentSceneKey available in CREATE:", this.parentSceneKey); // ★ create でキーが使えるか確認
+       
+        // console.log("UIScene create started", data);
+       // this.parentSceneKey = data?.parentSceneKey; // ★ 親キーを取得 (なければnull)
         if (!this.parentSceneKey) {
             console.error("UIScene launched without parentSceneKey! Aborting.");
             this.scene.stop(); // 親が不明なら停止
