@@ -5,7 +5,8 @@ import {
     BALL_INITIAL_VELOCITY_Y, BALL_INITIAL_VELOCITY_X_RANGE, NORMAL_BALL_SPEED, AUDIO_KEYS, MAX_STAGE, POWERUP_TYPES,
     ALL_POSSIBLE_POWERUPS, // アイテムドロップで使う可能性
     POWERUP_ICON_KEYS, // アイテムドロップで使う可能性
-    BRICK_WIDTH_RATIO, POWERUP_SIZE, POWERUP_SPEED_Y
+    BRICK_WIDTH_RATIO, POWERUP_SIZE, POWERUP_SPEED_Y,
+    POWERUP_DURATION, BALL_SPEED_MODIFIERS, NORMAL_BALL_SPEED // 時間・速度関連の定数を追加
 } from './constants.js';
 
 // --- ボス戦用定数 ---
@@ -49,7 +50,7 @@ export default class BossScene extends Phaser.Scene {
         this.attackBrickTimer = null; // ★ 攻撃ブロック生成タイマー用
         this.powerUps = null; // ★ パワーアップグループ用プロパティ追加
         this.bossDropPool = []; // ★ ボス戦用ドロッププールプロパティ追加
-        
+        this.powerUpTimers = {}; // ★ パワーアップタイマー用プロパティ
 
         // コライダー参照
         this.ballPaddleCollider = null;
@@ -90,6 +91,8 @@ export default class BossScene extends Phaser.Scene {
             this.chaosSettings = { count: 4, rate: 0.5 }; // デフォルト値
        }
         console.log(`BossScene Initialized with Lives: ${this.lives}, Score: ${this.score}`);
+        Object.values(this.powerUpTimers).forEach(timer => { if (timer) timer.remove(); });
+        this.powerUpTimers = {};
         this.bossDropPool = []; // ★ initでも初期化
         this.isBallLaunched = false;
         this.isGameOver = false;
@@ -407,6 +410,332 @@ this.setupBossDropPool();
         }
     }
 
+
+    // --- ▼ アイテムドロップメソッド (GameSceneから移植・ボス戦用に調整) ▼ ---
+    dropSpecificPowerUp(x, y, type) {
+        if (!type) { console.warn("Attempted to drop powerup with no type."); return; }
+        if (!this.powerUps) { console.error("PowerUps group does not exist!"); return; }
+
+        let textureKey = POWERUP_ICON_KEYS[type] || 'whitePixel';
+        let displaySize = POWERUP_SIZE;
+        let tintColor = null;
+        if (textureKey === 'whitePixel') { tintColor = (type === POWERUP_TYPES.BAISRAVA) ? 0xffd700 : 0xcccccc; }
+
+        console.log(`[BossScene] Dropping power up ${type} at (${x.toFixed(0)}, ${y.toFixed(0)})`);
+        try {
+            const powerUp = this.powerUps.create(x, y, textureKey);
+            if (powerUp) {
+                powerUp.setDisplaySize(displaySize, displaySize).setData('type', type);
+                if (tintColor !== null) { powerUp.setTint(tintColor); }
+                else { powerUp.clearTint(); }
+                if (powerUp.body) {
+                    powerUp.setVelocity(0, POWERUP_SPEED_Y);
+                    powerUp.body.setCollideWorldBounds(false);
+                    powerUp.body.setAllowGravity(false);
+                } else { powerUp.destroy(); console.error("No body for powerup!"); }
+            } else { console.error("Failed to create powerup object!"); }
+        } catch (e) { console.error("CRITICAL Error in dropSpecificPowerUp:", e); }
+    }
+    // --- ▲ アイテムドロップメソッド ▲ ---
+
+     // --- ▼ アイテム取得メソッド (ボス戦効果実装開始) ▼ ---
+     collectPowerUp(paddle, powerUp) {
+        if (!powerUp || !powerUp.active || this.isGameOver || this.bossDefeated) return;
+        const type = powerUp.getData('type');
+        if (!type) { powerUp.destroy(); return; }
+
+        console.log(`[BossScene] Collected power up: ${type}`);
+        powerUp.destroy();
+
+        // ボイス再生
+        const voiceKeyBase = `voice_${type}`; const upperCaseKey = voiceKeyBase.toUpperCase();
+        let actualAudioKey = AUDIO_KEYS[upperCaseKey]; if (type === POWERUP_TYPES.VAJRA) actualAudioKey = AUDIO_KEYS.VOICE_VAJRA_GET;
+        const now = this.time.now; const lastPlayed = this.lastPlayedVoiceTime[upperCaseKey] || 0;
+        if (actualAudioKey && (now - lastPlayed > this.voiceThrottleTime)) {
+            try { this.sound.play(actualAudioKey); this.lastPlayedVoiceTime[upperCaseKey] = now; }
+            catch (e) { console.error(`Error playing voice ${actualAudioKey}:`, e); }
+        } else if (!actualAudioKey) {/*console.warn(`Voice key ${upperCaseKey} not found.`);*/}
+        else { console.log(`Voice ${upperCaseKey} throttled.`); }
+
+        // --- ボス戦でのパワーアップ効果 ---
+        switch (type) {
+            case POWERUP_TYPES.KUBIRA:
+                console.log("Activating Kubira (Boss Fight - Damage +1 for 10s)");
+                this.activateTemporaryEffect(type, POWERUP_DURATION[type] || 10000);
+                // ★ ダメージ計算は hitBoss 側でフラグを見て行う必要あり
+                break;
+            case POWERUP_TYPES.SHATORA:
+                console.log("Activating Shatora (Boss Fight - Speed Up for 3s)");
+                this.activateTemporaryEffect(type, POWERUP_DURATION[type] || 3000, () => {
+                    // 開始時の処理
+                    this.balls.getChildren().forEach(ball => { if (ball.active) this.applySpeedModifier(ball, type); });
+                }, () => {
+                    // 終了時の処理
+                    this.balls.getChildren().forEach(ball => { if (ball.active) this.resetBallSpeed(ball); });
+                });
+                break;
+            case POWERUP_TYPES.HAILA:
+                console.log("Activating Haila (Boss Fight - Speed Down for 10s)");
+                 this.activateTemporaryEffect(type, POWERUP_DURATION[type] || 10000, () => {
+                    this.balls.getChildren().forEach(ball => { if (ball.active) this.applySpeedModifier(ball, type); });
+                }, () => {
+                    this.balls.getChildren().forEach(ball => { if (ball.active) this.resetBallSpeed(ball); });
+                });
+                break;
+            case POWERUP_TYPES.BAISRAVA:
+                console.log("Activating Baisrava (Boss Fight - 50 Damage)");
+                if (this.boss && this.boss.active && !this.boss.getData('isInvulnerable')) { // 無敵でないか確認
+                     this.applyBossDamage(this.boss, 50, "Baisrava"); // ★ ダメージを与える関数呼び出し (後で作成)
+                } else {
+                     console.log("Baisrava hit, but boss is inactive or invulnerable.");
+                }
+                break;
+            // --- ▼ 未実装の効果 ▼ ---
+            case POWERUP_TYPES.SINDARA:
+                console.log("Power up Sindara collected, effect TBD (Split 2).");
+                // ★ ここにボールを2個にする処理 (activateSindara)
+                break;
+            case POWERUP_TYPES.ANCHIRA:
+                 console.log("Power up Anchira collected, effect TBD (Split 4 for 5s).");
+                 // ★ ここに5秒間ボール4個にする処理 (activateAnchira)
+                break;
+            case POWERUP_TYPES.BIKARA:
+                console.log("Power up Bikara collected, effect TBD (Yin/Yang Damage).");
+                // ★ ここにビカラ状態開始処理 (activateBikara)
+                break;
+            case POWERUP_TYPES.INDARA:
+                console.log("Power up Indara collected, effect TBD (Homing + Pierce AttackBricks until Boss Hit).");
+                 // ★ ここにインダラ状態開始処理 (activateIndara)
+                break;
+            case POWERUP_TYPES.ANILA:
+                console.log("Power up Anila collected, effect TBD (Invincible Paddle for 10s).");
+                // ★ ここにアニラ無敵状態開始処理 (activateAnila)
+                break;
+            case POWERUP_TYPES.MAKORA:
+                console.log("Power up Makora collected, effect TBD (Copy Boss Ability).");
+                // ★ ここにマコラ処理 (activateMakora)
+                break;
+            case POWERUP_TYPES.MAKIRA:
+                 console.log("Power up Makira collected, effect TBD (Paddle Beam for 6.7s).");
+                 // ★ ここにマキラ処理 (activateMakira)
+                break;
+             case POWERUP_TYPES.VAJRA:
+                 console.log("Power up Vajra collected, effect TBD (Gauge System Start).");
+                 // ★ ここにヴァジラゲージシステム開始処理 (activateVajra)
+                break;
+            // --- ▲ 未実装の効果 ▲ ---
+            default:
+                console.log(`Power up ${type} collected, no specific effect defined yet.`);
+                break;
+        }
+         // ボールやパドルの見た目更新 (必要なら)
+         this.updateBallAndPaddleAppearance(); // 仮の関数
+    }
+    // --- ▲ アイテム取得メソッド ▲ ---
+
+
+    // --- ▼ パワーアップ効果管理ヘルパー ▼ ---
+
+    // 一定時間だけ効果を有効にする汎用関数
+    activateTemporaryEffect(type, duration, onStartCallback = null, onEndCallback = null) {
+        console.log(`Activating temporary effect: ${type} for ${duration}ms`);
+        // 既存タイマー解除
+        if (this.powerUpTimers[type]) {
+            this.powerUpTimers[type].remove();
+        }
+        // 開始時処理実行
+        if (onStartCallback) {
+            try { onStartCallback(); } catch (e) { console.error(`Error onStart for ${type}:`, e); }
+        }
+        // ボールに状態を設定 (例)
+        this.setBallPowerUpState(type, true);
+
+        // 終了タイマー設定
+        this.powerUpTimers[type] = this.time.delayedCall(duration, () => {
+            console.log(`Deactivating temporary effect: ${type}`);
+            // 終了時処理実行
+            if (onEndCallback) {
+                try { onEndCallback(); } catch (e) { console.error(`Error onEnd for ${type}:`, e); }
+            }
+            // ボールの状態を解除
+            this.setBallPowerUpState(type, false);
+            this.powerUpTimers[type] = null; // タイマー参照クリア
+            this.updateBallAndPaddleAppearance(); // 見た目更新
+        }, [], this);
+
+        this.updateBallAndPaddleAppearance(); // 開始時の見た目更新
+    }
+
+    // ボールにパワーアップ状態フラグを設定/解除する関数 (仮)
+    setBallPowerUpState(type, isActive) {
+        this.balls?.getChildren().forEach(ball => {
+            if (ball?.active) { // ?.で安全アクセス
+                // 例: ball.data.values.activePowers (Setを使う場合)
+                let activePowers = ball.getData('activePowers');
+                if (!activePowers) activePowers = new Set(); // なければ作成
+                if (isActive) {
+                     activePowers.add(type);
+                } else {
+                     activePowers.delete(type);
+                }
+                 // lastActivatedPower も更新 (単純化のため、常に追加されたものを最後に)
+                 if (isActive) {
+                     ball.setData('lastActivatedPower', type);
+                 } else {
+                     if (ball.getData('lastActivatedPower') === type) {
+                         const remaining = Array.from(activePowers);
+                         ball.setData('lastActivatedPower', remaining.length > 0 ? remaining[remaining.length - 1] : null);
+                     }
+                 }
+                 ball.setData('activePowers', activePowers); // 更新したSetを再設定
+                 console.log(`Ball power state for ${type} set to ${isActive}. Current:`, Array.from(activePowers));
+            }
+        });
+    }
+
+     // ★ ボールやパドルの見た目を現在のパワーアップ状態に合わせて更新する関数 (仮)
+     updateBallAndPaddleAppearance() {
+         console.log("Updating ball and paddle appearance (placeholder)...");
+         this.balls?.getChildren().forEach(ball => {
+             if (ball?.active) {
+                 this.updateBallAppearance(ball); // 既存のボール見た目更新を呼ぶ
+             }
+         });
+         // パドルの見た目変更 (もしあれば)
+     }
+
+    // ★ applyBossDamage メソッド (新規追加 - hitBossを汎用化)
+    applyBossDamage(boss, damage, source = "Unknown") {
+        if (!boss || !boss.active || boss.getData('isInvulnerable')) {
+             console.log(`Damage (${damage} from ${source}) blocked: Boss inactive or invulnerable.`);
+             return;
+        }
+         let currentHealth = boss.getData('health');
+         currentHealth -= damage;
+         boss.setData('health', currentHealth);
+         console.log(`[Boss Damage] ${damage} damage dealt by ${source}. Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
+         // ダメージリアクション
+         boss.setTint(0xff0000); boss.setData('isInvulnerable', true);
+         const shakeDuration = 60; const shakeAmount = boss.displayWidth * 0.03;
+         this.tweens.add({ targets: boss, props: { x: { value: `+=${shakeAmount}`, duration: shakeDuration / 4, yoyo: true, ease: 'Sine.InOut' } }, repeat: 1 });
+         // try { this.sound.add('seBossHit').play(); } catch(e) {}
+         this.time.delayedCall(150, () => { if (boss.active) { boss.clearTint(); boss.setData('isInvulnerable', false); } });
+         // 体力ゼロ判定
+         if (currentHealth <= 0) { this.defeatBoss(boss); }
+    }
+
+
+    // --- ▲ パワーアップ効果管理ヘルパー ▲ ---
+
+
+    // --- ▼ 速度変更ヘルパー (GameSceneから移植) ▼ ---
+    applySpeedModifier(ball, type) {
+        if (!ball || !ball.active || !ball.body) return;
+        const modifier = BALL_SPEED_MODIFIERS[type];
+        if (!modifier) return;
+        const currentVelocity = ball.body.velocity;
+        const direction = currentVelocity.length() > 0 ? currentVelocity.clone().normalize() : new Phaser.Math.Vector2(0, -1);
+        const newSpeed = NORMAL_BALL_SPEED * modifier;
+        ball.setVelocity(direction.x * newSpeed, direction.y * newSpeed);
+         console.log(`Applied speed modifier ${modifier} for ${type}`);
+         this.setBallPowerUpState(type === POWERUP_TYPES.SHATORA ? 'isFast' : 'isSlow', true); // 状態フラグ設定
+    }
+
+    resetBallSpeed(ball) {
+        if (!ball || !ball.active || !ball.body) return;
+        console.log("Resetting ball speed...");
+         // isFast/isSlow フラグをボールデータに持たせる必要がある
+         // this.setBallPowerUpState('isFast', false); // 仮
+         // this.setBallPowerUpState('isSlow', false); // 仮
+         // if (ball.getData('isFast')) ... else if (ball.getData('isSlow')) ... else ...
+         // GameSceneの実装を参照し、ボールのdataに必要なフラグを追加する必要あり
+         // → 簡略化のため、一旦単純にNORMAL_BALL_SPEEDに戻す
+         const currentVelocity = ball.body.velocity;
+         const direction = currentVelocity.length() > 0 ? currentVelocity.clone().normalize() : new Phaser.Math.Vector2(0, -1);
+         ball.setVelocity(direction.x * NORMAL_BALL_SPEED, direction.y * NORMAL_BALL_SPEED);
+          console.log("Ball speed reset to normal.");
+    }
+    // --- ▲ 速度変更ヘルパー ▲ ---
+
+
+    // ... (他のメソッド: hitBoss, hitOrbiter(削除済), defeatBoss など) ...
+
+    // hitAttackBrick メソッド (ヴァジラゲージ増加追加)
+    hitAttackBrick(brick, ball) {
+        if (!brick || !brick.active || !ball || !ball.active) return;
+        console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
+        console.log("Attack brick hit by ball!");
+        const brickX = brick.x; const brickY = brick.y; const brickColor = brick.tintTopLeft;
+        // エフェクト & SE
+        try { /* ...パーティクル... */ } catch (e) { /*...*/ }
+        try { this.sound.add(AUDIO_KEYS.SE_DESTROY).play(); } catch (e) { /*...*/ }
+        brick.destroy();
+
+        // ★★★ ヴァジラゲージ増加処理を追加 ★★★
+        this.increaseVajraGauge(); // 攻撃ブロック破壊でゲージ増加
+
+        // アイテムドロップ判定 (chaosSettings.rate 使用)
+        const dropRate = this.chaosSettings?.rate ?? ATTACK_BRICK_ITEM_DROP_RATE;
+        console.log(`[Drop Logic] Checking drop against rate: ${dropRate.toFixed(2)}`);
+        if (Phaser.Math.FloatBetween(0, 1) < dropRate) {
+             if (this.bossDropPool && this.bossDropPool.length > 0) {
+                 const dropType = Phaser.Utils.Array.GetRandom(this.bossDropPool);
+                 console.log(`[Drop Logic] Dropping item: ${dropType}`);
+                 this.dropSpecificPowerUp(brickX, brickY, dropType);
+             } else { console.log("No items in boss drop pool."); }
+        } else { console.log("[Drop Logic] No item drop based on rate."); }
+    }
+
+
+    // --- ▼ ヴァジラ関連メソッド (GameSceneから移植・調整) ▼ ---
+    activateVajra() {
+        if (!this.isVajraSystemActive) {
+            console.log("[BossScene] Activating Vajra system.");
+            this.isVajraSystemActive = true;
+            this.vajraGauge = 0;
+            if(this.uiScene?.scene.isActive()) this.uiScene.events.emit('activateVajraUI', this.vajraGauge, VAJRA_GAUGE_MAX);
+            // ボールに状態付与
+            this.setBallPowerUpState(POWERUP_TYPES.VAJRA, true);
+            this.updateBallAndPaddleAppearance();
+        }
+    }
+
+    increaseVajraGauge() {
+        if (this.isVajraSystemActive && !this.isGameOver && !this.bossDefeated) {
+            this.vajraGauge += VAJRA_GAUGE_INCREMENT; // 定義された増加量
+            this.vajraGauge = Math.min(this.vajraGauge, VAJRA_GAUGE_MAX);
+            if(this.uiScene?.scene.isActive()) this.uiScene.events.emit('updateVajraGauge', this.vajraGauge);
+            if (this.vajraGauge >= VAJRA_GAUGE_MAX) {
+                this.triggerVajraDestroy(); // 奥義発動
+            }
+        }
+    }
+
+    triggerVajraDestroy() {
+        if (!this.isVajraSystemActive) return; // 発動状態でなければ何もしない
+        console.log("[BossScene] Triggering Vajra destroy (Boss Damage).");
+        this.isVajraSystemActive = false; // 発動したらゲージシステム終了
+        if(this.uiScene?.scene.isActive()) this.uiScene.events.emit('deactivateVajraUI');
+        // ボール状態解除
+        this.setBallPowerUpState(POWERUP_TYPES.VAJRA, false);
+        this.updateBallAndPaddleAppearance();
+
+        // ボイス・SE再生
+        try { this.sound.add(AUDIO_KEYS.VOICE_VAJRA_TRIGGER).play(); } catch (e) { console.error("Error playing VOICE_VAJRA_TRIGGER:", e); }
+        try { this.sound.add(AUDIO_KEYS.SE_VAJRA_TRIGGER).play(); } catch (e) { console.error("Error playing SE_VAJRA_TRIGGER:", e); }
+
+        // ボスに5ダメージ
+        if (this.boss && this.boss.active) {
+            this.applyBossDamage(this.boss, 5, "Vajra Ougi"); // ★ 5ダメージに変更
+        } else {
+             console.log("Vajra Ougi triggered, but boss is inactive.");
+        }
+    }
+    // deactivateVajra は triggerVajraDestroy 内に含まれる形でOK
+    // --- ▲ ヴァジラ関連メソッド ▲ ---
+
+
+
     
 
     //* --- ▼ ボスの動きメソッド ▼ ---
@@ -706,7 +1035,7 @@ update(time, delta) {
 
 
     // --- ▼ アイテムドロップメソッド (GameSceneから移植・修正) ▼ ---
-    dropSpecificPowerUp(x, y, type) {
+ /*   dropSpecificPowerUp(x, y, type) {
         if (!type) { console.warn("Attempted to drop powerup with no type."); return; }
         if (!this.powerUps) { console.error("PowerUps group does not exist!"); return; } // グループ確認
 
@@ -749,7 +1078,7 @@ update(time, delta) {
         if (actualAudioKey && (now - lastPlayed > this.voiceThrottleTime)) {
             try { this.sound.play(actualAudioKey); this.lastPlayedVoiceTime[upperCaseKey] = now; }
             catch (e) { console.error(`Error playing voice ${actualAudioKey}:`, e); }
-        } else if (!actualAudioKey) {/*console.warn(`Voice key ${upperCaseKey} not found.`);*/}
+        } else if (!actualAudioKey) {/*console.warn(`Voice key ${upperCaseKey} not found.`);}
         else { console.log(`Voice ${upperCaseKey} throttled.`); }
 
         // ★★★ ボス戦でのパワーアップ効果 ★★★
@@ -772,10 +1101,10 @@ update(time, delta) {
                 console.log(`Power up ${type} collected, no specific effect in boss fight yet.`);
                 break;
         }
-    }
+    }*/
     // ★ (オプション) 一時的なパワーアップ有効化メソッド (もし必要なら)
-    // activateTemporaryPower(type, duration) { ... }
-    // --- ▲ アイテム取得メソッド ▲ ---
+    // activateTemporaryPower(type, duration) { ... }*/
+    // --- ▲ アイテム取得メソッド ▲ ---*/
 
     defeatBoss(boss) {
         if (this.bossDefeated) return;
