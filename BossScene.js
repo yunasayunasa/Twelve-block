@@ -615,6 +615,41 @@ updateBallAppearance(ball) {
         this.updateBallAndPaddleAppearance(); // 開始時の見た目更新
     }
 
+ // ★★★ このメソッドがクラス定義の内側にあるか？ ★★★
+ updateBallAndPaddleAppearance() {
+    console.log("Updating ball and paddle appearance...");
+    if (this.balls && this.balls.active) {
+        this.balls.getChildren().forEach(ball => {
+            if (ball && ball.active) {
+                try { this.updateBallAppearance(ball); }
+                catch (e) { console.error("Error during individual ball appearance update:", e); }
+            }
+        });
+    }
+    console.log("Ball and paddle appearance update finished.");
+}
+
+// ★★★ このメソッドもクラス定義の内側にあるか？ ★★★
+updateBallAppearance(ball) {
+     if (!ball || !ball.active || !ball.getData) return;
+     let textureKey = 'ball_image';
+     const lastPower = ball.getData('lastActivatedPower');
+     const activePowers = ball.getData('activePowers') || new Set();
+     // 見た目の優先順位
+     if (activePowers.has(POWERUP_TYPES.KUBIRA)) {
+         textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA] || 'ball_image';
+     } else if (activePowers.has(POWERUP_TYPES.MAKIRA)) { // マキラも追加
+          textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.MAKIRA] || 'ball_image';
+     } else if (lastPower && POWERUP_ICON_KEYS[lastPower]) {
+          textureKey = POWERUP_ICON_KEYS[lastPower];
+     }
+     // シャトラ/ハイラの見た目変更は未実装
+     if (ball.texture.key !== textureKey) { ball.setTexture(textureKey); console.log(`Ball texture set to: ${textureKey}`); }
+     ball.clearTint();
+ }
+
+
+
     // ボールにパワーアップ状態フラグを設定/解除する関数 (仮)
     setBallPowerUpState(type, isActive) {
         this.balls?.getChildren().forEach(ball => {
