@@ -169,19 +169,42 @@ this.setupBossDropPool();
         this.updateAttackBricks();
         // --- ▼ update メソッドにマキラ子機追従を追加 ▼ ---
     
-        // --- ▼ マキラファミリア位置更新 ▼ ---
-        if (this.isMakiraActive && this.paddle && this.paddle.active && this.familiars && this.familiars.active) {
-            const paddleX = this.paddle.x;
-            const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
-            const children = this.familiars.getChildren();
-            try {
-                if (children[0]?.active) {
-                    children[0].setPosition(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY);
-                }
-                if (children[1]?.active) {
-                    children[1].setPosition(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY);
-                }
-            } catch (e) { console.error("Error updating familiar position:", e); }
+         // --- ▼ マキラファミリア位置更新 (超詳細ログ) ▼ ---
+         if (this.isMakiraActive) { // ★ まず isMakiraActive かどうか
+            // console.log("[Update Check] Makira IS Active"); // 頻繁すぎるのでコメントアウト推奨
+            if (this.paddle && this.paddle.active && this.familiars && this.familiars.active) { // ★ 他のオブジェクトも確認
+                const paddleX = this.paddle.x;
+                const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
+                const children = this.familiars.getChildren();
+
+                // ★★★ このログが毎回出ているか？ パドルXは変化しているか？ ★★★
+                console.log(`[Update Familiars Tick] PaddleX: ${paddleX.toFixed(0)}, TargetY: ${familiarY.toFixed(0)}, Children: ${children.length}`);
+
+                if (children.length >= 2) {
+                    const targetXLeft = paddleX - MAKIRA_FAMILIAR_OFFSET;
+                    const targetXRight = paddleX + MAKIRA_FAMILIAR_OFFSET;
+
+                    try {
+                        if (children[0]?.active) {
+                             // ★★★ setPosition の直前と直後にログ追加 ★★★
+                             const oldX = children[0].x;
+                             const oldY = children[0].y;
+                             console.log(`  Left Familiar BEFORE setPosition: (${oldX.toFixed(0)}, ${oldY.toFixed(0)}) -> TRYING TO SET (${targetXLeft.toFixed(0)}, ${targetY.toFixed(0)})`);
+                             children[0].setPosition(targetXLeft, targetY);
+                             console.log(`  Left Familiar AFTER setPosition: (${children[0].x.toFixed(0)}, ${children[0].y.toFixed(0)})`); // ★ 実際に座標が変わったか？
+                        } else { console.log("  Left Familiar inactive?"); }
+
+                        if (children[1]?.active) {
+                             const oldX = children[1].x;
+                             const oldY = children[1].y;
+                             console.log(`  Right Familiar BEFORE setPosition: (${oldX.toFixed(0)}, ${oldY.toFixed(0)}) -> TRYING TO SET (${targetXRight.toFixed(0)}, ${targetY.toFixed(0)})`);
+                             children[1].setPosition(targetXRight, targetY);
+                             console.log(`  Right Familiar AFTER setPosition: (${children[1].x.toFixed(0)}, ${children[1].y.toFixed(0)})`);
+                        } else { console.log("  Right Familiar inactive?"); }
+
+                    } catch (e) { console.error("!!! Error inside setPosition loop:", e); }
+                } else { console.warn("[Update Familiars] Not enough children."); }
+            } else {console.error("Error updating familiar position:", e); }
         }
         // --- ▲ マキラファミリア位置更新 ▲ ---
     }
