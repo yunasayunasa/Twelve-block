@@ -124,17 +124,27 @@ export default class UIScene extends Phaser.Scene {
 
         // 登録直後に現在の親シーンの状態をUIに反映
         try {
+            console.log(`[UIScene Init Reflect] Reading initial data from ${this.parentSceneKey}:`); // ★追加
+        const parentLives = parentScene.lives;
+        const parentScore = parentScene.score;
+        const parentStage = parentScene.currentStage;
+        console.log(`  - Lives from Parent: ${parentLives}`); // ★追加
+        console.log(`  - Score from Parent: ${parentScore}`); // ★追加
+        console.log(`  - Stage from Parent: ${parentStage}`); // ★追加
             // ★ parentScene のプロパティを参照する ★
             this.updateLivesDisplay(parentScene.lives);
             this.updateScoreDisplay(parentScene.score);
             this.updateStageDisplay(parentScene.currentStage); // 親がcurrentStageを持つ想定
             if (parentScene.isVajraSystemActive) { // 親がisVajraSystemActiveを持つ想定
                  this.activateVajraUIDisplay(parentScene.vajraGauge, VAJRA_GAUGE_MAX); // 親がvajraGaugeを持つ想定
+                 console.log(`  - Vajra UI: Active (Gauge: ${parentScene.vajraGauge})`); // ★追加
             } else { this.deactivateVajraUIDisplay(); }
+            console.log(`  - Vajra UI: Inactive`); // ★追加
             // ドロッププールは親シーンの適切なプロパティを参照
             // (GameSceneならstageDropPool, BossSceneならbossDropPoolなど、親側で調整が必要かも)
             const dropPool = parentScene.stageDropPool ?? parentScene.bossDropPool ?? [];
             this.updateDropPoolDisplay(dropPool);
+            console.log(`  - Drop Pool: [${dropPool.join(', ')}]`); // ★追加
         } catch (e) {
             console.error(`Error reflecting initial state from ${this.parentSceneKey} in UIScene:`, e);
         }
@@ -247,4 +257,32 @@ export default class UIScene extends Phaser.Scene {
             currentX += DROP_POOL_UI_ICON_SIZE + DROP_POOL_UI_SPACING; // 次のアイコンの位置へ
         });
     }
+
+    // UIScene.js
+
+create(data) {
+    // ...(createメソッドの他の処理)...
+
+    // ▼▼▼ この delayedCall ブロックを create の最後に追加 ▼▼▼
+    this.time.delayedCall(100, () => { // 少し待ってからログ出力
+         console.log('--- UI Element Status Check ---');
+         if (this.livesText) {
+             console.log(`Lives Text: Pos=(${this.livesText.x.toFixed(0)}, ${this.livesText.y.toFixed(0)}), Visible=${this.livesText.visible}, Alpha=${this.livesText.alpha}, Text='${this.livesText.text}'`);
+         } else { console.log("Lives Text not found."); }
+         if (this.scoreText) {
+             console.log(`Score Text: Pos=(${this.scoreText.x.toFixed(0)}, ${this.scoreText.y.toFixed(0)}), Visible=${this.scoreText.visible}, Alpha=${this.scoreText.alpha}, Text='${this.scoreText.text}'`);
+         } else { console.log("Score Text not found."); }
+         if (this.stageText) {
+             console.log(`Stage Text: Pos=(${this.stageText.x.toFixed(0)}, ${this.stageText.y.toFixed(0)}), Visible=${this.stageText.visible}, Alpha=${this.stageText.alpha}, Text='${this.stageText.text}'`);
+         } else { console.log("Stage Text not found."); }
+         // 必要なら Vajra Gauge や Drop Pool の情報も追加
+         if (this.vajraGaugeText) {
+              console.log(`Vajra Text: Pos=(${this.vajraGaugeText.x.toFixed(0)}, ${this.vajraGaugeText.y.toFixed(0)}), Visible=${this.vajraGaugeText.visible}, Alpha=${this.vajraGaugeText.alpha}, Text='${this.vajraGaugeText.text}'`);
+         } else { console.log("Vajra Text not found."); }
+         console.log('--- Status Check End ---');
+    }, [], this);
+    // ▲▲▲ この delayedCall ブロックを create の最後に追加 ▲▲▲
+
+    console.log("--- UIScene CREATE End ---");
+} // create メソッドの終わり
 } // <-- UIScene
