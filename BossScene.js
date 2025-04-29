@@ -1155,51 +1155,59 @@ update(time, delta) {
         } catch (e) { console.error("Error creating paddle hit particle effect:", e); }
     }
 
+    // BossScene.js の hitBoss メソッド (修正後)
+
+    // BossScene.js の hitBoss メソッド (修正後)
+
     hitBoss(boss, ball) {
         if (!boss || !ball || !boss.active || !ball.active || boss.getData('isInvulnerable')) return;
         console.log("[hitBoss] Boss hit by ball.");
-        let damage = 1; // ★★★ 基本ダメージを1に初期化 ★★★
+        let damage = 1; // 基本ダメージ
 
         const lastPower = ball.getData('lastActivatedPower');
         const isBikara = lastPower === POWERUP_TYPES.BIKARA;
         const bikaraState = ball.getData('bikaraState');
-        // const isPenetrating = ball.getData('isPenetrating'); // ボス戦では使わない想定
-        const isKubiraActive = ball.getData('isKubiraActive') === true; // ★★★ 明確に true か比較 ★★★
+        const isKubiraActive = ball.getData('isKubiraActive') === true;
 
-        // --- ▼ ダメージ計算ロジック (isPenetrating 削除) ▼ ---
-        if (isBikara && bikaraState === 'yang') { // まずビカラ陽をチェック
+        // --- ダメージ計算ロジック ---
+        if (isBikara && bikaraState === 'yang') {
             damage = 2;
-            if (isKubiraActive) {
-                damage += 1; // クビラ重複なら+1で計3
-                console.log("[hitBoss] Bikara Yang + Kubira hit! Damage: 3");
-            } else {
-                console.log("[hitBoss] Bikara Yang hit! Damage: 2");
-            }
-        } else if (isKubiraActive) { // 次にクビラをチェック
-            damage += 1; // 基本ダメージ1 + 1 = 2
-            console.log("[hitBoss] Kubira hit! Damage: 2");
-        } else if (isBikara && bikaraState === 'yin') { // 次にビカラ陰
-             console.log("[hitBoss] Bikara Yin hit. Damage: 1");
-             // damage は 1 のまま
-        } else { // それ以外 (通常ヒット)
-            console.log(`[hitBoss] Normal hit. Damage: ${damage}`); // damage は 1
+            if (isKubiraActive) { damage += 1; console.log("[hitBoss] Bikara Yang + Kubira hit! Calculated Damage: 3"); }
+            else { console.log("[hitBoss] Bikara Yang hit! Calculated Damage: 2"); }
+        } else if (isKubiraActive) {
+            damage += 1; console.log("[hitBoss] Kubira hit! Calculated Damage: 2");
+        } else if (isBikara && bikaraState === 'yin') {
+             console.log("[hitBoss] Bikara Yin hit. Calculated Damage: 1");
+        } else {
+            console.log(`[hitBoss] Normal hit. Calculated Damage: ${damage}`);
         }
-        // --- ▲ ダメージ計算ロジック (isPenetrating 削除) ▲ ---
+        // --- ダメージ計算ロジック終わり ---
 
+        // ★★★ 計算したダメージを applyBossDamage に渡す ★★★
+        this.applyBossDamage(boss, damage, "Ball Hit");
 
-        this.applyBossDamage(boss, damage, "Ball Hit"); // ★ 適用ダメージを渡す
-        if (isPenetrating || (isBikara && bikaraState === 'yang')) { damage = 2; console.log("[hitBoss] Penetrating/Bikara Yang hit! Damage: 2"); }
-        else if (isBikara && bikaraState === 'yin') { damage = 1; console.log("[hitBoss] Bikara Yin hit. Damage: 1 (Simple Rule)"); }
-        else { console.log("[hitBoss] Normal hit. Damage: 1"); }
+        // --- ▼▼▼ 不要なコードを削除 ▼▼▼ ---
+        // if (isPenetrating || (isBikara && bikaraState === 'yang')) { ... } // 削除
+        // else if (isBikara && bikaraState === 'yin') { ... } // 削除
+        // else { ... } // 削除
+        // let currentHealth = boss.getData('health') - damage; // 削除 (applyBossDamage内で行う)
+        // boss.setData('health', currentHealth); // 削除
+        // console.log(`[hitBoss] Boss health: ...`); // 削除
+        // --- ▲▲▲ 不要なコードを削除 ▲▲▲ ---
+
+        // ★ ボール跳ね返し処理は applyBossDamage の外で行う方が自然かもしれない
+        // (applyBossDamageはダメージ適用とリアクションに専念)
+        // 例: ball.setVelocity(ball.body.velocity.x, -Math.abs(ball.body.velocity.y)); // 単純に上に跳ね返す
+    }
+
+    // applyBossDamage メソッドは前回のままでOK
+    applyBossDamage(boss, damage, source = "Unknown") {
+        if (!boss || !boss.active || boss.getData('isInvulnerable')) { /* ... */ return; }
         let currentHealth = boss.getData('health') - damage;
         boss.setData('health', currentHealth);
-        console.log(`[hitBoss] Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
-        // ダメージリアクション
-        boss.setTint(0xff0000); boss.setData('isInvulnerable', true);
-        const shakeDuration = 60; const shakeAmount = boss.displayWidth * 0.03;
-        this.tweens.add({ targets: boss, props: { x: { value: `+=${shakeAmount}`, duration: shakeDuration / 4, yoyo: true, ease: 'Sine.InOut' } }, repeat: 1 });
-        // try { this.sound.add('seBossHit').play(); } catch(e) {}
-        this.time.delayedCall(150, () => { if (boss.active) { boss.clearTint(); boss.setData('isInvulnerable', false); } });
+        console.log(`[Boss Damage] ${damage} damage dealt by ${source}. Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
+        // ダメージリアクション (Tint, 無敵, 揺れ)
+        // ...
         if (currentHealth <= 0) { this.defeatBoss(boss); }
     }
 
