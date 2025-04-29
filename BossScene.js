@@ -282,32 +282,37 @@ this.setupBossDropPool();
 
     // --- ▲ Create ヘルパーメソッド ▲ ---
 
-// --- ▼ 見た目更新ヘルパー (新規追加) ▼ ---
-updateBallAndPaddleAppearance() {
-    // この関数は、現在アクティブなパワーアップに基づいて
-    // ボールやパドルの見た目を更新するために呼び出される想定
+// --- ▼ 見た目更新ヘルパー (優先順位考慮) ▼ ---
+updateBallAppearance(ball) {
+    if (!ball || !ball.active || !ball.getData) return; // getDataも確認
+    let textureKey = 'ball_image'; // デフォルト
+    const lastPower = ball.getData('lastActivatedPower');
+    const activePowers = ball.getData('activePowers') || new Set(); // なければ空のSet
 
-    console.log("Updating ball and paddle appearance..."); // 呼び出されたことを確認
-
-    // 現在はボールの見た目更新のみを行う
-    if (this.balls && this.balls.active) {
-        this.balls.getChildren().forEach(ball => {
-            if (ball && ball.active) { // ボールが有効か確認
-                try {
-                    this.updateBallAppearance(ball); // 既存のボール見た目更新処理を呼ぶ
-                } catch (e) {
-                    console.error("Error during individual ball appearance update:", e);
-                }
-            }
-        });
+    // ★★★ 表示優先順位をつけてテクスチャを決定 ★★★
+    // 例: ビカラ > シンダラ合体後 > クビラ > マキラ > その他lastPower の順
+    if (activePowers.has(POWERUP_TYPES.BIKARA)) {
+         // const bikaraState = ball.getData('bikaraState');
+         // textureKey = bikaraState === 'yang' ? POWERUP_ICON_KEYS.BIKARA_YANG : POWERUP_ICON_KEYS.BIKARA;
+         // → まだbikaraStateフラグを設定していないので、今はlastPowerに任せる
+    } else if (activePowers.has(POWERUP_TYPES.SINDARA) /* && isSuperSindara(ball) */) { // 合体後などの条件
+         // textureKey = POWERUP_ICON_KEYS.SINDARA_SUPER;
+    } else if (activePowers.has(POWERUP_TYPES.KUBIRA)) { // ★ クビラ状態か？
+        textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA] || 'ball_image';
+    } else if (activePowers.has(POWERUP_TYPES.MAKIRA)) {
+         textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.MAKIRA] || 'ball_image';
+    } else if (lastPower && POWERUP_ICON_KEYS[lastPower]) { // ★ その他の有効な最後のパワーアップ
+         textureKey = POWERUP_ICON_KEYS[lastPower];
     }
+    // 必要に応じて isFast, isSlow なども考慮
 
-    // ★ もしマキラなどでパドルの見た目を変えたい場合はここに追加 ★
-    // 例: if (this.isMakiraActive) { this.paddle.setTint(0xffcccc); }
-    //     else { this.paddle.clearTint(); }
-    console.log("Ball and paddle appearance update finished.");
+    if (ball.texture.key !== textureKey) {
+        ball.setTexture(textureKey);
+        console.log(`Ball texture set to: ${textureKey} based on power state`);
+    }
+    ball.clearTint(); // Tintは基本的に使わない
 }
-// --- ▲ 見た目更新ヘルパー (新規追加) ▲ ---
+// --- ▲ 見た目更新ヘルパー ▲ ---
 
 
     // --- ▼ Update ヘルパーメソッド ▼ ---
@@ -630,15 +635,21 @@ updateBallAndPaddleAppearance() {
                 if (type === POWERUP_TYPES.SHATORA) ball.setData('isFast', isActive);
                 if (type === POWERUP_TYPES.HAILA) ball.setData('isSlow', isActive);
 
-                // lastActivatedPower 更新
+                 // --- ▼ lastActivatedPower 更新ロジック修正 ▼ ---
                  if (isActive) {
-                     ball.setData('lastActivatedPower', type);
-                 } else {
-                     if (ball.getData('lastActivatedPower') === type) {
-                         const remaining = Array.from(activePowers);
-                         ball.setData('lastActivatedPower', remaining.length > 0 ? remaining[remaining.length - 1] : null);
-                     }
-                 }
+                    // 有効になったパワーを最後に記録
+                    ball.setData('lastActivatedPower', type);
+                } else {
+                    // 無効になったパワーが lastActivatedPower だったら、残っているものから再設定
+                    if (ball.getData('lastActivatedPower') === type) {
+                        const remaining = Array.from(activePowers);
+                        // 残っているものの最後（配列なのでインデックスが最後）を選ぶ
+                        const newLastPower = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+                        ball.setData('lastActivatedPower', newLastPower);
+                         console.log(`Last activated power reset to: ${newLastPower}`);
+                    }
+                }
+                // --- ▲ lastActivatedPower 更新ロジック修正 ▲ ---
                  console.log(`Ball power state for ${type} set to ${isActive}. Current:`, Array.from(activePowers));
             }
         });
@@ -1147,33 +1158,37 @@ update(time, delta) {
     hitBoss(boss, ball) {
         if (!boss || !ball || !boss.active || !ball.active || boss.getData('isInvulnerable')) return;
         console.log("[hitBoss] Boss hit by ball.");
-        let damage = 1;
+        let damage = 1; // ★★★ 基本ダメージを1に初期化 ★★★
+
         const lastPower = ball.getData('lastActivatedPower');
         const isBikara = lastPower === POWERUP_TYPES.BIKARA;
         const bikaraState = ball.getData('bikaraState');
-        const isPenetrating = ball.getData('isPenetrating');
-        const isKubiraActive = ball.getData('isKubiraActive'); // ★ クビラフラグ取得
+        // const isPenetrating = ball.getData('isPenetrating'); // ボス戦では使わない想定
+        const isKubiraActive = ball.getData('isKubiraActive') === true; // ★★★ 明確に true か比較 ★★★
 
-        if (isKubiraActive) {
-            // ★ クビラ効果中ならダメージ+1 ★
-            damage += 1;
-            console.log("[hitBoss] Kubira active! Damage +1.");
-        }
-
+        // --- ▼ ダメージ計算ロジック修正 ▼ ---
         if (isBikara && bikaraState === 'yang') {
-            damage = 2; // ビカラ陽は固定ダメージ2 (クビラと重なると3?)
-            if(isKubiraActive) damage += 1; // クビラ重複で+1
-            console.log(`[hitBoss] Bikara Yang hit! Base Damage: 2, Final Damage: ${damage}`);
-        } else if (isBikara && bikaraState === 'yin') {
-            // damage はクビラ効果が適用されていれば既に2になっている
-            console.log(`[hitBoss] Bikara Yin hit. Damage: ${damage}`);
+            // ビカラ陽が最優先でダメージ2
+            damage = 2;
+            if (isKubiraActive) {
+                damage += 1; // クビラ重複なら+1で計3
+                console.log("[hitBoss] Bikara Yang + Kubira hit! Damage: 3");
+            } else {
+                console.log("[hitBoss] Bikara Yang hit! Damage: 2");
+            }
         } else if (isKubiraActive) {
-            // クビラのみ有効な場合 (damage は既に 2)
-            console.log(`[hitBoss] Kubira hit. Damage: ${damage}`);
+            // 次にクビラをチェック、ダメージ+1
+            damage += 1; // 基本ダメージ1 + 1 = 2
+            console.log("[hitBoss] Kubira hit! Damage: 2");
+        } else if (isBikara && bikaraState === 'yin') {
+             // ビカラ陰は基本ダメージ1のまま
+             console.log("[hitBoss] Bikara Yin hit. Damage: 1");
+        } else {
+            // それ以外は基本ダメージ1
+            console.log(`[hitBoss] Normal hit. Damage: ${damage}`);
         }
-        else {
-            console.log(`[hitBoss] Normal hit. Damage: ${damage}`); // 通常ヒットは 1
-        }
+        // --- ▲ ダメージ計算ロジック修正 ▲ ---
+
 
         this.applyBossDamage(boss, damage, "Ball Hit"); // ★ 適用ダメージを渡す
         if (isPenetrating || (isBikara && bikaraState === 'yang')) { damage = 2; console.log("[hitBoss] Penetrating/Bikara Yang hit! Damage: 2"); }
