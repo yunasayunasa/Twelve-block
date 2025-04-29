@@ -542,118 +542,132 @@ scheduleNextAttackBrick() {
     // --- ▲ アイテムドロップメソッド ▲ ---
 
      // --- ▼ アイテム取得メソッド (ボス戦効果実装開始) ▼ ---
-     collectPowerUp(paddle, powerUp) {
-        console.log("--- collectPowerUp ---"); // 開始を明確に
-        console.log("Context 'this' in collectPowerUp:", this); // ★ this の内容確
-        if (!(this instanceof BossScene)) { console.error("!!! 'this' is NOT BossScene in collectPowerUp !!!"); return; } // ★ 型チェック
-        if (!powerUp || !powerUp.active || this.isGameOver || this.bossDefeated) return;
-        const type = powerUp.getData('type');
-        if (!type) { powerUp.destroy(); return; }
+     // BossScene.js
 
-        console.log(`[BossScene] Collected power up: ${type}`);
-        powerUp.destroy();
+collectPowerUp(paddle, powerUp) {
+    console.log("--- collectPowerUp ---");
+    if (!(this instanceof BossScene)) { console.error("!!! 'this' is NOT BossScene in collectPowerUp !!!"); return; }
+    if (!powerUp || !powerUp.active || this.isGameOver || this.bossDefeated) return;
+    const type = powerUp.getData('type');
+    if (!type) { powerUp.destroy(); return; }
 
-        // ボイス再生
-        const voiceKeyBase = `voice_${type}`; const upperCaseKey = voiceKeyBase.toUpperCase();
-        let actualAudioKey = AUDIO_KEYS[upperCaseKey]; if (type === POWERUP_TYPES.VAJRA) actualAudioKey = AUDIO_KEYS.VOICE_VAJRA_GET;
-        const now = this.time.now; const lastPlayed = this.lastPlayedVoiceTime[upperCaseKey] || 0;
-        if (actualAudioKey && (now - lastPlayed > this.voiceThrottleTime)) {
-            try { this.sound.play(actualAudioKey); this.lastPlayedVoiceTime[upperCaseKey] = now; }
-            catch (e) { console.error(`Error playing voice ${actualAudioKey}:`, e); }
-        } else if (!actualAudioKey) {/*console.warn(`Voice key ${upperCaseKey} not found.`);*/}
-        else { console.log(`Voice ${upperCaseKey} throttled.`); }
+    console.log(`[BossScene] Collected power up: ${type}`);
+    powerUp.destroy();
 
-        // --- ボス戦でのパワーアップ効果 ---
-        switch (type) {
-            // --- ▼ collectPowerUp 内の Kubira 処理 (念のため確認) ▼ ---
+    // --- ボイス再生 (共通処理) ---
+    const voiceKeyBase = `voice_${type}`; const upperCaseKey = voiceKeyBase.toUpperCase();
+    // 特殊なキー名を持つボイスの処理
+    let actualAudioKey = AUDIO_KEYS[upperCaseKey];
+    if (type === POWERUP_TYPES.VAJRA) actualAudioKey = AUDIO_KEYS.VOICE_VAJRA_GET; // ヴァジラ取得時用
+    // ビカラは陰陽でボイスが分かれる可能性があるが、取得時は共通か？ 일단 Bikara Yin 으로?
+    // if (type === POWERUP_TYPES.BIKARA) actualAudioKey = AUDIO_KEYS.VOICE_BIKARA_YIN;
+    // シンダラ合体ボイスは別途
+
+    const now = this.time.now; const lastPlayed = this.lastPlayedVoiceTime[upperCaseKey] || 0;
+    if (actualAudioKey && (now - lastPlayed > this.voiceThrottleTime)) {
+        try {
+            console.log(`Playing voice: ${actualAudioKey}`); // ★再生するキー名をログ出力
+            this.sound.play(actualAudioKey);
+            this.lastPlayedVoiceTime[upperCaseKey] = now;
+        }
+        catch (e) { console.error(`Error playing voice ${actualAudioKey}:`, e); }
+    } else if (!actualAudioKey) { console.warn(`Voice key ${upperCaseKey} / ${actualAudioKey} not found or invalid for type ${type}.`);} // ★見つからない場合もログ
+    else { console.log(`Voice ${upperCaseKey} throttled.`); }
+    // --- ボイス再生 終了 ---
+
+
+    // --- ボス戦でのパワーアップ効果 ---
+    switch (type) {
         case POWERUP_TYPES.KUBIRA:
             console.log("Activating Kubira (Boss Fight - Damage +1 for 10s)");
             this.activateTemporaryEffect(
-                type,
-                POWERUP_DURATION[type] || 10000,
-                // 開始コールバック: setBallPowerUpState を呼ぶ
-                () => {
-                     console.log("[Kubira Start Callback] Calling setBallPowerUpState(true)"); // ★ コールバック呼び出しログ
-                     this.setBallPowerUpState(type, true);
-                },
-                // 終了コールバック: setBallPowerUpState を呼ぶ
-                () => {
-                     console.log("[Kubira End Callback] Calling setBallPowerUpState(false)"); // ★ コールバック呼び出しログ
-                     this.setBallPowerUpState(type, false);
-                }
+                type, POWERUP_DURATION[type] || 10000,
+                () => this.setBallPowerUpState(type, true),
+                () => this.setBallPowerUpState(type, false)
             );
-            break; // ★ break があるか確認
-// --- ▲ collectPowerUp 内の Kubira 処理 ▲ ---
-            case POWERUP_TYPES.SHATORA:
-                console.log("Activating Shatora (Boss Fight - Speed Up for 3s)");
-                this.activateTemporaryEffect(type, POWERUP_DURATION[type] || 3000, () => {
-                    // 開始時の処理
-                    this.balls.getChildren().forEach(ball => { if (ball.active) this.applySpeedModifier(ball, type); });
-                }, () => {
-                    // 終了時の処理
-                    this.balls.getChildren().forEach(ball => { if (ball.active) this.resetBallSpeed(ball); });
-                });
-                break;
-            case POWERUP_TYPES.HAILA:
-                console.log("Activating Haila (Boss Fight - Speed Down for 10s)");
-                 this.activateTemporaryEffect(type, POWERUP_DURATION[type] || 10000, () => {
-                    this.balls.getChildren().forEach(ball => { if (ball.active) this.applySpeedModifier(ball, type); });
-                }, () => {
-                    this.balls.getChildren().forEach(ball => { if (ball.active) this.resetBallSpeed(ball); });
-                });
-                break;
-            case POWERUP_TYPES.BAISRAVA:
-                console.log("Activating Baisrava (Boss Fight - 50 Damage)");
-                if (this.boss && this.boss.active && !this.boss.getData('isInvulnerable')) { // 無敵でないか確認
-                     this.applyBossDamage(this.boss, 50, "Baisrava"); // ★ ダメージを与える関数呼び出し (後で作成)
-                } else {
-                     console.log("Baisrava hit, but boss is inactive or invulnerable.");
-                }
-                break;
-            // --- ▼ 未実装の効果 ▼ ---
-            case POWERUP_TYPES.SINDARA:
-                console.log("Power up Sindara collected, effect TBD (Split 2).");
-                // ★ ここにボールを2個にする処理 (activateSindara)
-                break;
-            case POWERUP_TYPES.ANCHIRA:
-                 console.log("Power up Anchira collected, effect TBD (Split 4 for 5s).");
-                 // ★ ここに5秒間ボール4個にする処理 (activateAnchira)
-                break;
-            case POWERUP_TYPES.BIKARA:
-                console.log("Power up Bikara collected, effect TBD (Yin/Yang Damage).");
-                // ★ ここにビカラ状態開始処理 (activateBikara)
-                break;
-            case POWERUP_TYPES.INDARA:
-                console.log("Power up Indara collected, effect TBD (Homing + Pierce AttackBricks until Boss Hit).");
-                 // ★ ここにインダラ状態開始処理 (activateIndara)
-                break;
-            case POWERUP_TYPES.ANILA:
-                console.log("Power up Anila collected, effect TBD (Invincible Paddle for 10s).");
-                // ★ ここにアニラ無敵状態開始処理 (activateAnila)
-                break;
-            case POWERUP_TYPES.MAKORA:
-                console.log("Power up Makora collected, effect TBD (Copy Boss Ability).");
-                // ★ ここにマコラ処理 (activateMakora)
-                break;
-                case POWERUP_TYPES.MAKIRA: // ★ マキラ呼び出し追加
-                console.log("Activating Makira (Boss Fight - Paddle Beam for 6.7s).");
-                this.activateMakira(); // ★ activateMakira を呼び出す
-                break;
-       
-       
-             case POWERUP_TYPES.VAJRA:
-                 console.log("Power up Vajra collected, effect TBD (Gauge System Start).");
-                 // ★ ここにヴァジラゲージシステム開始処理 (activateVajra)
-                break;
-            // --- ▲ 未実装の効果 ▲ ---
-            default:
-                console.log(`Power up ${type} collected, no specific effect defined yet.`);
-                break;
-        }
-         // ボールやパドルの見た目更新 (必要なら)
-         this.updateBallAndPaddleAppearance(); // 仮の関数
+            break;
+        case POWERUP_TYPES.SHATORA:
+            console.log("Activating Shatora (Boss Fight - Speed Up for 3s)");
+            this.activateTemporaryEffect(
+                type, POWERUP_DURATION[type] || 3000,
+                () => { this.balls.getChildren().forEach(ball => { if (ball.active) this.applySpeedModifier(ball, type); }); },
+                () => { this.balls.getChildren().forEach(ball => { if (ball.active) this.resetBallSpeed(ball); }); }
+            );
+             this.setBallPowerUpState(type, true); // アイコン表示のため状態設定も必要
+            break;
+        case POWERUP_TYPES.HAILA:
+            console.log("Activating Haila (Boss Fight - Speed Down for 10s)");
+             this.activateTemporaryEffect(
+                 type, POWERUP_DURATION[type] || 10000,
+                 () => { this.balls.getChildren().forEach(ball => { if (ball.active) this.applySpeedModifier(ball, type); }); },
+                 () => { this.balls.getChildren().forEach(ball => { if (ball.active) this.resetBallSpeed(ball); }); }
+             );
+             this.setBallPowerUpState(type, true); // アイコン表示のため状態設定も必要
+            break;
+        case POWERUP_TYPES.BAISRAVA:
+            console.log("Activating Baisrava (Boss Fight - 50 Damage)");
+            if (this.boss && this.boss.active && !this.boss.getData('isInvulnerable')) {
+                 this.applyBossDamage(this.boss, 50, "Baisrava");
+            } else { console.log("Baisrava hit, but boss is inactive or invulnerable."); }
+             // バイシュラヴァはアイコン表示不要（即時効果のため）
+            break;
+        case POWERUP_TYPES.MAKIRA:
+            console.log("Activating Makira (Boss Fight - Paddle Beam for 6.7s).");
+            this.activateMakira(); // activateMakira 内で状態設定とタイマー管理
+            break;
+
+        // --- ▼▼▼ 未実装パワーアップのアイコン＆ボイス対応 ▼▼▼ ---
+        case POWERUP_TYPES.SINDARA:
+            console.log("Power up Sindara collected (Icon/Voice Test - Effect TBD: Split 2).");
+            this.setBallPowerUpState(type, true); // アイコン表示のために状態設定
+            // 効果時間がない/特殊な解除条件なので activateTemporaryEffect は使わない
+            // ※ 解除ロジックは効果実装時に必要
+            break;
+        case POWERUP_TYPES.ANCHIRA:
+            console.log("Power up Anchira collected (Icon/Voice Test - Effect TBD: Split 4 for 5s?).");
+            this.setBallPowerUpState(type, true);
+            // ※ 効果時間があるので、後で activateTemporaryEffect に組み込む必要あり
+            // this.activateTemporaryEffect(type, 5000, () => {/*開始処理*/}, () => {/*終了処理*/});
+            break;
+        case POWERUP_TYPES.BIKARA:
+            console.log("Power up Bikara collected (Icon/Voice Test - Effect TBD: Yin/Yang Damage).");
+            this.setBallPowerUpState(type, true); // 初期状態（陰？）を設定
+            // ※ 解除ロジック（陽で一定回数破壊後など）は効果実装時に必要
+            break;
+        case POWERUP_TYPES.INDARA:
+            console.log("Power up Indara collected (Icon/Voice Test - Effect TBD: Homing + Pierce).");
+            this.setBallPowerUpState(type, true);
+            // ※ 解除ロジック（ボスヒット時など）は効果実装時に必要
+            break;
+        case POWERUP_TYPES.ANILA:
+            console.log("Power up Anila collected (Icon/Voice Test - Effect TBD: Invincible Paddle for 10s?).");
+            this.setBallPowerUpState(type, true); // ボールアイコンに反映
+            // ※ パドルの無敵効果とタイマーは別途実装必要
+            // this.activateTemporaryEffect(type, 10000, () => {/*パドル無敵化*/}, () => {/*無敵解除*/});
+            break;
+        case POWERUP_TYPES.MAKORA:
+            console.log("Power up Makora collected (Icon/Voice Test - Effect TBD: Copy Boss Ability).");
+            this.setBallPowerUpState(type, true);
+            // ※ コピー効果は後で実装
+            break;
+        case POWERUP_TYPES.VAJRA:
+            console.log("Power up Vajra collected (Icon/Voice Test - Effect TBD: Gauge System Start).");
+             // activateVajra を呼び出すようにする (ゲージシステム開始)
+             this.activateVajra();
+            // activateVajra 内でボール状態設定とUI起動が行われるので、ここでは setBallPowerUpState は不要
+            break;
+        // --- ▲▲▲ 未実装パワーアップのアイコン＆ボイス対応 ▲▲▲ ---
+
+        default:
+            console.log(`Power up ${type} collected, no specific handler defined yet.`);
+            // デフォルトでもアイコン表示を試みる（もし対応キーがあれば）
+            this.setBallPowerUpState(type, true);
+            break;
     }
-    // --- ▲ アイテム取得メソッド ▲ ---
+    // ★★★ 見た目更新呼び出しを追加 ★★★
+    // （setBallPowerUpState内で呼ばれるが、念のためここでも呼ぶと確実かも）
+    this.updateBallAndPaddleAppearance();
+}
 
 
     // --- ▼ パワーアップ効果管理ヘルパー ▼ ---
