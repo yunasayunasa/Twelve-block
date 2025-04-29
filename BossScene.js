@@ -162,35 +162,69 @@ this.setupBossDropPool();
         console.log("BossScene Create End");
     }
 
+    // BossScene.js の update メソッド
+
     update(time, delta) {
         if (this.isGameOver || this.bossDefeated) { return; }
 
-        this.updateBallFall();
-        this.updateAttackBricks();
-        // --- ▼ マキラファミリア位置更新 (速度制御) ▼ ---
-        if (this.isMakiraActive && this.paddle && this.paddle.active && this.familiars && this.familiars.active) {
-            const paddleX = this.paddle.x;
-            const targetY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
-            const children = this.familiars.getChildren();
-            const followSpeed = 1000; // ★ 追従速度 (px/sec) - 要調整
+        // --- ▼ マキラファミリア位置更新 (詳細ログ追加) ▼ ---
+        // isMakiraActive フラグの値を確認
+        if (this.isMakiraActive) { // まず isMakiraActive かどうかだけチェック
+             // console.log("[Update] Makira IS active."); // このログは頻繁に出るので注意
 
-            try {
-                if (children[0]?.active && children[0].body) {
-                    const targetXLeft = paddleX - MAKIRA_FAMILIAR_OFFSET;
-                    // 目標位置までの差分ベクトルから速度を設定
-                    const desiredVelX = (targetXLeft - children[0].x) * (followSpeed / 100); // 簡易的な比例制御
-                    const desiredVelY = (targetY - children[0].y) * (followSpeed / 100);
-                    children[0].body.setVelocity(desiredVelX, desiredVelY);
-                }
-                 if (children[1]?.active && children[1].body) {
-                    const targetXRight = paddleX + MAKIRA_FAMILIAR_OFFSET;
-                    const desiredVelX = (targetXRight - children[1].x) * (followSpeed / 100);
-                    const desiredVelY = (targetY - children[1].y) * (followSpeed / 100);
-                     children[1].body.setVelocity(desiredVelX, desiredVelY);
-                }
-            } catch (e) { console.error("Error updating familiar velocity:", e); }
+             // 次にパドルとファミリアが存在するか確認
+             if (this.paddle && this.paddle.active && this.familiars && this.familiars.active) {
+                 const paddleX = this.paddle.x;
+                 const paddleY = this.paddle.y; // パドルのYもログに
+                 const targetY = paddleY - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
+                 const children = this.familiars.getChildren();
+
+                 // ★★★ 重要なログ ★★★
+                 console.log(`[Update Familiars] Paddle Pos: (${paddleX.toFixed(0)}, ${paddleY.toFixed(0)}), TargetY: ${targetY.toFixed(0)}, Children Count: ${children.length}`);
+
+                 if (children.length >= 2) { // 子機が2つ以上あるか確認
+                     try {
+                         const targetXLeft = paddleX - MAKIRA_FAMILIAR_OFFSET;
+                         const targetXRight = paddleX + MAKIRA_FAMILIAR_OFFSET;
+
+                         // 子機オブジェクトと現在の座標を確認
+                         const leftFamiliar = children[0];
+                         const rightFamiliar = children[1];
+                         console.log(`  Left Familiar: exists=${!!leftFamiliar}, active=${leftFamiliar?.active}, pos=(${leftFamiliar?.x.toFixed(0)}, ${leftFamiliar?.y.toFixed(0)})`);
+                         console.log(`  Right Familiar: exists=${!!rightFamiliar}, active=${rightFamiliar?.active}, pos=(${rightFamiliar?.x.toFixed(0)}, ${rightFamiliar?.y.toFixed(0)})`);
+                         console.log(`  Target Pos: LeftX=${targetXLeft.toFixed(0)}, RightX=${targetXRight.toFixed(0)}, Y=${targetY.toFixed(0)}`);
+
+
+                         // ★ setPosition で位置を設定 ★
+                         if (leftFamiliar?.active) {
+                             leftFamiliar.setPosition(targetXLeft, targetY);
+                              console.log(`  --> Left Familiar setPosition called. New Pos should be: (${targetXLeft.toFixed(0)}, ${targetY.toFixed(0)})`);
+                         }
+                         if (rightFamiliar?.active) {
+                             rightFamiliar.setPosition(targetXRight, targetY);
+                              console.log(`  --> Right Familiar setPosition called. New Pos should be: (${targetXRight.toFixed(0)}, ${targetY.toFixed(0)})`);
+                         }
+
+                     } catch (e) {
+                          console.error("!!! Error inside familiar position update loop:", e);
+                     }
+                 } else {
+                      console.warn("[Update Familiars] Not enough children in familiars group.");
+                 }
+
+             } else {
+                  // 追従できない理由のログ
+                  if (!this.paddle) console.warn("[Update Familiars] Paddle object not found.");
+                  else if (!this.paddle.active) console.warn("[Update Familiars] Paddle is not active.");
+                  if (!this.familiars) console.warn("[Update Familiars] Familiars group not found.");
+                  else if (!this.familiars.active) console.warn("[Update Familiars] Familiars group is not active.");
+             }
         }
         // --- ▲ マキラファミリア位置更新 ▲ ---
+
+
+        this.updateBallFall();
+        this.updateAttackBricks();
     }
     
 
