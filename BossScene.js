@@ -6,7 +6,7 @@ import {
     ALL_POSSIBLE_POWERUPS, // アイテムドロップで使う可能性
     POWERUP_ICON_KEYS, // アイテムドロップで使う可能性
     BRICK_WIDTH_RATIO, POWERUP_SIZE, POWERUP_SPEED_Y,
-    POWERUP_DURATION, BALL_SPEED_MODIFIERS, NORMAL_BALL_SPEED // 時間・速度関連の定数を追加
+    POWERUP_DURATION, BALL_SPEED_MODIFIERS// 時間・速度関連の定数を追加
 } from './constants.js';
 
 // --- ボス戦用定数 ---
