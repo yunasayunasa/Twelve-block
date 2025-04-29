@@ -1166,9 +1166,8 @@ update(time, delta) {
         // const isPenetrating = ball.getData('isPenetrating'); // ボス戦では使わない想定
         const isKubiraActive = ball.getData('isKubiraActive') === true; // ★★★ 明確に true か比較 ★★★
 
-        // --- ▼ ダメージ計算ロジック修正 ▼ ---
-        if (isBikara && bikaraState === 'yang') {
-            // ビカラ陽が最優先でダメージ2
+        // --- ▼ ダメージ計算ロジック (isPenetrating 削除) ▼ ---
+        if (isBikara && bikaraState === 'yang') { // まずビカラ陽をチェック
             damage = 2;
             if (isKubiraActive) {
                 damage += 1; // クビラ重複なら+1で計3
@@ -1176,18 +1175,16 @@ update(time, delta) {
             } else {
                 console.log("[hitBoss] Bikara Yang hit! Damage: 2");
             }
-        } else if (isKubiraActive) {
-            // 次にクビラをチェック、ダメージ+1
+        } else if (isKubiraActive) { // 次にクビラをチェック
             damage += 1; // 基本ダメージ1 + 1 = 2
             console.log("[hitBoss] Kubira hit! Damage: 2");
-        } else if (isBikara && bikaraState === 'yin') {
-             // ビカラ陰は基本ダメージ1のまま
+        } else if (isBikara && bikaraState === 'yin') { // 次にビカラ陰
              console.log("[hitBoss] Bikara Yin hit. Damage: 1");
-        } else {
-            // それ以外は基本ダメージ1
-            console.log(`[hitBoss] Normal hit. Damage: ${damage}`);
+             // damage は 1 のまま
+        } else { // それ以外 (通常ヒット)
+            console.log(`[hitBoss] Normal hit. Damage: ${damage}`); // damage は 1
         }
-        // --- ▲ ダメージ計算ロジック修正 ▲ ---
+        // --- ▲ ダメージ計算ロジック (isPenetrating 削除) ▲ ---
 
 
         this.applyBossDamage(boss, damage, "Ball Hit"); // ★ 適用ダメージを渡す
