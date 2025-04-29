@@ -482,6 +482,9 @@ updateBallAppearance(ball) {
 
      // --- ▼ アイテム取得メソッド (ボス戦効果実装開始) ▼ ---
      collectPowerUp(paddle, powerUp) {
+        console.log("--- collectPowerUp ---"); // 開始を明確に
+        console.log("Context 'this' in collectPowerUp:", this); // ★ this の内容確
+        if (!(this instanceof BossScene)) { console.error("!!! 'this' is NOT BossScene in collectPowerUp !!!"); return; } // ★ 型チェック
         if (!powerUp || !powerUp.active || this.isGameOver || this.bossDefeated) return;
         const type = powerUp.getData('type');
         if (!type) { powerUp.destroy(); return; }
@@ -587,7 +590,9 @@ updateBallAppearance(ball) {
 
     // 一定時間だけ効果を有効にする汎用関数
     activateTemporaryEffect(type, duration, onStartCallback = null, onEndCallback = null) {
-        console.log(`Activating temporary effect: ${type} for ${duration}ms`);
+        console.log(`--- activateTemporaryEffect for ${type} ---`);
+        console.log("Context 'this' in activateTemporaryEffect:", this); // ★ this の内容確認
+        if (!(this instanceof BossScene)) { console.error("!!! 'this' is NOT BossScene in activateTemporaryEffect !!!"); return; } // ★ 型チェック
         // 既存タイマー解除
         if (this.powerUpTimers[type]) {
             this.powerUpTimers[type].remove();
