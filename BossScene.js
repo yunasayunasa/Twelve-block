@@ -167,27 +167,23 @@ this.setupBossDropPool();
 
         this.updateBallFall();
         this.updateAttackBricks();
-        // --- ▼ マキラファミリア位置更新 (setPosition を使う) ▼ ---
+        // --- ▼ update メソッドにマキラ子機追従を追加 ▼ ---
+    
+        // --- ▼ マキラファミリア位置更新 ▼ ---
         if (this.isMakiraActive && this.paddle && this.paddle.active && this.familiars && this.familiars.active) {
             const paddleX = this.paddle.x;
             const familiarY = this.paddle.y - PADDLE_HEIGHT / 2 - MAKIRA_FAMILIAR_SIZE;
             const children = this.familiars.getChildren();
-            // console.log(`Updating familiars. PaddleX: ${paddleX.toFixed(0)}, TargetY: ${familiarY.toFixed(0)}`); // デバッグログ
-
             try {
                 if (children[0]?.active) {
                     children[0].setPosition(paddleX - MAKIRA_FAMILIAR_OFFSET, familiarY);
-                     // if(children[0].x !== paddleX - MAKIRA_FAMILIAR_OFFSET) console.log("Left pos not updated?"); // 位置確認ログ
                 }
                 if (children[1]?.active) {
                     children[1].setPosition(paddleX + MAKIRA_FAMILIAR_OFFSET, familiarY);
                 }
             } catch (e) { console.error("Error updating familiar position:", e); }
-        } else if (this.isMakiraActive) {
-             // マキラはアクティブなのに他がない場合のログ
-             // console.warn("Makira active but paddle or familiars missing/inactive?");
         }
-        // --- ▲ マキラファミリア位置更新 ▲ --
+        // --- ▲ マキラファミリア位置更新 ▲ ---
     }
     
 
@@ -1301,21 +1297,41 @@ update(time, delta) {
     hitBoss(boss, ball) {
         if (!boss || !ball || !boss.active || !ball.active || boss.getData('isInvulnerable')) return;
         console.log("[hitBoss] Boss hit by ball.");
+        // ★★★ 衝突時のボールデータをログ出力 ★★★
+        console.log('[hitBoss] Ball data at impact:', ball.data?.getAll());
+
         let damage = 1;
         const lastPower = ball.getData('lastActivatedPower');
         const isBikara = lastPower === POWERUP_TYPES.BIKARA;
         const bikaraState = ball.getData('bikaraState');
         const isKubiraActive = ball.getData('isKubiraActive') === true;
+        console.log('[hitBoss] Checking isKubiraActive:', isKubiraActive); // ★ isKubiraActive の値確認
 
-        // --- ダメージ計算ロジック ---
-        if (isBikara && bikaraState === 'yang') { /* ... */ }
-        else if (isKubiraActive) { /* ... */ }
-        else if (isBikara && bikaraState === 'yin') { /* ... */ }
-        else { /* ... */ }
-        // --- ダメージ計算ロジック終わり ---
+        // --- ▼ ダメージ計算ロジック (省略なし) ▼ ---
+        if (isBikara && bikaraState === 'yang') {
+            // ビカラ陽が最優先で基本ダメージ2
+            damage = 2;
+            if (isKubiraActive) {
+                damage += 1; // クビラ重複なら+1で計3
+                console.log("[hitBoss] Bikara Yang + Kubira hit! Calculated Damage: 3");
+            } else {
+                console.log("[hitBoss] Bikara Yang hit! Calculated Damage: 2");
+            }
+        } else if (isKubiraActive) {
+            // 次にクビラをチェック、基本ダメージ1に+1して2にする
+            damage += 1;
+            console.log("[hitBoss] Kubira hit! Calculated Damage: 2");
+        } else if (isBikara && bikaraState === 'yin') {
+             // 次にビカラ陰、基本ダメージ1のまま
+             console.log("[hitBoss] Bikara Yin hit. Calculated Damage: 1");
+        } else {
+            // それ以外（通常ヒット）も基本ダメージ1
+            console.log(`[hitBoss] Normal hit. Calculated Damage: ${damage}`); // damage は初期値 1
+        }
+        // --- ▲ ダメージ計算ロジック (省略なし) ▲ ---
 
-        this.applyBossDamage(boss, damage, "Ball Hit"); // ダメージ適用とリアクション
-
+        console.log(`[hitBoss] Final calculated damage before applying: ${damage}`); // ★適用直前の最終ダメージ確認ログ
+        this.applyBossDamage(boss, damage, "Ball Hit"); // 計算されたダメージを適用
         // --- ▼ ボール跳ね返し処理 (パワーアップ考慮) ▼ ---
         if (ball && ball.active && ball.body) { // ボールがまだ有効か確認
              console.log("[hitBoss] Calculating ball reflection velocity...");
