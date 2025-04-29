@@ -340,8 +340,8 @@ updateBallAppearance(ball) {
         ball.setTexture(textureKey);
         console.log(`===> Ball texture CHANGED to: ${textureKey}`); // ★ 変更時ログ
     }
-    ball.clearTint();
-}*/
+    ball.clearTint();*/
+}
  // --- ▲ updateBallAppearance ▲ ---
 
 
