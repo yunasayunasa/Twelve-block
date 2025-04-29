@@ -130,6 +130,7 @@ export default class BossScene extends Phaser.Scene {
         this.setupUI();
         this.setupPhysics();
 
+
         // --- 2. パドルとボールの生成 ---
         this.createPaddle();
         this.createBalls();
@@ -205,20 +206,26 @@ update(time, delta) {
     setupUI() {
         console.log("Launching UIScene for Boss...");
         if (!this.scene.isActive('UIScene')) {
-             this.scene.launch('UIScene');
+             // ▼▼▼ UIScene 起動時にデータを渡す ▼▼▼
+             this.scene.launch('UIScene', { parentSceneKey: 'BossScene' });
+             // ▲▲▲ UIScene 起動時にデータを渡す ▲▲▲
         }
         this.uiScene = this.scene.get('UIScene');
+        // 初期UI更新 (少し遅延させるのは良いプラクティス)
         this.time.delayedCall(50, () => {
             if (this.uiScene && this.uiScene.scene.isActive()) {
                 console.log("Updating initial UI for BossScene.");
-                this.uiScene.events.emit('updateLives', this.lives);
-                this.uiScene.events.emit('updateScore', this.score);
-                this.uiScene.events.emit('updateStage', this.currentStage);
-                this.uiScene.events.emit('deactivateVajraUI');
-                this.uiScene.events.emit('updateDropPoolUI', []);
-            } else { console.warn("UIScene not ready for initial UI update."); }
+                // ★ this (BossScene) のプロパティを使ってイベントを発行 ★
+                this.events.emit('updateLives', this.lives);
+                this.events.emit('updateScore', this.score);
+                this.events.emit('updateStage', this.currentStage);
+                 // ボス戦開始時はヴァジラUIは非表示、ドロッププールは空のはず
+                 this.events.emit('deactivateVajraUI');
+                 this.events.emit('updateDropPoolUI', this.bossDropPool); // bossDropPool を渡す
+            } else { console.warn("UIScene not ready for initial UI update in BossScene."); }
         }, [], this);
     }
+
 
     // --- ▼ Create ヘルパーメソッドに setupBossDropPool を追加 ▼ ---
     setupBossDropPool() {
@@ -1610,6 +1617,9 @@ update(time, delta) {
         // ★ 撃破演出実装
         boss.disableBody(true, true);
         this.score += BOSS_SCORE;
+         // ▼▼▼ UI更新イベントを発行 ▼▼▼
+         this.events.emit('updateScore', this.score);
+         // ▲▲▲ UI更新イベントを発行 ▲▲▲
         if (this.uiScene?.scene.isActive()) { this.uiScene.events.emit('updateScore', this.score); }
         // if (this.orbiters) this.orbiters.clear(true, true); // 削除
         if (this.attackBricks) this.attackBricks.clear(true, true);
@@ -1650,7 +1660,10 @@ update(time, delta) {
         }
         this.isBallLaunched = false;
         if (this.balls) { this.balls.clear(true, true); } // 古いボールクリア
-
+        // ▼▼▼ UI更新イベントを発行 ▼▼▼
+        this.events.emit('updateLives', this.lives);
+        // ▲▲▲ UI更新イベントを発行 ▲▲▲
+        // ...
         if (this.lives > 0) {
              this.time.delayedCall(500, this.resetForNewLife, [], this);
         } else {
@@ -1736,20 +1749,23 @@ testLogFunction(message) {
         this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth);
     }
 
+    // handleResize メソッドを修正 (または新規追加)
     handleResize(gameSize) {
         console.log("BossScene resized.");
         this.gameWidth = gameSize.width;
         this.gameHeight = gameSize.height;
         this.updatePaddleSize();
-        if (this.boss) {
-            this.updateBossSize();
-            // ボス移動Tweenを再開/調整する必要があるか？
-            // this.startBossMovement(); // サイズ変更後に動きを再開
+        if (this.boss) { this.updateBossSize(); }
+
+        // ▼▼▼ UIScene にリサイズを通知 ▼▼▼
+        if (this.scene.isActive('UIScene')) {
+            // 'gameResize' というイベント名で通知 (UIScene側と合わせる)
+            this.events.emit('gameResize');
+            console.log("Emitted gameResize event for UIScene from BossScene.");
         }
-        if (this.uiScene && this.uiScene.scene.isActive()) {
-            this.uiScene.events.emit('gameResize');
-        }
+        // ▲▲▲ UIScene にリサイズを通知 ▲▲▲
     }
+
 
     updateBossSize() {
         if (!this.boss || !this.boss.texture || !this.boss.texture.source[0]) return;

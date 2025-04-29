@@ -197,14 +197,16 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
         // this.input.setDefaultCursor('default');
     });
     buttonContainer.on('pointerdown', () => {
-        console.log("Start button clicked."); // ★ これが出るか？
+        console.log("Start button clicked.");
         this.sound.play(AUDIO_KEYS.SE_START);
         this.stopTitleBgm();
         this.clearDOM();
-        const settingsToPass = { count: this.selectedCount, ratePercent: this.selectedRate }; // ★ 渡す設定値
-        console.log("Passing settings to GameScene:", settingsToPass); // ★ ログ追加
-        this.scene.start('GameScene', { chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } });
-        this.scene.launch('UIScene');
+        const settingsToPass = { count: this.selectedCount, ratePercent: this.selectedRate };
+        console.log("Passing settings to GameScene:", settingsToPass);
+        this.scene.start('GameScene', { chaosSettings: settingsToPass }); // GameScene を開始
+        // ▼▼▼ UIScene 起動時にデータを渡す ▼▼▼
+        this.scene.launch('UIScene', { parentSceneKey: 'GameScene' });
+        // ▲▲▲ UIScene 起動時にデータを渡す ▲▲▲
     });
     console.log("Button container event listeners added.");
     // --- ▲ ゲーム開始ボタン (コンテナ使用) ▲ ---

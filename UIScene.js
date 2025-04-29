@@ -9,6 +9,9 @@ export default class UIScene extends Phaser.Scene {
         this.stageText = null;
         this.vajraGaugeText = null;
         this.dropPoolIconsGroup = null; // ドロッププール表示用グループ
+        this.parentSceneKey = null; // ★ 親シーンのキーを保持するプロパティ
+        this.parentScene = null;    // ★ 親シーンへの参照を保持
+        this.parentResizeListener = null; // ★ リサイズリスナー参照
 
         // 状態管理
         this.gameSceneListenerAttached = false; // GameSceneイベントリスナー登録済みフラグ
@@ -17,8 +20,23 @@ export default class UIScene extends Phaser.Scene {
         this.gameHeight = 0;
      }
 
-    create() {
-        console.log("UIScene create started");
+     create(data) { // ★ data を受け取るように変更
+        console.log("UIScene create started", data);
+        this.parentSceneKey = data?.parentSceneKey; // ★ 親キーを取得 (なければnull)
+        if (!this.parentSceneKey) {
+            console.error("UIScene launched without parentSceneKey! Aborting.");
+            this.scene.stop(); // 親が不明なら停止
+            return;
+        }
+
+        // ★ 親シーンへの参照を取得
+        this.parentScene = this.scene.get(this.parentSceneKey);
+        if (!this.parentScene) {
+            console.error(`UIScene could not find parent scene: ${this.parentSceneKey}! Aborting.`);
+            this.scene.stop();
+            return;
+        }
+        console.log(`UIScene linked to parent: ${this.parentSceneKey}`);
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
 
@@ -44,40 +62,86 @@ export default class UIScene extends Phaser.Scene {
         this.dropPoolIconsGroup = this.add.group();
         this.updateDropPoolDisplay([]); // 初期状態は空で表示
 
-        // --- GameSceneイベントリスナー登録 ---
-        this.gameScene = this.scene.get('GameScene'); // GameSceneへの参照を取得
-        if (this.gameScene) {
-            // GameSceneのリサイズイベントにも反応するように登録
-            this.gameScene.events.on('gameResize', this.onGameResize, this);
-        }
+        // --- ▼ 親シーンのイベントリスナー登録 ▼ ---
         try {
-            const gameScene = this.scene.get('GameScene');
-            // GameSceneが既に実行中か確認
-            if (gameScene && gameScene.scene.settings.status === Phaser.Scenes.RUNNING) {
-                 // 実行中ならすぐにリスナー登録
-                this.registerGameEventListeners(gameScene);
-            } else {
-                // まだ準備中なら、create完了イベントを待ってからリスナー登録
-                // (GameSceneのcreate完了前にUISceneのcreateが完了する場合があるため)
-                this.scene.get('GameScene').events.once('create', () => {
-                     this.registerGameEventListeners(this.scene.get('GameScene'));
-                 }, this);
-            }
+            // 親シーンのcreate完了を待つ必要はない (UISceneは後から起動されるため)
+            this.registerParentEventListeners(this.parentScene);
+
+            // ★ 親シーンのリサイズイベントを購読 ★
+            this.parentResizeListener = this.onGameResize.bind(this); // bindしておく
+            this.parentScene.events.on('gameResize', this.parentResizeListener);
+             console.log(`UIScene listening for resize events from ${this.parentSceneKey}`);
+
         } catch (e) {
-            console.error("Error setting up UIScene listeners:", e);
+            console.error("Error setting up UIScene listeners for parent:", e);
         }
 
         // UIScene自体の終了時処理
         this.events.on('shutdown', () => {
             console.log("UIScene shutdown initiated.");
-            this.unregisterGameEventListeners(); // GameSceneリスナー解除
-             // GameSceneリサイズリスナーも解除
-             if (this.gameScene && this.gameScene.events) {
-                 this.gameScene.events.off('gameResize', this.onGameResize, this);
-             }
-             console.log("UIScene shutdown complete.");
+            this.unregisterParentEventListeners(); // ★ 親リスナー解除
+            // ★ 親リサイズリスナーも解除 ★
+            if (this.parentScene && this.parentScene.events && this.parentResizeListener) {
+                this.parentScene.events.off('gameResize', this.parentResizeListener);
+                console.log(`UIScene stopped listening for resize events from ${this.parentSceneKey}`);
+            }
+            this.parentScene = null; // 参照解除
+            this.parentSceneKey = null;
+            this.parentResizeListener = null;
+            console.log("UIScene shutdown complete.");
         });
     }
+
+    // ★ メソッド名を registerParentEventListeners に変更し、引数に親シーンを取る
+    registerParentEventListeners(parentScene) {
+        if (!parentScene || !parentScene.events || this.gameSceneListenerAttached) return; // 重複防止
+        console.log(`Registering event listeners for ${this.parentSceneKey} in UIScene...`);
+        this.unregisterParentEventListeners(parentScene); // 念のため既存を解除
+
+        parentScene.events.on('updateLives', this.updateLivesDisplay, this);
+        parentScene.events.on('updateScore', this.updateScoreDisplay, this);
+        parentScene.events.on('updateStage', this.updateStageDisplay, this);
+        parentScene.events.on('activateVajraUI', this.activateVajraUIDisplay, this);
+        parentScene.events.on('updateVajraGauge', this.updateVajraGaugeDisplay, this);
+        parentScene.events.on('deactivateVajraUI', this.deactivateVajraUIDisplay, this);
+        parentScene.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this);
+
+        this.gameSceneListenerAttached = true; // 登録済みフラグ
+
+        // 登録直後に現在の親シーンの状態をUIに反映
+        try {
+            // ★ parentScene のプロパティを参照する ★
+            this.updateLivesDisplay(parentScene.lives);
+            this.updateScoreDisplay(parentScene.score);
+            this.updateStageDisplay(parentScene.currentStage); // 親がcurrentStageを持つ想定
+            if (parentScene.isVajraSystemActive) { // 親がisVajraSystemActiveを持つ想定
+                 this.activateVajraUIDisplay(parentScene.vajraGauge, VAJRA_GAUGE_MAX); // 親がvajraGaugeを持つ想定
+            } else { this.deactivateVajraUIDisplay(); }
+            // ドロッププールは親シーンの適切なプロパティを参照
+            // (GameSceneならstageDropPool, BossSceneならbossDropPoolなど、親側で調整が必要かも)
+            const dropPool = parentScene.stageDropPool ?? parentScene.bossDropPool ?? [];
+            this.updateDropPoolDisplay(dropPool);
+        } catch (e) {
+            console.error(`Error reflecting initial state from ${this.parentSceneKey} in UIScene:`, e);
+        }
+    }
+
+    // ★ メソッド名を unregisterParentEventListeners に変更
+    unregisterParentEventListeners(parentScene = null) {
+        console.log(`Unregistering event listeners for ${this.parentSceneKey} from UIScene...`);
+        const ps = parentScene || this.parentScene; // 引数がなければ保持している参照を使う
+        if (ps && ps.events) {
+            ps.events.off('updateLives', this.updateLivesDisplay, this);
+            ps.events.off('updateScore', this.updateScoreDisplay, this);
+            ps.events.off('updateStage', this.updateStageDisplay, this);
+            ps.events.off('activateVajraUI', this.activateVajraUIDisplay, this);
+            ps.events.off('updateVajraGauge', this.updateVajraGaugeDisplay, this);
+            ps.events.off('deactivateVajraUI', this.deactivateVajraUIDisplay, this);
+            ps.events.off('updateDropPoolUI', this.updateDropPoolDisplay, this);
+        }
+        this.gameSceneListenerAttached = false;
+    }
+
 
     // GameSceneのリサイズイベントを受けたときの処理
     onGameResize() {
@@ -91,52 +155,8 @@ export default class UIScene extends Phaser.Scene {
         this.updateDropPoolPosition(); // ドロッププールアイコンの位置も更新
     }
 
-    // GameSceneのイベントリスナーを登録する
-    registerGameEventListeners(gameScene) {
-        if (!gameScene || !gameScene.events || this.gameSceneListenerAttached) return; // 重複登録防止
-        console.log("Registering GameScene event listeners in UIScene...");
-        this.unregisterGameEventListeners(gameScene); // 念のため既存を解除
-
-        gameScene.events.on('updateLives', this.updateLivesDisplay, this);
-        gameScene.events.on('updateScore', this.updateScoreDisplay, this);
-        gameScene.events.on('updateStage', this.updateStageDisplay, this);
-        gameScene.events.on('activateVajraUI', this.activateVajraUIDisplay, this);
-        gameScene.events.on('updateVajraGauge', this.updateVajraGaugeDisplay, this);
-        gameScene.events.on('deactivateVajraUI', this.deactivateVajraUIDisplay, this);
-        gameScene.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this); // ドロッププール更新
-
-        this.gameSceneListenerAttached = true; // 登録済みフラグを立てる
-
-        // 登録直後に現在のゲーム状態をUIに反映
-        try {
-            this.updateLivesDisplay(gameScene.lives);
-            this.updateScoreDisplay(gameScene.score);
-            this.updateStageDisplay(gameScene.currentStage);
-            if (gameScene.isVajraSystemActive) this.activateVajraUIDisplay(gameScene.vajraGauge, VAJRA_GAUGE_MAX);
-            else this.deactivateVajraUIDisplay();
-            this.updateDropPoolDisplay(gameScene.stageDropPool);
-        } catch (e) {
-            console.error("Error reflecting initial state in UIScene:", e);
-        }
-    }
-
-    // GameSceneのイベントリスナーを解除する
-    unregisterGameEventListeners(gameScene = null) {
-        console.log("Unregistering GameScene event listeners from UIScene...");
-        // 引数で渡されなければ、保持している参照を使う
-        const gs = gameScene || this.gameScene || (this.scene.manager ? this.scene.manager.getScene('GameScene') : null);
-        if (gs && gs.events) {
-            gs.events.off('updateLives', this.updateLivesDisplay, this);
-            gs.events.off('updateScore', this.updateScoreDisplay, this);
-            gs.events.off('updateStage', this.updateStageDisplay, this);
-            gs.events.off('activateVajraUI', this.activateVajraUIDisplay, this);
-            gs.events.off('updateVajraGauge', this.updateVajraGaugeDisplay, this);
-            gs.events.off('deactivateVajraUI', this.deactivateVajraUIDisplay, this);
-            gs.events.off('create', this.registerGameEventListeners, this); // onceで登録したリスナーも解除
-            gs.events.off('updateDropPoolUI', this.updateDropPoolDisplay, this);
-        }
-        this.gameSceneListenerAttached = false; // 未登録状態に
-    }
+    
+    
 
     // --- UI更新メソッド ---
     updateLivesDisplay(lives) { if (this.livesText) this.livesText.setText(`ライフ: ${lives}`); }
