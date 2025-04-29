@@ -706,7 +706,7 @@ updateBallAndPaddleAppearance() {
 
 
 /// --- ▼ updateBallAppearance (入口ログ追加) ▼ ---
-updateBallAppearance(ball) {
+/*updateBallAppearance(ball) {
     // ★★★ 関数の最初に入口ログを追加 ★★★
     console.log(`>>> Entering updateBallAppearance for ball: ${ball?.name || ball?.texture?.key}`);
     // ★★★ 関数の最初に入口ログを追加 ★★★
@@ -751,7 +751,7 @@ updateBallAppearance(ball) {
          // console.log(`  Texture already ${textureKey}. No change needed.`); // 変更不要ログ (冗長ならコメントアウト)
     }
     ball.clearTint(); // Tint は常にクリア
-}
+}*/
 // --- ▲ updateBallAppearance ▲ ---
 
 
