@@ -299,36 +299,36 @@ this.setupBossDropPool();
     // --- ▲ Create ヘルパーメソッド ▲ ---
 
 // --- ▼ 見た目更新ヘルパー (優先順位考慮) ▼ ---
+// --- ▼ updateBallAppearance (ログ追加・優先順位確認) ▼ ---
 updateBallAppearance(ball) {
     if (!ball || !ball.active || !ball.getData) return;
-    let textureKey = 'ball_image'; // デフォルト
+    let textureKey = 'ball_image';
     const lastPower = ball.getData('lastActivatedPower');
     const activePowers = ball.getData('activePowers') || new Set();
-    const isKubiraActive = ball.getData('isKubiraActive') === true; // クビラフラグ取得
+    const isKubiraActive = ball.getData('isKubiraActive') === true;
+    const isMakiraActiveBall = activePowers.has(POWERUP_TYPES.MAKIRA); // マキラ状態か
 
-    // ★★★ 見た目の優先順位を見直し ★★★
-    // (例: クビラ > マキラ > その他 lastPower)
+    console.log(`[updateBallAppearance] Checking ball. Kubira: ${isKubiraActive}, Makira: ${isMakiraActiveBall}, Last: ${lastPower}`); // ★ 状態ログ
 
-    if (isKubiraActive) { // ★ クビラがアクティブならクビラアイコン
+    // 優先順位: クビラ > マキラ > その他 LastPower
+    if (isKubiraActive) {
         textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA] || 'ball_image';
-    } else if (activePowers.has(POWERUP_TYPES.MAKIRA)) { // 次にマキラ
+    } else if (isMakiraActiveBall) {
          textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.MAKIRA] || 'ball_image';
-    // } else if (activePowers.has(POWERUP_TYPES.SHATORA)) { // 今後追加する場合
-    //      textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.SHATORA] || 'ball_image';
-    // } else if (activePowers.has(POWERUP_TYPES.HAILA)) { // 今後追加する場合
-    //      textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.HAILA] || 'ball_image';
-    } else if (lastPower && POWERUP_ICON_KEYS[lastPower]) { // 他に有効なものがなければlastPower基準
+    } else if (lastPower && POWERUP_ICON_KEYS[lastPower]) {
          textureKey = POWERUP_ICON_KEYS[lastPower];
+    } else {
+        textureKey = 'ball_image'; // デフォルトに戻す
     }
-    // --- ビカラなどの他の見た目変更もここに追加 ---
 
     if (ball.texture.key !== textureKey) {
         ball.setTexture(textureKey);
-        console.log(`Ball texture set to: ${textureKey} based on power state`);
+        console.log(`===> Ball texture CHANGED to: ${textureKey}`); // ★ 変更時ログ
     }
     ball.clearTint();
 }
-// --- ▲ 見た目更新ヘルパー ▲ ---
+ // --- ▲ updateBallAppearance ▲ ---
+
 
 // ★★★ このメソッド定義を追加 ★★★
 scheduleNextAttackBrick() {
@@ -688,46 +688,48 @@ updateBallAppearance(ball) {
 
 
 
-    // ボールにパワーアップ状態フラグを設定/解除する関数 (仮)
+    // --- ▼ ボール状態設定ヘルパー (lastActivatedPower再設定ロジック省略なし) ▼ ---
     setBallPowerUpState(type, isActive) {
         this.balls?.getChildren().forEach(ball => {
-            if (ball?.active) { // ?.で安全アクセス
-                // activePowers Set を使う (GameScene準拠)
+            if (ball?.active && ball.getData) { // getDataの存在も確認
                 let activePowers = ball.getData('activePowers');
                 if (!activePowers) activePowers = new Set();
-                if (isActive) activePowers.add(type);
-                else activePowers.delete(type);
-                ball.setData('activePowers', activePowers);
 
-                // ★ isKubiraActive フラグも設定/解除 (例) ★
-                if (type === POWERUP_TYPES.KUBIRA) {
-                    ball.setData('isKubiraActive', isActive);
-                    console.log(`Ball Kubira state set to: ${isActive}`);
-                }
-                // ★ isFast/isSlow フラグもここで管理 ★
-                if (type === POWERUP_TYPES.SHATORA) ball.setData('isFast', isActive);
-                if (type === POWERUP_TYPES.HAILA) ball.setData('isSlow', isActive);
-
-                 // --- ▼ lastActivatedPower 更新ロジック修正 ▼ ---
-                 if (isActive) {
-                    // 有効になったパワーを最後に記録
-                    ball.setData('lastActivatedPower', type);
+                if (isActive) {
+                    activePowers.add(type); // 有効になったパワーを追加
+                    ball.setData('lastActivatedPower', type); // 最後に有効になったものを記録
                 } else {
-                    // 無効になったパワーが lastActivatedPower だったら、残っているものから再設定
+                    activePowers.delete(type); // 無効になったパワーを削除
+                    // もし無効になったパワーが最後に有効だったものなら、
+                    // 残っているパワーの中から新しい lastActivatedPower を探す
                     if (ball.getData('lastActivatedPower') === type) {
-                        const remaining = Array.from(activePowers);
-                        // 残っているものの最後（配列なのでインデックスが最後）を選ぶ
-                        const newLastPower = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+                        // Set を Array に変換して、最後の要素（=一番最近追加されたもの）を取得
+                        const remainingPowers = Array.from(activePowers);
+                        const newLastPower = remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null;
                         ball.setData('lastActivatedPower', newLastPower);
-                         console.log(`Last activated power reset to: ${newLastPower}`);
+                        console.log(`Last activated power reset to: ${newLastPower}`);
                     }
                 }
-                // --- ▲ lastActivatedPower 更新ロジック修正 ▲ ---
-                 console.log(`Ball power state for ${type} set to ${isActive}. Current:`, Array.from(activePowers));
+                ball.setData('activePowers', activePowers); // 更新されたSetを保存
+
+                // 各パワーアップに対応するフラグの設定/解除
+                if (type === POWERUP_TYPES.KUBIRA) {
+                    ball.setData('isKubiraActive', isActive);
+                    console.log(`Set isKubiraActive to: ${ball.getData('isKubiraActive')} for ball`);
+                }
+                if (type === POWERUP_TYPES.SHATORA) {
+                    ball.setData('isFast', isActive);
+                }
+                if (type === POWERUP_TYPES.HAILA) {
+                    ball.setData('isSlow', isActive);
+                }
+                // 他のパワーアップフラグもここに追加
+
+                console.log(`Ball power state for ${type} set to ${isActive}. Current Powers:`, Array.from(activePowers), `Last Activated: ${ball.getData('lastActivatedPower')}`);
             }
         });
     }
-    // --- ボール状態設定ヘルパー (修正) ---
+    // --- ▲ ボール状態設定ヘルパー ▲ ---
 
       // --- 見た目更新ヘルパー (クビラ対応) ---
     updateBallAppearance(ball) {
