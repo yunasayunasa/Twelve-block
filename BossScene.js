@@ -271,10 +271,10 @@ this.setupBossDropPool();
     }
 
     createAttackBricksGroup() {
-        console.log("Creating attack bricks group...");
+     //   console.log("Creating attack bricks group...");
         if (this.attackBricks) { this.attackBricks.destroy(true); this.attackBricks = null; }
         this.attackBricks = this.physics.add.group();
-        console.log("Attack bricks group created.");
+     //   console.log("Attack bricks group created.");
     }
 
     createGameOverText() {
@@ -337,7 +337,7 @@ scheduleNextAttackBrick() {
     }
     // 次回実行までの遅延時間をランダムに決定
     const nextDelay = Phaser.Math.Between(ATTACK_BRICK_SPAWN_DELAY_MIN, ATTACK_BRICK_SPAWN_DELAY_MAX);
-    console.log(`Scheduling next attack brick in ${nextDelay}ms`);
+ //   console.log(`Scheduling next attack brick in ${nextDelay}ms`);
     // タイマーを設定
     this.attackBrickTimer = this.time.addEvent({
         delay: nextDelay,
@@ -373,7 +373,7 @@ scheduleNextAttackBrick() {
         if (!this.attackBricks || !this.attackBricks.active) return;
         this.attackBricks.children.each(brick => {
             if (brick.active && brick.y > this.gameHeight + brick.displayHeight) {
-                console.log("Attack brick went out of bounds.");
+             //   console.log("Attack brick went out of bounds.");
                 brick.destroy();
             }
         });
@@ -462,9 +462,9 @@ scheduleNextAttackBrick() {
                     // const offsetY = (attackBrick.displayHeight - hitboxHeight) / 2;
                     // attackBrick.body.setOffset(offsetX, offsetY);
 
-                    console.log(`Attack brick body size set to: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)} (Multiplier: ${hitboxScaleMultiplier})`);
-                } else { console.warn("Attack brick body not ready for size setting."); }
-            } catch (e) { console.error("Error setting attack brick body size:", e); }
+                  //  console.log(`Attack brick body size set to: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)} (Multiplier: ${hitboxScaleMultiplier})`);
+                } else //{ console.warn("Attack brick body not ready for size setting."); }
+            } catch (e) //{ console.error("Error setting attack brick body size:", e); }
             // --- ▲ 当たり判定を表示サイズより大きくする ▲ ---
 
 
@@ -473,13 +473,13 @@ scheduleNextAttackBrick() {
             attackBrick.body.setAllowGravity(false);
             attackBrick.body.setCollideWorldBounds(false);
 
-            console.log(`Attack brick spawned at (${spawnX.toFixed(0)}, ${spawnY})`);
+          //  console.log(`Attack brick spawned at (${spawnX.toFixed(0)}, ${spawnY})`);
             this.scheduleNextAttackBrick();
 
     
 
         } else {
-            console.error("Failed to create attack brick object!");
+         //   console.error("Failed to create attack brick object!");
              // エラー発生時も次の生成を試みる (無限ループ防止のため遅延を入れる)
              this.time.delayedCall(ATTACK_BRICK_SPAWN_DELAY_MAX, this.scheduleNextAttackBrick, [], this);
         }
@@ -918,8 +918,8 @@ hitBossWithMakiraBeam(beam, boss) {
 
     hitAttackBrick(brick, ball) {
         if (!brick || !brick.active || !ball || !ball.active) return;
-        console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
-        console.log("Attack brick hit by ball!");
+      //  console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
+      //  console.log("Attack brick hit by ball!");
         const brickX = brick.x; const brickY = brick.y; const brickColor = brick.tintTopLeft;
         // エフェクト & SE
         try { /* ...パーティクル... */ } catch (e) { /*...*/ }
@@ -1394,7 +1394,7 @@ update(time, delta) {
     console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
     // ★★★ chaosSettings の値をログに出力 ★★★
 
-        console.log("Attack brick hit by ball!");
+       // console.log("Attack brick hit by ball!");
 
         const brickX = brick.x;
         const brickY = brick.y;
