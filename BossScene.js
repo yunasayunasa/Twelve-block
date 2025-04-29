@@ -282,6 +282,33 @@ this.setupBossDropPool();
 
     // --- ▲ Create ヘルパーメソッド ▲ ---
 
+// --- ▼ 見た目更新ヘルパー (新規追加) ▼ ---
+updateBallAndPaddleAppearance() {
+    // この関数は、現在アクティブなパワーアップに基づいて
+    // ボールやパドルの見た目を更新するために呼び出される想定
+
+    console.log("Updating ball and paddle appearance..."); // 呼び出されたことを確認
+
+    // 現在はボールの見た目更新のみを行う
+    if (this.balls && this.balls.active) {
+        this.balls.getChildren().forEach(ball => {
+            if (ball && ball.active) { // ボールが有効か確認
+                try {
+                    this.updateBallAppearance(ball); // 既存のボール見た目更新処理を呼ぶ
+                } catch (e) {
+                    console.error("Error during individual ball appearance update:", e);
+                }
+            }
+        });
+    }
+
+    // ★ もしマキラなどでパドルの見た目を変えたい場合はここに追加 ★
+    // 例: if (this.isMakiraActive) { this.paddle.setTint(0xffcccc); }
+    //     else { this.paddle.clearTint(); }
+    console.log("Ball and paddle appearance update finished.");
+}
+// --- ▲ 見た目更新ヘルパー (新規追加) ▲ ---
+
 
     // --- ▼ Update ヘルパーメソッド ▼ ---
 
