@@ -675,33 +675,52 @@ scheduleNextAttackBrick() {
         this.updateBallAndPaddleAppearance(); // 開始時の見た目更新
     }
 
- // --- ▼ updateBallAndPaddleAppearance (ログ追加) ▼ ---
+ // --- ▼ updateBallAndPaddleAppearance (ループ確認ログ追加) ▼ ---
 updateBallAndPaddleAppearance() {
-    console.log("--- updateBallAndPaddleAppearance called ---"); // ★ 呼び出しログ
+    console.log("--- updateBallAndPaddleAppearance called ---");
     if (this.balls && this.balls.active) {
-        this.balls.getChildren().forEach(ball => {
-            if (ball && ball.active) {
-                try { this.updateBallAppearance(ball); }
-                catch (e) { console.error("Error during individual ball appearance update:", e); }
+        const children = this.balls.getChildren(); // 先に子を取得
+        console.log(`  Checking ${children.length} balls in group.`); // ★ ボールの数をログ出力
+        children.forEach((ball, index) => {
+            console.log(`  Looping ball index ${index}. Ball active: ${ball?.active}`); // ★ ループ実行ログ
+            if (ball && ball.active) { // ボールが存在しアクティブか確認
+                try {
+                    console.log(`    Calling updateBallAppearance for ball index ${index}...`); // ★ 関数呼び出し直前ログ
+                    this.updateBallAppearance(ball);
+                }
+                catch (e) { console.error(`Error during individual ball appearance update (index ${index}):`, e); }
+            } else {
+                console.log(`    Skipping inactive/null ball index ${index}.`); // ★ スキップログ
             }
         });
+    } else {
+        console.log("  Balls group not active or does not exist."); // ★ グループがない場合のログ
     }
     console.log("--- updateBallAndPaddleAppearance finished ---");
 }
 // --- ▲ updateBallAndPaddleAppearance ▲ ---
 
 
-// --- ▼ updateBallAppearance (ログ強化・再掲) ▼ ---
+
+/// --- ▼ updateBallAppearance (入口ログ追加) ▼ ---
 updateBallAppearance(ball) {
-    if (!ball || !ball.active || !ball.getData) return;
-    let textureKey = 'ball_image'; // デフォルト
+    // ★★★ 関数の最初に入口ログを追加 ★★★
+    console.log(`>>> Entering updateBallAppearance for ball: ${ball?.name || ball?.texture?.key}`);
+    // ★★★ 関数の最初に入口ログを追加 ★★★
+
+   if (!ball || !ball.active || !ball.getData) {
+        console.log("<<< Exiting updateBallAppearance early: Ball invalid or inactive."); // ★早期リターンログ
+       return;
+   }
+   let textureKey = 'ball_image'; // デフォル
     const currentTexture = ball.texture.key; // 現在のテクスチャ記録
     const lastPower = ball.getData('lastActivatedPower');
     const activePowers = ball.getData('activePowers') || new Set();
     const isKubiraActive = ball.getData('isKubiraActive') === true; // ★ 明示的に true か比較
     const isMakiraActiveBall = activePowers.has(POWERUP_TYPES.MAKIRA);
 
-    console.log(`[updateBallAppearance] Checking ball ${ball.name || currentTexture}. Kubira: ${isKubiraActive}, Makira: ${isMakiraActiveBall}, Last: ${lastPower}, CurrentTex: ${currentTexture}`); // ★ 詳細ログ
+    console.log(`<<< Exiting updateBallAppearance for ball: ${ball?.name || ball?.texture?.key}`); // ★正常終了ログ
+
 
     // 優先順位: クビラ > マキラ > その他 LastPower
     if (isKubiraActive) {
