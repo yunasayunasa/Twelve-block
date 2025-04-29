@@ -314,33 +314,46 @@ update(time, delta) {
 // --- ▼ 見た目更新ヘルパー (優先順位考慮) ▼ ---
 // --- ▼ updateBallAppearance (ログ追加・優先順位確認) ▼ ---
 updateBallAppearance(ball) {
-    
-    console.log(`>>> Entering updateBallAppearance. Ball texture: ${ball?.texture?.key}`); // この1行だけにする
-   /* if (!ball || !ball.active || !ball.getData) return;
-    let textureKey = 'ball_image';
-    const lastPower = ball.getData('lastActivatedPower');
-    const activePowers = ball.getData('activePowers') || new Set();
-    const isKubiraActive = ball.getData('isKubiraActive') === true;
-    const isMakiraActiveBall = activePowers.has(POWERUP_TYPES.MAKIRA); // マキラ状態か
+    console.log(`>>> Entering updateBallAppearance. Ball texture: ${ball?.texture?.key}`);
 
-    console.log(`[updateBallAppearance] Checking ball. Kubira: ${isKubiraActive}, Makira: ${isMakiraActiveBall}, Last: ${lastPower}`); // ★ 状態ログ
+    if (!ball || !ball.active || !ball.getData) {
+        console.log("<<< Exiting updateBallAppearance early: Ball invalid or inactive.");
+        return;
+    }
 
-    // 優先順位: クビラ > マキラ > その他 LastPower
-    if (isKubiraActive) {
-        textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA] || 'ball_image';
-    } else if (isMakiraActiveBall) {
-         textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.MAKIRA] || 'ball_image';
-    } else if (lastPower && POWERUP_ICON_KEYS[lastPower]) {
-         textureKey = POWERUP_ICON_KEYS[lastPower];
+    let textureKey = 'ball_image'; // デフォルト
+    const currentTexture = ball.texture.key;
+    const lastPower = ball.getData('lastActivatedPower'); // 最後に有効になったパワーアップタイプを取得
+
+    console.log(`[updateBallAppearance] Checking ball ${ball.name || currentTexture}. Last Activated Power: ${lastPower}`);
+
+    // ▼▼▼ 条件分岐を lastPower 最優先に変更 ▼▼▼
+    if (lastPower && POWERUP_ICON_KEYS[lastPower]) {
+        // 最後に有効になったパワーアップに対応するアイコンキーがあれば、それを使用
+        textureKey = POWERUP_ICON_KEYS[lastPower];
+        console.log(`  Priority: Last power (${lastPower}). Target texture: ${textureKey}`);
     } else {
-        textureKey = 'ball_image'; // デフォルトに戻す
+        // lastPower が null か、対応するアイコンキーがなければデフォルト
+        textureKey = 'ball_image';
+        console.log(`  Priority: Default or no icon for last power. Target texture: ${textureKey}`);
     }
+    // ▲▲▲ 条件分岐を lastPower 最優先に変更 ▲▲▲
 
-    if (ball.texture.key !== textureKey) {
-        ball.setTexture(textureKey);
-        console.log(`===> Ball texture CHANGED to: ${textureKey}`); // ★ 変更時ログ
+
+    // テクスチャが実際に変更されるかチェック
+    if (currentTexture !== textureKey) {
+        try {
+            ball.setTexture(textureKey);
+            console.log(`  ===> Texture CHANGED from ${currentTexture} to: ${textureKey}`);
+        } catch (e) {
+            console.error(`  !!! Error setting texture to ${textureKey}:`, e);
+        }
+    } else {
+        // console.log(`  Texture already ${textureKey}. No change needed.`);
     }
-    ball.clearTint();*/
+    ball.clearTint(); // Tint は常にクリア
+
+    console.log(`<<< updateBallAppearance finished (lastPower priority).`); // 出口ログ変更
 }
  // --- ▲ updateBallAppearance ▲ ---
 
@@ -705,54 +718,7 @@ updateBallAndPaddleAppearance() {
 
 
 
-/// --- ▼ updateBallAppearance (入口ログ追加) ▼ ---
-/*updateBallAppearance(ball) {
-    // ★★★ 関数の最初に入口ログを追加 ★★★
-    console.log(`>>> Entering updateBallAppearance for ball: ${ball?.name || ball?.texture?.key}`);
-    // ★★★ 関数の最初に入口ログを追加 ★★★
 
-   if (!ball || !ball.active || !ball.getData) {
-        console.log("<<< Exiting updateBallAppearance early: Ball invalid or inactive."); // ★早期リターンログ
-       return;
-   }
-   let textureKey = 'ball_image'; // デフォル
-    const currentTexture = ball.texture.key; // 現在のテクスチャ記録
-    const lastPower = ball.getData('lastActivatedPower');
-    const activePowers = ball.getData('activePowers') || new Set();
-    const isKubiraActive = ball.getData('isKubiraActive') === true; // ★ 明示的に true か比較
-    const isMakiraActiveBall = activePowers.has(POWERUP_TYPES.MAKIRA);
-
-    console.log(`<<< Exiting updateBallAppearance for ball: ${ball?.name || ball?.texture?.key}`); // ★正常終了ログ
-
-
-    // 優先順位: クビラ > マキラ > その他 LastPower
-    if (isKubiraActive) {
-        textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA] || 'ball_image';
-        console.log(`  Priority: Kubira is active. Target texture: ${textureKey}`); // ★ 優先度ログ
-    } else if (isMakiraActiveBall) {
-        textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.MAKIRA] || 'ball_image';
-        console.log(`  Priority: Makira is active. Target texture: ${textureKey}`);
-    } else if (lastPower && POWERUP_ICON_KEYS[lastPower]) {
-        textureKey = POWERUP_ICON_KEYS[lastPower];
-         console.log(`  Priority: Last power (${lastPower}). Target texture: ${textureKey}`);
-    } else {
-         console.log(`  Priority: Default. Target texture: ${textureKey}`);
-    }
-
-    // テクスチャが実際に変更されるかチェック
-    if (currentTexture !== textureKey) {
-        try {
-            ball.setTexture(textureKey);
-            console.log(`  ===> Texture CHANGED from ${currentTexture} to: ${textureKey}`); // ★ 変更ログ
-        } catch (e) {
-            console.error(`  !!! Error setting texture to ${textureKey}:`, e); // ★ エラーログ
-        }
-    } else {
-         // console.log(`  Texture already ${textureKey}. No change needed.`); // 変更不要ログ (冗長ならコメントアウト)
-    }
-    ball.clearTint(); // Tint は常にクリア
-}*/
-// --- ▲ updateBallAppearance ▲ ---
 
 
 
@@ -832,27 +798,6 @@ try {
 // --- ▲ setBallPowerUpState ▲ ---
     // --- ▲ ボール状態設定ヘルパー ▲ ---
 
-      // --- 見た目更新ヘルパー (クビラ対応) ---
-    /*updateBallAppearance(ball) {
-        if (!ball || !ball.active) return;
-        let textureKey = 'ball_image'; // デフォルト
-        const lastPower = ball.getData('lastActivatedPower');
-        const isKubiraActive = ball.getData('isKubiraActive'); // ★ クビラ状態取得
-
-        // ★ クビラ状態ならアイコンを変更 ★
-        if (isKubiraActive) {
-            textureKey = POWERUP_ICON_KEYS[POWERUP_TYPES.KUBIRA] || 'ball_image';
-        }
-        // ★ 他のパワーアップの見た目変更もここに追加 ★
-        // else if (ball.getData('isFast')) { textureKey = ... }
-
-        if (ball.texture.key !== textureKey) {
-            ball.setTexture(textureKey);
-             console.log(`Ball texture set to: ${textureKey}`);
-        }
-        ball.clearTint();
-    }*/
-     // --- 見た目更新ヘルパー (クビラ対応) ---
 
 
 // --- ▼ マキラ関連メソッド (GameSceneから移植・調整) ▼ ---
@@ -1810,12 +1755,7 @@ testLogFunction(message) {
         console.log(`Boss size updated. Scale: ${desiredScale.toFixed(2)}, Hitbox: ${hitboxWidth.toFixed(0)}x${hitboxHeight.toFixed(0)}`);
     }
 
-    /*updateBallAppearance(ball) {
-        if (!ball || !ball.active) return;
-        if (ball.texture.key !== 'ball_image') { ball.setTexture('ball_image'); }
-        ball.clearTint();
-    }*/
-
+    
     createAndAddBall(x, y, vx = 0, vy = 0) {
         console.log(`Creating ball at (${x}, ${y})`);
         if (!this.balls) { console.error("Balls group missing!"); return null; }
