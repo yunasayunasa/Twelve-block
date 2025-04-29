@@ -70,6 +70,7 @@ export default class GameScene extends Phaser.Scene {
 
     init(data) {
         console.log("GameScene Init Start");
+        console.log("Received data in GameScene init:", data); // ★ 受け取ったデータ全体をログ出力
         // タイトルシーンからのデータ受け取り
         if (data && data.chaosSettings) {
             this.chaosSettings.count = data.chaosSettings.count;
@@ -2253,6 +2254,7 @@ export default class GameScene extends Phaser.Scene {
         // --- ▼ ステージ遷移処理 (再掲) ▼ ---
        if (this.currentStage === MAX_STAGE) { // ★ ステージ12になったら
         console.log("Proceeding to Boss Stage!");
+        console.log("Passing chaosSettings to BossScene:", this.chaosSettings); // ★ 渡す直前の値を確認
         this.scene.start('BossScene', { // ★ BossSceneを開始
             lives: this.lives,
             score: this.score,

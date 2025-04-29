@@ -201,6 +201,8 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
         this.sound.play(AUDIO_KEYS.SE_START);
         this.stopTitleBgm();
         this.clearDOM();
+        const settingsToPass = { count: this.selectedCount, ratePercent: this.selectedRate }; // ★ 渡す設定値
+        console.log("Passing settings to GameScene:", settingsToPass); // ★ ログ追加
         this.scene.start('GameScene', { chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } });
         this.scene.launch('UIScene');
     });
@@ -230,6 +232,7 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
                  chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } // カオス設定も引き継ぐ
              };
              console.log("Starting BossScene with test data:", testData);
+             console.log("Passing settings to BossScene (Test):", testData.chaosSettings); // ★ ログ追加
              this.scene.start('BossScene', testData); // BossSceneへ遷移
              // ★ BossScene 側で UIScene を launch する必要あり ★
              // ここで launch すると BossScene より先に UI が表示されてしまう可能性

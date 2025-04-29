@@ -72,9 +72,23 @@ export default class BossScene extends Phaser.Scene {
 
     init(data) {
         console.log("BossScene Init Start");
+        console.log("Received data in BossScene init:", data); // ★ 受け取ったデータ全体をログ出力
         this.lives = data.lives || 3;
         this.score = data.score || 0;
-        this.chaosSettings = data.chaosSettings || { count: 4, rate: 0.5 };
+        if (data && data.chaosSettings) {
+            // ★ GameSceneから(rate)かTitleSceneから(ratePercent)かで処理を分けるか、
+            //    または、常に ratePercent を期待して変換するのが安全かも？
+            // 例：常に ratePercent を期待する方式
+            this.chaosSettings = {
+                count: data.chaosSettings.count,
+                rate: (data.chaosSettings.ratePercent ?? (data.chaosSettings.rate ? data.chaosSettings.rate * 100 : 50)) / 100.0 // ratePercent優先、なければrate*100、それもなければ50%
+            };
+            this.chaosSettings.rate = Phaser.Math.Clamp(this.chaosSettings.rate, 0, 1);
+            console.log('Chaos Settings Set in BossScene:', this.chaosSettings); // ★ 設定後の値を確認
+       } else {
+            console.log('No Chaos Settings received in BossScene, using defaults.');
+            this.chaosSettings = { count: 4, rate: 0.5 }; // デフォルト値
+       }
         console.log(`BossScene Initialized with Lives: ${this.lives}, Score: ${this.score}`);
         this.bossDropPool = []; // ★ initでも初期化
         this.isBallLaunched = false;
