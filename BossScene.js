@@ -1017,47 +1017,7 @@ hitBossWithMakiraBeam(beam, boss) {
 
     // ... (他のメソッド: hitBoss, hitOrbiter(削除済), defeatBoss など) ...
 
-    hitAttackBrick(brick, ball) {
-        if (!brick || !brick.active || !ball || !ball.active) return;
-      //  console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
-      //  console.log("Attack brick hit by ball!");
-        const brickX = brick.x; const brickY = brick.y; const brickColor = brick.tintTopLeft;
-        // エフェクト & SE
-        try { /* ...パーティクル... */ } catch (e) { /*...*/ }
-        try { this.sound.add(AUDIO_KEYS.SE_DESTROY).play(); } catch (e) { /*...*/ }
-        brick.destroy(); // 先にブロックを破壊
-
-        // ★★★ ヴァジラゲージ増加処理を追加 ★★★
-        this.increaseVajraGauge(); // 攻撃ブロック破壊でゲージ増加
-
-        // --- ▼ アイテムドロップ判定 (バイシュラヴァ特別判定追加) ▼ ---
-        const dropRate = this.chaosSettings?.rate ?? ATTACK_BRICK_ITEM_DROP_RATE;
-
-        // 1. まずバイシュラヴァが特別にドロップするか判定 (GameSceneと同じ定数を使用)
-        if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) {
-            console.log("[Drop Logic] Baisrava special drop!");
-            this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA);
-        }
-        // 2. バイシュラヴァが出なかった場合、通常のドロップ判定を行う
-        else if (Phaser.Math.FloatBetween(0, 1) < dropRate) {
-             console.log(`[Drop Logic] Checking drop against rate: ${dropRate.toFixed(2)}`);
-             if (this.bossDropPool && this.bossDropPool.length > 0) {
-                 // ★ バイシュラヴァを除いたプールから選ぶ (任意) ★
-                 //    これにより、特別ドロップ以外ではバイシュラヴァが出なくなる
-                 const poolWithoutBaisrava = this.bossDropPool.filter(type => type !== POWERUP_TYPES.BAISRAVA);
-                 if (poolWithoutBaisrava.length > 0) {
-                     const dropType = Phaser.Utils.Array.GetRandom(poolWithoutBaisrava);
-                     console.log(`[Drop Logic] Dropping item: ${dropType} (From pool excluding Baisrava)`);
-                     this.dropSpecificPowerUp(brickX, brickY, dropType);
-                 } else {
-                      console.log("Drop pool only contained Baisrava, nothing else to drop.");
-                 }
-             } else { console.log("No items in boss drop pool."); }
-        } else {
-             console.log("[Drop Logic] No item drop based on rate.");
-        }
-        // --- ▲ アイテムドロップ判定 (バイシュラヴァ特別判定追加) ▲ ---
-
+    
         // --- ▼ ボール速度を維持/再設定 ▼ ---
         if (ball.body) { // ボディがあるか確認
             let speedMultiplier = 1.0;
