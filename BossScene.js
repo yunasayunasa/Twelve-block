@@ -40,6 +40,8 @@ const ANILA_DURATION = POWERUP_DURATION[POWERUP_TYPES.ANILA] || 10000; // アニ
 const PADDLE_NORMAL_TINT = 0xffff00; // 通常のパドルの色 (黄色)
 const PADDLE_ANILA_TINT = 0xffffff; // アニラ効果中のパドルの色 (白)
 const PADDLE_ANILA_ALPHA = 0.9;     // アニラ効果中のパドルの透明度 (少し透明)
+// --- 定数 (追尾速度調整用) ---
+const INDARA_HOMING_SPEED = NORMAL_BALL_SPEED * 1.2; // 通常より少し速く？
 
 
 export default class BossScene extends Phaser.Scene {
@@ -670,11 +672,10 @@ collectPowerUp(paddle, powerUp) {
             this.setBallPowerUpState(type, true); // 初期状態（陰？）を設定
             // ※ 解除ロジック（陽で一定回数破壊後など）は効果実装時に必要
             break;
-        case POWERUP_TYPES.INDARA:
-            console.log("Power up Indara collected (Icon/Voice Test - Effect TBD: Homing + Pierce).");
-            this.setBallPowerUpState(type, true);
-            // ※ 解除ロジック（ボスヒット時など）は効果実装時に必要
-            break;
+            case POWERUP_TYPES.INDARA:
+                console.log("Power up Indara collected - Activating Homing & Pierce.");
+                this.activateIndara(); // ★ インダラ有効化
+                break;
             case POWERUP_TYPES.ANILA:
                 console.log("Power up Anila collected - Activating Invincible Paddle & Bounce.");
                 this.activateAnila(); // ★ アニラ有効化関数呼び出し
@@ -774,7 +775,26 @@ updateBallAndPaddleAppearance() {
 }
 // --- ▲ updateBallAndPaddleAppearance ▲ ---
 
+// インダラ有効化メソッド (新規追加)
+activateIndara() {
+    console.log("[Indara] Activating!");
+    // アクティブなボール全てにインダラ効果を付与
+    this.balls?.getMatching('active', true).forEach(ball => {
+        this.setBallPowerUpState(POWERUP_TYPES.INDARA, true);
+    });
+    this.updateBallAndPaddleAppearance(); // ボールアイコン変更
+    this.setColliders(); // 衝突判定変更 (Overlapへ)
+    // ★ TODO: ホーミング開始エフェクト ★
+}
 
+// インダラ無効化メソッド (主にボスヒット時用)
+deactivateIndara(ball) {
+    if (!ball || !ball.active || !ball.getData('isIndaraActive')) return; // 対象ボールの状態チェック
+    console.log("[Indara] Deactivating for specific ball.");
+    this.setBallPowerUpState(POWERUP_TYPES.INDARA, false); // フラグ解除
+    // 見た目更新は deactivateIndara を呼んだ後に行う
+    // ★ TODO: ホーミング終了エフェクト ★
+}
 
 
 
@@ -822,6 +842,12 @@ setBallPowerUpState(type, isActive) {
              if (type === POWERUP_TYPES.MAKIRA) { // マキラ用フラグはないが、activePowersで管理
                  console.log(`    Makira power status set to: ${isActive}`);
              }
+             // ▼▼▼ インダラフラグ ▼▼▼
+             if (type === POWERUP_TYPES.INDARA) {
+                ball.setData('isIndaraActive', isActive);
+                console.log(`    Set isIndaraActive to: ${isActive}`);
+            }
+            // ▲▲▲ インダラフラグ ▲▲▲
             // 他のパワーアップフラグもここに追加
 
         }
@@ -1399,6 +1425,16 @@ update(time, delta) {
          }
         return;
     }
+    // --- ▼ ホーミング処理 ▼ ---
+    this.balls?.getMatching('active', true).forEach(ball => {
+        if (ball.getData('isIndaraActive') && this.boss && this.boss.active && ball.body) {
+            // ボスへの方向ベクトルを計算
+            const direction = Phaser.Math.Angle.BetweenPoints(ball.body.center, this.boss.body.center);
+            // 計算した角度と定義した速度でボールの速度を設定
+            this.physics.velocityFromAngle(Phaser.Math.RadToDeg(direction), INDARA_HOMING_SPEED, ball.body.velocity);
+        }
+    });
+    // --- ▲ ホーミング処理 ▲ --
 
     // --- ▼ 残像エミッタの位置追従 & 強制放出 (デバッグ用) ▼ ---
     if (this.bossAfterImageEmitter && this.boss && this.boss.active) {
@@ -1433,6 +1469,9 @@ update(time, delta) {
         this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider",
         "paddlePowerUpOverlap"); // ★ 追加
         this.safeDestroy(this.paddleAttackBrickCollider, "paddleAttackBrickCollider"); // 既存参照を破棄
+        this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider");
+        this.safeDestroy(this.ballAttackBrickOverlap, "ballAttackBrickOverlap"); // ★ Overlap参照も破棄
+
 
         
 // ▼▼▼ パドル vs 攻撃ブロックの衝突判定を追加 ▼▼▼
@@ -1466,18 +1505,39 @@ if (this.paddle && this.attackBricks) {
 
          // ★ (オプション) マキラビーム vs 攻撃ブロック の判定も追加？
 
-        // ★★★ ボール vs 攻撃ブロック ★★★
-        this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider"); // 既存を破棄
-        if (this.attackBricks && this.balls) {
+        // --- ▼ ボール vs 攻撃ブロック (インダラ状態を考慮) ▼ ---
+        let needsCollider = false;
+        let needsOverlap = false;
+        this.balls?.getMatching('active', true).forEach(ball => {
+            if (ball.getData('isIndaraActive')) {
+                needsOverlap = true; // インダラボールがあればOverlapが必要
+            } else {
+                needsCollider = true; // 通常ボールがあればColliderが必要
+            }
+        });
+
+        if (needsCollider) {
             this.ballAttackBrickCollider = this.physics.add.collider(
                 this.attackBricks,
                 this.balls,
-                this.hitAttackBrick, // 衝突時のコールバック
-                null, // processCallback は不要
+                this.hitAttackBrick,
+                (brick, ball) => !ball.getData('isIndaraActive'), // インダラ状態でないボールのみ衝突
                 this
             );
-            console.log("[BossScene] Ball-AttackBrick collider added.");
-        } else { console.warn("[BossScene] Cannot set Ball-AttackBrick collider."); }
+            console.log("[Colliders] Ball-AttackBrick Collider added (for non-Indara).");
+        }
+        if (needsOverlap) {
+            this.ballAttackBrickOverlap = this.physics.add.overlap(
+                this.attackBricks,
+                this.balls,
+                this.handleBallAttackBrickOverlap, // ★ Overlap用コールバック
+                (brick, ball) => ball.getData('isIndaraActive'), // インダラ状態のボールのみ検知
+                this
+            );
+            console.log("[Colliders] Ball-AttackBrick Overlap added (for Indara).");
+        }
+        // --- ▲ ボール vs 攻撃ブロック ▲ ---
+
     // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
     if (this.paddle && this.powerUps) {
         this.paddlePowerUpOverlap = this.physics.add.overlap(
@@ -1491,6 +1551,37 @@ if (this.paddle && this.attackBricks) {
    } else { console.warn("[BossScene] Cannot set Paddle-PowerUp overlap."); }
 }
 // --- ▲ setColliders メソッド修正 ▲ ---
+
+// ボールが攻撃ブロックとオーバーラップした時の処理 (新規追加)
+handleBallAttackBrickOverlap(brick, ball) {
+    // この関数は isIndaraActive が true のボールに対してのみ呼ばれるはず
+    if (!brick || !brick.active || !ball || !ball.active) return;
+    console.log("[Indara] Ball piercing attack brick!");
+
+    // ★ TODO: 貫通エフェクト・SE ★
+    // 攻撃ブロックを破壊する (アイテムドロップはしない)
+    this.handleAttackBrickDestruction(brick); // ★ 破壊処理メソッド呼び出し (後で作成or既存利用)
+
+    // ボールはそのまま進むので速度変更は不要
+}
+
+// 攻撃ブロックの破壊処理メソッド (新規追加 or hitAttackBrickから分離)
+    // (アイテムドロップ無し版)
+    handleAttackBrickDestruction(brick) {
+        if (!brick || !brick.active) return;
+        const brickX = brick.x; const brickY = brick.y; const brickColor = brick.tintTopLeft;
+        // エフェクト
+        try {
+            const particles = this.add.particles(0, 0, 'whitePixel', { /* ... エフェクト設定 ... */ });
+             if(particles) { particles.setParticleTint(brickColor || 0xcccccc); particles.explode(12); this.time.delayedCall(600, () => { if(particles.scene) particles.destroy();});}
+        } catch (e) { console.error("Error creating attack brick destroy effect:", e); }
+        // SE
+        try { this.sound.add(AUDIO_KEYS.SE_DESTROY).play(); } catch (e) { /*...*/ }
+        // 破壊
+        brick.destroy();
+        // ★ ヴァジラゲージ増加はここで行うか、元のhitAttackBrickに任せるか要検討
+        // this.increaseVajraGauge();
+    }
 
     // パドルが攻撃ブロックに当たった時の処理 (新規追加)
     handlePaddleHitByAttackBrick(paddle, attackBrick) {
@@ -1593,6 +1684,21 @@ if (this.paddle && this.attackBricks) {
         const bikaraState = ball.getData('bikaraState');
         const isKubiraActive = ball.getData('isKubiraActive') === true;
         console.log('[hitBoss] Checking isKubiraActive:', isKubiraActive); // ★ isKubiraActive の値確認
+        const isIndara = ball.getData('isIndaraActive') === true; // ★ インダラ状態か取得
+
+        // ダメージ適用
+        console.log(`[hitBoss] Final calculated damage before applying: ${damage}`);
+        this.applyBossDamage(boss, damage, "Ball Hit");
+
+        // ▼▼▼ インダラ解除処理 ▼▼▼
+        if (isIndara) {
+            console.log("[Indara] Ball hit boss, deactivating Indara.");
+            this.deactivateIndara(ball); // インダラ状態を解除
+            this.setColliders(); // 衝突判定を Collider に戻す
+            this.updateBallAndPaddleAppearance(); // アイコンを戻す
+        }
+        // ▲▲▲ インダラ解除処理 ▲▲▲
+
 
         // --- ▼ ダメージ計算ロジック (省略なし) ▼ ---
         if (isBikara && bikaraState === 'yang') {
@@ -2098,6 +2204,9 @@ testLogFunction(message) {
         // ...
         this.powerUps = null; // ★ 参照クリア
         this.paddlePowerUpOverlap = null; // ★ 参照クリア
+        this.safeDestroy(this.ballAttackBrickOverlap, "ballAttackBrickOverlap"); // ★ Overlap参照クリア
+        this.ballAttackBrickOverlap = null;
+        console.log("[Shutdown] Indara overlap cleared.");
         // ...
         if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; }
         this.safeDestroy(this.familiars, "familiars group", true);
