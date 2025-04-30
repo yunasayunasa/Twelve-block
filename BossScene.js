@@ -1030,7 +1030,7 @@ setBallPowerUpState(type, isActive) {
             // ▲▲▲ ビカラ貫通フラグ設定 ▲▲▲
               // ▼▼▼ シンダラフラグ ▼▼▼
               if (type === POWERUP_TYPES.SINDARA) {
-                b.setData('isSindaraActive', isActive);
+                ball.setData('isSindaraActive', isActive);
                 console.log(`    Set isSindaraActive to: ${isActive}`);
                 // シンダラにはタイマーはない
             }
@@ -1760,17 +1760,19 @@ if (this.paddle && this.attackBricks) {
         }
         // --- ▲ ボール vs 攻撃ブロック ▲ ---
 
-    // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
-    if (this.paddle && this.powerUps) {
-        this.paddlePowerUpOverlap = this.physics.add.overlap(
-            this.paddle,
-            this.powerUps,
-            this.collectPowerUp, // ★ アイテム取得処理
-            null,
-            this
-        );
-        console.log("[BossScene] Paddle-PowerUp overlap added.");
-   } else { console.warn("[BossScene] Cannot set Paddle-PowerUp overlap."); }
+      // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
+      this.safeDestroy(this.paddlePowerUpOverlap, "paddlePowerUpOverlap"); // 既存参照を破棄
+      if (this.paddle && this.powerUps) {
+          this.paddlePowerUpOverlap = this.physics.add.overlap(
+              this.paddle,
+              this.powerUps,
+              this.collectPowerUp, // ★ アイテム取得処理のコールバック
+              null, // processCallback は通常不要
+              this // コールバックのコンテキスト
+          );
+          console.log("[Colliders] Paddle-PowerUp overlap added.");
+     } else { console.warn("[Colliders] Cannot set Paddle-PowerUp overlap."); }
+      // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
 }
 // --- ▲ setColliders メソッド修正 ▲ ---
 
