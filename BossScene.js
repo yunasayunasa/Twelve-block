@@ -1243,7 +1243,7 @@ setBallPowerUpState(type, isActive) {
             // ▲▲▲ アンチラフラグ ▲▲▲
              // ▼▼▼ マコラフラグ (主に一時的なアイコン表示用) ▼▼▼
              if (type === POWERUP_TYPES.MAKORA) {
-                Ball.setData('isMakoraActive', isActive); // フラグは念のため
+                targetBall.setData('isMakoraActive', isActive); // フラグは念のため
                 console.log(`    Set isMakoraActive to: ${isActive}`);
             }
             // ▲▲▲ マコラフラグ ▲▲▲
@@ -2653,12 +2653,7 @@ testLogFunction(message) {
         // ...
         this.safeDestroy(this.powerUps, "powerUps group", true); // ★ powerUps も破棄
         if (this.attackBrickTimer) { this.attackBrickTimer.remove(); this.attackBrickTimer = null; }
-        console.log("[Shutdown] Clearing Makora state (just in case)...");
-        // 特にタイマーはないが、フラグクリアを念のため？（ボール消滅で不要かも）
-        // this.balls?.getMatching('active', true).forEach(ball => {
-        //     this.setBallPowerUpState(POWERUP_TYPES.MAKORA, false, ball);
-        // });
-        console.log("[Shutdown] Makora state cleared.");
+        
         this.powerUps = null; // ★ 参照クリア
         this.paddlePowerUpOverlap = null; // ★ 参照クリア
         this.safeDestroy(this.ballAttackBrickOverlap, "ballAttackBrickOverlap"); // ★ Overlap参照クリア
