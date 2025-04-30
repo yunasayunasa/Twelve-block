@@ -786,7 +786,7 @@ updateBallAndPaddleAppearance() {
 // --- ▲ updateBallAndPaddleAppearance ▲ ---
 
  // collectPowerUp メソッド (シンダラのcase追加、他分裂系取得時の解除処理)
- collectPowerUp(paddle, powerUp) {
+/* collectPowerUp(paddle, powerUp) {
     // ... (ボイス再生など) ...
     const type = powerUp.getData('type'); // type をここで取得
 
@@ -805,9 +805,9 @@ updateBallAndPaddleAppearance() {
             this.activateSindara(); // ★ シンダラ有効化
             break;
         // ... (他のcase) ...
-    }
+    }*/
     // this.updateBallAndPaddleAppearance();
-}
+
 
 // keepFurthestBall メソッド (GameSceneから移植 or 新規作成)
 keepFurthestBall() {
