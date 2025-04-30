@@ -885,16 +885,16 @@ setBallPowerUpState(type, isActive) {
             // ▲▲▲ インダラフラグ ▲▲▲
             // ▼▼▼ ビカラ貫通フラグ設定 ▼▼▼
             if (type === POWERUP_TYPES.BIKARA) {
-                b.setData('isBikaraPenetrating', isActive); // ★ 貫通フラグを設定/解除
+                ball.setData('isBikaraPenetrating', isActive); // ★ 貫通フラグを設定/解除
                 console.log(`    Set isBikaraPenetrating to: ${isActive}`);
                 // bikaraState は削除
                 // タイマー解除は deactivateBikara で行う
                 if (!isActive) { // ★ 無効化時にタイマー解除
-                    const timer = this.bikaraTimers[b.name];
+                    const timer = this.bikaraTimers[ball.name];
                     if (timer) {
-                        console.log(`    Removing Bikara timer for ball ${b.name}`);
+                        console.log(`    Removing Bikara timer for ball ${ball.name}`);
                         timer.remove();
-                        delete this.bikaraTimers[b.name];
+                        delete this.bikaraTimers[ball.name];
                     }
                 }
             }
