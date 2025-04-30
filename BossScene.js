@@ -483,6 +483,13 @@ update(time, delta) {
         this.boss.setPosition(this.gameWidth / 2, zoomInStartY);
         this.boss.setScale(zoomInStartScale);
         this.boss.setAlpha(0); // 最初は見えない
+
+        // ▼▼▼ 物理ボディを無効化 ▼▼▼
+        if (this.boss.body) {
+            console.log("[Intro] Disabling boss physics body for zoom.");
+            this.boss.disableBody(true, false); // ボディを無効化 (GameObjectは表示したまま)
+        }
+        // ▲▲▲ 物理ボディを無効化 ▲▲▲
         this.boss.setVisible(true); // 表示はする
 
         // Tweenでズームイン
@@ -499,6 +506,20 @@ update(time, delta) {
                 this.time.delayedCall(200, this.startBossQuickShrink, [], this); // 0.2秒待つ
             }
         });
+        // ▼▼▼ 物理ボディを再有効化 ▼▼▼
+        if (this.boss.body) { // body参照が残っているか確認
+            console.log("[Intro] Re-enabling boss physics body.");
+            // enableBody(reset, x, y, enableGameObject, showGameObject)
+            this.boss.enableBody(true, this.boss.x, this.boss.y, true, true);
+            // サイズを再設定（念のため）
+            this.updateBossSize();
+       } else {
+            console.error("!!! Boss body not found after shrink! Cannot re-enable physics.");
+            // ここでエラーになる場合、enableBodyの前に再度 body を作り直す必要があるかも
+            // this.boss.body = this.physics.add.body(...) のような処理
+       }
+       // ▲▲▲ 物理ボディを再有効化 ▲▲▲
+
     }
 
     // 4. ドアップから定位置へ瞬間縮小
@@ -545,6 +566,14 @@ update(time, delta) {
     startGameplay() {
         console.log("[Intro] Enabling player control. Boss fight start!");
         this.playerControlEnabled = true;
+         // ▼▼▼ 物理ボディが有効か最終確認 (デバッグ用) ▼▼▼
+         if (this.boss?.body?.enable) {
+            console.log("[Gameplay Start] Boss physics body is enabled.");
+        } else {
+            console.warn("[Gameplay Start] Boss physics body is NOT enabled!");
+        }
+        // ▲▲▲ 物理ボディが有効か最終確認 ▲▲▲
+        // ...
         // 必要ならボス移動や攻撃ブロック生成タイマーをここで開始しても良い
 
          // ▼▼▼ ここでボス移動と攻撃ブロック生成を開始 ▼▼▼
