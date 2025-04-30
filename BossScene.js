@@ -14,8 +14,11 @@ import {
     MAKIRA_BEAM_WIDTH,
     MAKIRA_BEAM_HEIGHT,
     MAKIRA_BEAM_COLOR,
-    MAKIRA_BEAM_SPEED
+    MAKIRA_BEAM_SPEED,
     // --- ▲ マキラ関連の定数をインポート ▲ ---
+     // ▼▼▼ ここに VAJRA_GAUGE_MAX を追加 ▼▼▼
+     VAJRA_GAUGE_MAX,
+     VAJRA_GAUGE_INCREMENT // ヴァジラ関連の他の定数もここでインポートしておくと良い
 } from './constants.js';
 
 // --- ボス戦用定数 ---
