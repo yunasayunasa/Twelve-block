@@ -127,8 +127,8 @@ export default class BossScene extends Phaser.Scene {
         this.gameHeight = this.scale.height;
 
         // --- 1. 基本的なシーン設定 ---
-        this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground3')
-            .setOrigin(0.5, 0.5).setDisplaySize(this.gameWidth, this.gameHeight).setDepth(-1);
+       // this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground3')
+            //.setOrigin(0.5, 0.5).setDisplaySize(this.gameWidth, this.gameHeight).setDepth(-1);
         this.playBossBgm();
         this.setupUI();
         this.setupPhysics();
