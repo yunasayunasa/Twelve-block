@@ -857,60 +857,59 @@ keepFurthestBall() {
 
 
     // マコラ有効化メソッド (新規追加)
-    activateMakora() {
-        console.log("[Makora] Activating!");
-        const targetBalls = this.balls?.getMatching('active', true);
-        if (!targetBalls || targetBalls.length === 0) { console.warn("No active balls for Makora."); return; }
+    // BossScene.js クラス内に新しいメソッドとして追加
 
-        // 1. 一時的に全ボールをマコラ状態にしてアイコン表示
-        targetBalls.forEach(ball => {
-            this.setBallPowerUpState(POWERUP_TYPES.MAKORA, true, ball);
-        });
-        this.updateBallAndPaddleAppearance(); // マコラアイコン表示
+activateMakora() {
+    console.log("[Makora] Activating!");
+    const targetBalls = this.balls?.getMatching('active', true);
+    if (!targetBalls || targetBalls.length === 0) { console.warn("No active balls for Makora."); return; }
 
-        // 2. コピー対象をランダムに選択
-        if (!MAKORA_COPYABLE_POWERS || MAKORA_COPYABLE_POWERS.length === 0) {
-            console.error("[Makora] MAKORA_COPYABLE_POWERS list is empty or not defined!");
-            // エラー処理: マコラ状態を解除して終了
-            targetBalls.forEach(ball => { this.setBallPowerUpState(POWERUP_TYPES.MAKORA, false, ball); });
-            this.updateBallAndPaddleAppearance();
-            return;
-        }
-        const copiedType = Phaser.Utils.Array.GetRandom(MAKORA_COPYABLE_POWERS);
-        console.log(`[Makora] Randomly selected power to copy: ${copiedType}`);
+    // 1. 一時的に全ボールをマコラ状態にしてアイコン表示
+    //    setBallPowerUpState(type, isActive, specificBall = null) を利用
+    //    第3引数を指定しない -> 全ボール対象
+    this.setBallPowerUpState(POWERUP_TYPES.MAKORA, true); // 全ボールにマコラ状態セット
+    this.updateBallAndPaddleAppearance(); // マコラアイコン表示
 
-        // 3. 短いディレイ後にコピーを実行
-        this.time.delayedCall(MAKORA_COPY_DELAY, () => {
-            console.log(`[Makora] Executing copy of ${copiedType}`);
-
-            // 3a. まず全ボールからマコラ状態を解除
-            const currentActiveBalls = this.balls?.getMatching('active', true) ?? []; // 再取得
-            currentActiveBalls.forEach(ball => {
-                if (ball && ball.active) {
-                    this.setBallPowerUpState(POWERUP_TYPES.MAKORA, false, ball);
-                }
-            });
-
-            // 3b. コピー先の activate 関数を呼び出す
-            switch (copiedType) {
-                case POWERUP_TYPES.KUBIRA:   this.activateKubira();   break; // Kubira用に別途activate関数が必要かも？
-                case POWERUP_TYPES.SHATORA:  this.activateShatora();  break; // Shatora用に別途activate関数が必要かも？
-                case POWERUP_TYPES.HAILA:    this.activateHaira();    break; // Haila用に別途activate関数が必要かも？
-                case POWERUP_TYPES.ANCHIRA:  this.activateAnchira();  break;
-                case POWERUP_TYPES.SINDARA:  this.activateSindara();  break;
-                case POWERUP_TYPES.BIKARA:   this.activateBikara();   break;
-                case POWERUP_TYPES.INDARA:   this.activateIndara();   break;
-                case POWERUP_TYPES.ANILA:    this.activateAnila();    break;
-                case POWERUP_TYPES.VAJRA:    this.activateVajra();    break;
-                case POWERUP_TYPES.MAKIRA:   this.activateMakira();   break;
-                default: console.warn(`[Makora] No activate function defined for copied type: ${copiedType}`);
-            }
-
-            // 3c. 見た目を最終的に更新 (コピー先の activate 関数内で更新される場合もある)
-            // this.updateBallAndPaddleAppearance(); // 必要に応じて
-
-        }, [], this);
+    // 2. コピー対象をランダムに選択
+    if (!MAKORA_COPYABLE_POWERS || MAKORA_COPYABLE_POWERS.length === 0) {
+        console.error("[Makora] MAKORA_COPYABLE_POWERS list is empty or not defined!");
+        this.setBallPowerUpState(POWERUP_TYPES.MAKORA, false); // エラー時はマコラ解除
+        this.updateBallAndPaddleAppearance();
+        return;
     }
+    const copiedType = Phaser.Utils.Array.GetRandom(MAKORA_COPYABLE_POWERS);
+    console.log(`[Makora] Randomly selected power to copy: ${copiedType}`);
+
+    // 3. 短いディレイ後にコピーを実行
+    const MAKORA_COPY_DELAY = 150; // ディレイ時間
+    this.time.delayedCall(MAKORA_COPY_DELAY, () => {
+        console.log(`[Makora] Executing copy of ${copiedType}`);
+
+        // 3a. まず全ボールからマコラ状態を解除
+        this.setBallPowerUpState(POWERUP_TYPES.MAKORA, false); // 全ボールからマコラ解除
+
+        // 3b. コピー先の activate 関数を呼び出す
+        switch (copiedType) {
+            // ★★★ 既存の activate 関数を呼び出す ★★★
+            case POWERUP_TYPES.KUBIRA:   this.activateKubira();   break; // activateKubira が必要
+            case POWERUP_TYPES.SHATORA:  this.activateShatora();  break; // activateShatora が必要
+            case POWERUP_TYPES.HAILA:    this.activateHaira();    break; // activateHaira が必要
+            case POWERUP_TYPES.ANCHIRA:  this.activateAnchira();  break;
+            case POWERUP_TYPES.SINDARA:  this.activateSindara();  break;
+            case POWERUP_TYPES.BIKARA:   this.activateBikara();   break;
+            case POWERUP_TYPES.INDARA:   this.activateIndara();   break;
+            case POWERUP_TYPES.ANILA:    this.activateAnila();    break;
+            case POWERUP_TYPES.VAJRA:    this.activateVajra();    break;
+            case POWERUP_TYPES.MAKIRA:   this.activateMakira();   break;
+            default: console.warn(`[Makora] No activate function defined for copied type: ${copiedType}`);
+        }
+        // ★★★ コピー先の activate 関数が存在しない場合は追加が必要 ★★★
+
+        // 3c. 見た目を最終的に更新 (コピー先で更新されることが多いので不要な場合も)
+        // this.updateBallAndPaddleAppearance();
+
+    }, [], this);
+}
 
     // ▼▼▼ 単純な効果の Activate 関数 (もし必要なら追加) ▼▼▼
     // 例: Kubira, Shatora, Haila は activateTemporaryEffect を直接呼んでも良いが、
@@ -999,9 +998,9 @@ activateAnchira() {
             // 新しいボールにもアンチラ状態を設定
             this.setBallPowerUpState(POWERUP_TYPES.ANCHIRA, true, newBall);
             createdCount++;
-            console.log(`[Anchira Split] Ball ${index + 1} created successfully.`);
+            //console.log(`[Anchira Split] Ball ${index + 1} created successfully.`);
         } else {
-            console.error(`[Anchira Split] Failed to create ball ${index + 1}!`);
+            //console.error(`[Anchira Split] Failed to create ball ${index + 1}!`);
         }
 
         // --- 次のフレームで次のボール生成を予約 ---
@@ -1168,6 +1167,7 @@ deactivateBikara(ball) {
     // --- ▼ setBallPowerUpState (ログ強化) ▼ ---
 setBallPowerUpState(type, isActive) {
     console.log(`[setBallPowerUpState] Called for type: ${type}, isActive: ${isActive}`); // ★ 関数呼び出しログ
+    
     this.balls?.getChildren().forEach(ball => {
         if (ball?.active && ball.getData) { // getDataの存在も確認
             let activePowers = ball.getData('activePowers');
@@ -1243,7 +1243,7 @@ setBallPowerUpState(type, isActive) {
             // ▲▲▲ アンチラフラグ ▲▲▲
              // ▼▼▼ マコラフラグ (主に一時的なアイコン表示用) ▼▼▼
              if (type === POWERUP_TYPES.MAKORA) {
-                targetBall.setData('isMakoraActive', isActive); // フラグは念のため
+                ball.setData('isMakoraActive', isActive); // フラグは念のため
                 console.log(`    Set isMakoraActive to: ${isActive}`);
             }
             // ▲▲▲ マコラフラグ ▲▲▲
