@@ -80,7 +80,7 @@ export default class UIScene extends Phaser.Scene {
             // ▲▲▲ ★★★ 直接参照してライフ表示 ★★★ ▲▲▲
 
             // --- 2. イベントリスナー登録 (UI要素生成後に実行) ---
-            /*console.log("[UIScene Create] Registering parent event listeners...");
+            console.log("[UIScene Create] Registering parent event listeners...");
             this.registerParentEventListeners(this.parentScene); // ★ UI生成後に移動したことを確認
             this.parentResizeListener = this.onGameResize.bind(this);
             this.parentScene.events.on('gameResize', this.parentResizeListener);
@@ -94,7 +94,7 @@ export default class UIScene extends Phaser.Scene {
                 if (this.stageText) { console.log(`Stage Text: Pos=(${this.stageText.x.toFixed(0)}, ${this.stageText.y.toFixed(0)}), Visible=${this.stageText.visible}, Alpha=${this.stageText.alpha}, Text='${this.stageText.text}'`); } else { console.log("Stage Text not found after delay."); } //ログ変更
                 if (this.vajraGaugeText) { console.log(`Vajra Text: Pos=(${this.vajraGaugeText.x.toFixed(0)}, ${this.vajraGaugeText.y.toFixed(0)}), Visible=${this.vajraGaugeText.visible}, Alpha=${this.vajraGaugeText.alpha}, Text='${this.vajraGaugeText.text}'`); } else { console.log("Vajra Text not found after delay."); } //ログ変更
                 console.log('--- Status Check End ---');
-            }, [], this);*/
+            }, [], this);
 
             // --- 4. UIScene 終了時処理 ---
             this.events.on('shutdown', () => {
@@ -159,43 +159,7 @@ export default class UIScene extends Phaser.Scene {
         } catch (e) { console.error(`!!! ERROR reflecting initial state from ${this.parentSceneKey} in UIScene:`, e.message, e.stack); }
     }
 
-    // registerParentEventListeners メソッド (ログ追加済み)
-    registerParentEventListeners(parentScene) {
-        if (!parentScene || !parentScene.events || this.gameSceneListenerAttached) return;
-        console.log(`Registering event listeners for ${this.parentSceneKey} in UIScene...`);
-        this.unregisterParentEventListeners(parentScene);
-
-        parentScene.events.on('updateLives', this.updateLivesDisplay, this);
-        parentScene.events.on('updateScore', this.updateScoreDisplay, this);
-        parentScene.events.on('updateStage', this.updateStageDisplay, this);
-        parentScene.events.on('activateVajraUI', this.activateVajraUIDisplay, this);
-        parentScene.events.on('updateVajraGauge', this.updateVajraGaugeDisplay, this);
-        parentScene.events.on('deactivateVajraUI', this.deactivateVajraUIDisplay, this);
-        parentScene.events.on('updateDropPoolUI', this.updateDropPoolDisplay, this);
-
-        this.gameSceneListenerAttached = true;
-
-        // 初期値反映の try...catch とログ (再掲)
-        try {
-            console.log(`[UIScene Init Reflect] Reading initial data from ${this.parentSceneKey}:`);
-            const parentLives = parentScene.lives;
-            const parentScore = parentScene.score;
-            const parentStage = parentScene.currentStage;
-            console.log(`  - Lives from Parent: ${parentLives}`);
-            console.log(`  - Score from Parent: ${parentScore}`);
-            console.log(`  - Stage from Parent: ${parentStage}`);
-            this.updateLivesDisplay(parentLives);
-            this.updateScoreDisplay(parentScore);
-            this.updateStageDisplay(parentStage);
-            if (parentScene.isVajraSystemActive) {
-                 this.activateVajraUIDisplay(parentScene.vajraGauge, VAJRA_GAUGE_MAX); // ★ VAJRA_GAUGE_MAX 使用箇所
-                 console.log(`  - Vajra UI: Active (Gauge: ${parentScene.vajraGauge})`);
-            } else { this.deactivateVajraUIDisplay(); console.log(`  - Vajra UI: Inactive`); }
-            const dropPool = parentScene.stageDropPool ?? parentScene.bossDropPool ?? [];
-            this.updateDropPoolDisplay(dropPool); console.log(`  - Drop Pool: [${dropPool.join(', ')}]`);
-        } catch (e) { console.error(`!!! ERROR reflecting initial state from ${this.parentSceneKey} in UIScene:`, e.message, e.stack); }
-    }
-
+    
     
 
     // ★ メソッド名を unregisterParentEventListeners に変更
@@ -310,29 +274,5 @@ export default class UIScene extends Phaser.Scene {
 
     // UIScene.js
 
-create(data) {
-    // ...(createメソッドの他の処理)...
 
-    // ▼▼▼ この delayedCall ブロックを create の最後に追加 ▼▼▼
-    this.time.delayedCall(100, () => { // 少し待ってからログ出力
-         console.log('--- UI Element Status Check ---');
-         if (this.livesText) {
-             console.log(`Lives Text: Pos=(${this.livesText.x.toFixed(0)}, ${this.livesText.y.toFixed(0)}), Visible=${this.livesText.visible}, Alpha=${this.livesText.alpha}, Text='${this.livesText.text}'`);
-         } else { console.log("Lives Text not found."); }
-         if (this.scoreText) {
-             console.log(`Score Text: Pos=(${this.scoreText.x.toFixed(0)}, ${this.scoreText.y.toFixed(0)}), Visible=${this.scoreText.visible}, Alpha=${this.scoreText.alpha}, Text='${this.scoreText.text}'`);
-         } else { console.log("Score Text not found."); }
-         if (this.stageText) {
-             console.log(`Stage Text: Pos=(${this.stageText.x.toFixed(0)}, ${this.stageText.y.toFixed(0)}), Visible=${this.stageText.visible}, Alpha=${this.stageText.alpha}, Text='${this.stageText.text}'`);
-         } else { console.log("Stage Text not found."); }
-         // 必要なら Vajra Gauge や Drop Pool の情報も追加
-         if (this.vajraGaugeText) {
-              console.log(`Vajra Text: Pos=(${this.vajraGaugeText.x.toFixed(0)}, ${this.vajraGaugeText.y.toFixed(0)}), Visible=${this.vajraGaugeText.visible}, Alpha=${this.vajraGaugeText.alpha}, Text='${this.vajraGaugeText.text}'`);
-         } else { console.log("Vajra Text not found."); }
-         console.log('--- Status Check End ---');
-    }, [], this);
-    // ▲▲▲ この delayedCall ブロックを create の最後に追加 ▲▲▲
-
-    console.log("--- UIScene CREATE End ---");
-} // create メソッドの終わり
 } // <-- UIScene
