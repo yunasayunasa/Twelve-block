@@ -55,7 +55,7 @@ export default class UIScene extends Phaser.Scene {
             const textStyle = {
                 fontSize: '24px',
                 fill: '#fff',
-                fontFamily: 'MyGameFont, sans-serif'
+                fontFamily: 'Arial, sans-serif'
             };
 
             // --- 1. UI 要素の生成 (ライフだけ確実に生成) ---
