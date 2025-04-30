@@ -1121,7 +1121,7 @@ setBallPowerUpState(type, isActive) {
             // ▲▲▲ シンダラフラグ ▲▲▲
              // ▼▼▼ アンチラフラグ ▼▼▼
              if (type === POWERUP_TYPES.ANCHIRA) {
-                b.setData('isAnchiraActive', isActive);
+                ball.setData('isAnchiraActive', isActive);
                 console.log(`    Set isAnchiraActive to: ${isActive}`);
             }
             // ▲▲▲ アンチラフラグ ▲▲▲
