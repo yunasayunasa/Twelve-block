@@ -152,30 +152,35 @@ export default class BossScene extends Phaser.Scene {
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
 
-        // --- 1. 基本的なシーン設定 ---
-        this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground3')
-            .setOrigin(0.5, 0.5).setDisplaySize(this.gameWidth, this.gameHeight).setDepth(-1);
-        this.playBossBgm();
+        // --- 1. 基本設定とUI ---
+        this.setupBackgroundAndBgm(); // 背景とBGM設定を分離
         this.setupUI();
         this.setupPhysics();
 
-
-        // --- 2. パドルとボールの生成 ---
+        // --- 2. ゲームオブジェクト生成 (ボスは最初は非表示) ---
         this.createPaddle();
         this.createBalls();
-
-        // --- 3. ボス関連オブジェクトの生成 ---
-        this.createBoss();
+        this.createBoss(false); // ★ initiallyVisible = false で生成
         this.createAttackBricksGroup();
-        this.setupAfterImageEmitter(); // ★ 残像エミッタのセットアップ呼び出
-        this.createPowerUpsGroup(); // ★ パワーアップグループ作成呼び出
+        this.setupAfterImageEmitter();
+        this.createPowerUpsGroup();
 
-        // --- 4. 衝突判定の設定 ---
-// --- ▼ ボス戦用ドロッププールを設定 ▼ ---
-this.setupBossDropPool();
-// --- ▲ ボス戦用ドロッププールを設定 ▲ ---        
-        this.setColliders(); // ★ 衝突判定にアイテム取得も追加
+        // --- 3. プール設定、コライダー、テキスト、入力 ---
+        this.setupBossDropPool();
+        this.setColliders();
+        this.createGameOverText();
+        this.setupInputAndEvents();
 
+        // --- 4. ★ 演出開始 ★ ---
+        this.playerControlEnabled = false; // 最初は操作不可
+        this.startIntroCutscene();      // カットイン演出を開始
+
+        console.log("BossScene Create End - Waiting for intro");
+    
+
+    
+
+    // --- ▼ Create ヘルパーメソッド分割 ▼ ---
         // --- 5. ゲームオーバーテキスト ---
         this.createGameOverText();
 
@@ -267,6 +272,13 @@ update(time, delta) {
         }, [], this);
     }
 
+    setupBackgroundAndBgm() {
+        this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground3')
+            .setOrigin(0.5, 0.5).setDisplaySize(this.gameWidth, this.gameHeight).setDepth(-1);
+        this.playBossBgm();
+    }
+
+
 
     // --- ▼ Create ヘルパーメソッドに setupBossDropPool を追加 ▼ ---
     setupBossDropPool() {
@@ -309,18 +321,29 @@ update(time, delta) {
         console.log("Balls group and initial ball created.");
     }
 
-    createBoss() {
-        console.log("Creating boss...");
+     // createBoss メソッドに initiallyVisible 引数を追加
+     createBoss(initiallyVisible = true) { // ★ 引数追加
+        console.log(`Creating boss (Visible: ${initiallyVisible})...`);
         if (this.boss) { this.boss.destroy(); this.boss = null; }
         const bossStartX = this.gameWidth / 2;
-        const bossStartY = this.gameHeight * 0.25;
+        const bossStartY = this.gameHeight * 0.25; // ★ 定位置 Y
         this.boss = this.physics.add.image(bossStartX, bossStartY, 'bossStand')
-             .setImmovable(true);
+             .setImmovable(true)
+             .setVisible(initiallyVisible) // ★ 初期表示設定
+             .setAlpha(initiallyVisible ? 1 : 0); // ★ 初期透明度設定
+
         this.boss.setData('health', BOSS_MAX_HEALTH);
         this.boss.setData('maxHealth', BOSS_MAX_HEALTH);
         this.boss.setData('isInvulnerable', false);
         this.updateBossSize();
+        this.boss.setData('targetY', bossStartY); // ★ 定位置Yを保存しておく
+        this.updateBossSize(); // これで正しいスケールも計算される
+        this.boss.setData('targetScale', this.boss.scale); // ★ 定位置スケールも保存
+        console.log(`Boss created. Initial Scale: ${this.boss.scale}, Target Scale: ${this.boss.getData('targetScale')}`);
+    
+
         console.log(`Boss created with health: ${this.boss.getData('health')}`);
+
     }
 
      // ★ パワーアップグループ作成メソッド (新規追加)
@@ -340,7 +363,7 @@ update(time, delta) {
 
     createGameOverText() {
         if (this.gameOverText) { this.gameOverText.destroy(); this.gameOverText = null; }
-        this.gameOverText = this.add.text(this.gameWidth / 2, this.gameHeight / 2, 'GAME OVER\nTap to Restart', { fontSize: '48px', fill: '#f00', align: 'center' })
+        this.gameOverText = this.add.text(this.gameWidth / 2, this.gameHeight / 2, '全滅した...\nタイトルに戻る', { fontSize: '48px', fill: '#f00', align: 'center' })
             .setOrigin(0.5).setVisible(false).setDepth(1);
     }
 
@@ -358,6 +381,156 @@ update(time, delta) {
     }
 
     // --- ▲ Create ヘルパーメソッド ▲ ---
+
+    // --- ▼ 演出用メソッド ▼ ---
+
+    // 1. カットイン演出
+    startIntroCutscene() {
+        console.log("[Intro] Starting Cutscene...");
+        const cutsceneDuration = 3000; // 3秒
+
+        // 背景暗転用オブジェクト
+        const overlay = this.add.rectangle(0, 0, this.gameWidth, this.gameHeight, 0x000000, 0.7)
+            .setOrigin(0, 0)
+            .setDepth(900); // UIより手前、カットイン要素より奥
+
+        // ボス立ち絵 (上半分アップ)
+        const bossImage = this.add.image(this.gameWidth / 2, this.gameHeight * 0.1, 'bossStand') // Y座標を少し上目に
+            .setOrigin(0.5, 0) // 上端中央基準
+            .setDepth(901);
+        // サイズ調整 (画面幅の70%くらいに？ 要調整)
+        const targetImageWidth = this.gameWidth * 0.7;
+        bossImage.displayWidth = targetImageWidth;
+        bossImage.scaleY = bossImage.scaleX; // アスペクト比維持
+        // 下半分を切り取る (画像の高さの半分でクロップ)
+        bossImage.setCrop(0, 0, bossImage.width, bossImage.height / 2);
+
+        // テキスト表示
+        const vsText = this.add.text(this.gameWidth / 2, bossImage.y + bossImage.displayHeight + 10, 'VS アートマンHL', {
+            fontSize: '36px', fill: '#fff', stroke: '#000', strokeThickness: 4,
+            fontFamily: 'MyGameFont, sans-serif' // フォント指定
+        }).setOrigin(0.5, 0).setDepth(902);
+
+        // SE再生 (try...catch)
+        try {
+            // this.sound.play('your_cutscene_se_key'); // ★ SEキーを指定
+            console.log("[Intro] Cutscene SE should play here.");
+        } catch (e) { console.error("Error playing cutscene SE:", e); }
+
+        // 時間経過でカットイン終了 → フラッシュ＆ズーム演出へ
+        this.time.delayedCall(cutsceneDuration, () => {
+            console.log("[Intro] Cutscene End. Starting Flash & Zoom.");
+            // カットイン要素を破棄
+            overlay.destroy();
+            bossImage.destroy();
+            vsText.destroy();
+            // 次の演出を開始
+            this.startFlashAndZoomIntro();
+        }, [], this);
+    }
+
+    // 2. フラッシュ＆ズームイン演出
+    startFlashAndZoomIntro() {
+        // フラッシュ設定
+        const flashDuration = 200; // 0.2秒
+        // SE再生 (try...catch)
+        try {
+            // this.sound.play('your_flash_se_key'); // ★ SEキーを指定
+            console.log("[Intro] Flash SE should play here.");
+        } catch (e) { console.error("Error playing flash SE:", e); }
+        // カメラフラッシュエフェクト
+        this.cameras.main.flash(flashDuration, 255, 255, 255); // 白でフラッシュ
+
+        // フラッシュ後にズームイン開始
+        this.time.delayedCall(flashDuration, () => {
+            this.startBossZoomIn();
+        }, [], this);
+    }
+
+    // 3. ボスズームイン (奥からドアップまで)
+    startBossZoomIn() {
+        console.log("[Intro] Starting Boss Zoom In...");
+        if (!this.boss) { console.error("Boss object missing for zoom in!"); return; }
+
+        const zoomInDuration = 1300; // 1.3秒
+        const zoomInStartY = this.gameHeight * 0.8; // 開始Y座標 (画面下の方)
+        const zoomInStartScale = 0.1; // 開始スケール
+        const zoomInEndScale = 5; // ドアップ時のスケール (画面サイズに合わせて要調整)
+        const zoomInEndY = this.gameHeight / 2; // ドアップ時のY座標 (画面中央)
+
+        // ボスを初期状態に設定
+        this.boss.setPosition(this.gameWidth / 2, zoomInStartY);
+        this.boss.setScale(zoomInStartScale);
+        this.boss.setAlpha(0); // 最初は見えない
+        this.boss.setVisible(true); // 表示はする
+
+        // Tweenでズームイン
+        this.tweens.add({
+            targets: this.boss,
+            y: zoomInEndY,
+            scale: zoomInEndScale,
+            alpha: 1,
+            duration: zoomInDuration,
+            ease: 'Quad.easeIn', // 加速する感じ
+            onComplete: () => {
+                console.log("[Intro] Zoom In Complete. Starting quick shrink.");
+                // ズームイン完了後、短い待機を経て縮小演出へ
+                this.time.delayedCall(200, this.startBossQuickShrink, [], this); // 0.2秒待つ
+            }
+        });
+    }
+
+    // 4. ドアップから定位置へ瞬間縮小
+    startBossQuickShrink() {
+        console.log("[Intro] Starting Boss Quick Shrink...");
+        if (!this.boss || !this.boss.active) { console.error("Boss object missing or inactive for shrink!"); return; }
+
+        const shrinkDuration = 50; // 0.05秒 (一瞬)
+        const targetX = this.gameWidth / 2;
+        const targetY = this.boss.getData('targetY'); // createBossで保存した定位置Y
+        const targetScale = this.boss.getData('targetScale'); // createBossで保存した定スケール
+
+        // 効果音再生 (try...catch)
+        try {
+            // this.sound.play('your_shrink_se_key'); // ★ SEキーを指定
+            console.log("[Intro] Quick Shrink SE should play here.");
+        } catch (e) { console.error("Error playing shrink SE:", e); }
+
+        // Tweenで瞬間的に移動＆縮小
+        this.tweens.add({
+            targets: this.boss,
+            x: targetX,
+            y: targetY,
+            scale: targetScale,
+            duration: shrinkDuration,
+            ease: 'Expo.easeOut', // 素早く減速する感じ
+            onComplete: () => {
+                console.log("[Intro] Quick Shrink Complete. Playing voice and starting game.");
+                // ボス登場ボイス再生 (少し遅延)
+                this.time.delayedCall(100, () => {
+                     try {
+                         // this.sound.play('your_boss_intro_voice_key'); // ★ ボイスキーを指定
+                         console.log("[Intro] Boss intro voice should play here.");
+                     } catch (e) { console.error("Error playing boss intro voice:", e); }
+                 }, [], this);
+
+                // さらに遅れてゲーム開始
+                this.time.delayedCall(600, this.startGameplay, [], this); // ボイス再生から0.5秒後
+            }
+        });
+    }
+
+    // 5. ゲームプレイ開始処理
+    startGameplay() {
+        console.log("[Intro] Enabling player control. Boss fight start!");
+        this.playerControlEnabled = true;
+        // 必要ならボス移動や攻撃ブロック生成タイマーをここで開始しても良い
+        this.startBossMovement(); // ボスの動きを開始
+        // this.scheduleNextAttackBrick(); // 攻撃ブロック生成タイマーはcreateで既に開始しているはず
+        // ★ TODO: 戦闘中ランダムボイスタイマーを開始 ★
+    }
+
+    // --- ▲ 演出用メソッド ▲ ---
 
 // --- ▼ 見た目更新ヘルパー (優先順位考慮) ▼ ---
 // --- ▼ updateBallAppearance (ログ追加・優先順位確認) ▼ ---
