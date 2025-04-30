@@ -40,6 +40,8 @@ const ANILA_DURATION = POWERUP_DURATION[POWERUP_TYPES.ANILA] || 10000; // アニ
 const PADDLE_NORMAL_TINT = 0xffff00; // 通常のパドルの色 (黄色)
 const PADDLE_ANILA_TINT = 0xffffff; // アニラ効果中のパドルの色 (白)
 const PADDLE_ANILA_ALPHA = 0.9;     // アニラ効果中のパドルの透明度 (少し透明)
+const ANCHIRA_DURATION = POWERUP_DURATION[POWERUP_TYPES.ANCHIRA] || 8000; // アンチラ効果時間 (8秒)
+
 // --- 定数 (追尾速度調整用) ---
 const INDARA_HOMING_SPEED = NORMAL_BALL_SPEED * 1.2; // 通常より少し速く？
 const BIKARA_DURATION = POWERUP_DURATION[POWERUP_TYPES.BIKARA] || 10000;
@@ -74,6 +76,8 @@ export default class BossScene extends Phaser.Scene {
         this.vajraGauge = 0;              // ★ ヴァジラゲージの現在値
         this.isAnilaActive = false; // ★ アニラ効果が有効か
         this.anilaTimer = null;     // ★ アニラ効果タイマー
+        this.anchiraTimer = null; // ★ アンチラ効果タイマー (シーン全体で1つ)
+        // isAnchiraActive フラグはボールデータで管理
         this.bikaraTimers = {}; // ボールごとのタイマー管理は維持
         this.paddleAttackBrickCollider = null; // ★ パドルと攻撃ブロックのコライダー参照
 
@@ -129,6 +133,8 @@ export default class BossScene extends Phaser.Scene {
         this.isAnilaActive = false; // ★ initでも初期化
         if (this.anilaTimer) this.anilaTimer.remove();
         this.anilaTimer = null;
+        if (this.anchiraTimer) this.anchiraTimer.remove(); // ★ initでタイマークリア
+        this.anchiraTimer = null;
         if (this.bossMoveTween) {
             this.bossMoveTween.stop();
             this.bossMoveTween = null;
@@ -600,7 +606,7 @@ collectPowerUp(paddle, powerUp) {
      if (type === POWERUP_TYPES.SINDARA || type === POWERUP_TYPES.ANCHIRA) {
         console.log(`[Split Power Check] New split power: ${type}. Deactivating existing splits.`);
         this.deactivateSindara(); // 既存のシンダラを解除
-        // this.deactivateAnchira(); // アンチラ実装後に追加
+         this.deactivateAnchira(); // アンチラ実装後に追加
    }
    // ▲▲▲ 分裂系取得時の既存効果解除 ▲▲▲
 
@@ -672,12 +678,10 @@ collectPowerUp(paddle, powerUp) {
                 console.log("Power up Sindara collected - Activating Persistent Split.");
                 this.activateSindara(); // ★ シンダラ有効化
                 break;
-        case POWERUP_TYPES.ANCHIRA:
-            console.log("Power up Anchira collected (Icon/Voice Test - Effect TBD: Split 4 for 5s?).");
-            this.setBallPowerUpState(type, true);
-            // ※ 効果時間があるので、後で activateTemporaryEffect に組み込む必要あり
-            // this.activateTemporaryEffect(type, 5000, () => {/*開始処理*/}, () => {/*終了処理*/});
-            break;
+                case POWERUP_TYPES.ANCHIRA:
+                    console.log("Power up Anchira collected - Activating 4-Split.");
+                    this.activateAnchira(); // ★ アンチラ有効化
+                    break;
             case POWERUP_TYPES.BIKARA:
                 console.log("Power up Bikara collected - Activating Penetration."); // メッセージ変更
                 this.activateBikara(); // ★ ビカラ有効化
@@ -847,6 +851,84 @@ keepFurthestBall() {
     console.log(`[Split Prep] Kept ball: ${furthestBall.name || furthestBall.texture.key}. Removed ${removedCount} balls.`);
     return furthestBall; // 残したボールを返す
 }
+
+
+    // アンチラ有効化メソッド (新規追加)
+    activateAnchira() {
+        console.log("[Anchira] Activating!");
+        // 1. 起点ボール決定
+        const sourceBall = this.keepFurthestBall();
+        if (!sourceBall || !sourceBall.active) { console.warn("[Anchira] Activation failed: No source ball."); return; }
+        console.log(`[Anchira] Source ball: ${sourceBall.name || sourceBall.texture.key}`);
+
+        // 2. 起点ボールの直前の状態を取得 (重要: lastActivatedPower をアンチラ取得前のものにする)
+        let previousData = sourceBall.data.getAll();
+        previousData.activePowers = new Set(previousData.activePowers);
+        // アンチラ自体は除外して lastActivatedPower を探す
+        previousData.activePowers.delete(POWERUP_TYPES.ANCHIRA);
+        const remainingPowers = Array.from(previousData.activePowers);
+        previousData.lastActivatedPower = remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null;
+        console.log(`[Anchira] Previous data for split: LastPower=${previousData.lastActivatedPower}`);
+
+        // 3. 起点ボールにアンチラ状態設定
+        this.setBallPowerUpState(POWERUP_TYPES.ANCHIRA, true, sourceBall);
+
+        // 4. 3つのボールを複製 (合計4つ)
+        const ballsToCreate = 3;
+        let createdCount = 0;
+        for (let i = 0; i < ballsToCreate; i++) {
+            const vx = sourceBall.body.velocity.x * Phaser.Math.FloatBetween(0.7, 1.3) + Phaser.Math.Between(-60, 60);
+            const vy = sourceBall.body.velocity.y * Phaser.Math.FloatBetween(0.7, 1.3) + Phaser.Math.Between(-60, 0);
+            const newBall = this.createAndAddBall(
+                sourceBall.x + Phaser.Math.Between(-15, 15),
+                sourceBall.y + Phaser.Math.Between(-15, 15),
+                vx, vy,
+                previousData // ★ アンチラ取得前のデータを引き継ぐ
+            );
+            if (newBall) {
+                // 5. 新しいボールにもアンチラ状態を設定
+                this.setBallPowerUpState(POWERUP_TYPES.ANCHIRA, true, newBall);
+                createdCount++;
+            } else { console.error(`[Anchira] Failed to create split ball ${i + 1}!`); }
+        }
+        console.log(`[Anchira] ${createdCount} balls created (total ${this.balls.countActive(true)}).`);
+         // ★ TODO: 分裂エフェクト ★
+
+        // 6. 効果終了タイマー設定 (既存があれば上書き)
+        if (this.anchiraTimer) this.anchiraTimer.remove();
+        this.anchiraTimer = this.time.delayedCall(ANCHIRA_DURATION, this.deactivateAnchira, [], this);
+        console.log(`[Anchira] Deactivation timer set for ${ANCHIRA_DURATION}ms`);
+
+        this.updateBallAndPaddleAppearance(); // 全ボールの見た目更新
+    }
+
+    // アンチラ無効化メソッド (新規追加)
+    deactivateAnchira() {
+        if (!this.anchiraTimer) return; // タイマーがなければ既に解除済み
+        console.log("[Anchira] Deactivating!");
+        this.anchiraTimer.remove(); // タイマー解除
+        this.anchiraTimer = null;
+
+        // 1. 起点となるボールを決定 (タイマー切れなので一番遠いものを残す)
+        const keepBall = this.keepFurthestBall();
+
+        // 2. 全てのアクティブなボールからアンチラ状態を解除
+        const activeBalls = this.balls?.getMatching('active', true) ?? [];
+        activeBalls.forEach(ball => {
+             if (ball && ball.active) {
+                 this.setBallPowerUpState(POWERUP_TYPES.ANCHIRA, false, ball);
+             }
+        });
+
+        // 3. 残すボールがあれば、その見た目を更新
+        if (keepBall && keepBall.active) {
+            console.log(`[Anchira] Kept ball ${keepBall.name || keepBall.texture.key} after deactivation.`);
+            this.updateBallAppearance(keepBall); // keepBallの見た目を最終状態に
+        } else {
+            console.log("[Anchira] No ball kept after deactivation.");
+        }
+         // ★ TODO: ボール消滅エフェクト ★
+    }
 
 // シンダラ有効化メソッド (新規追加)
 activateSindara() {
@@ -1037,6 +1119,12 @@ setBallPowerUpState(type, isActive) {
                 // シンダラにはタイマーはない
             }
             // ▲▲▲ シンダラフラグ ▲▲▲
+             // ▼▼▼ アンチラフラグ ▼▼▼
+             if (type === POWERUP_TYPES.ANCHIRA) {
+                b.setData('isAnchiraActive', isActive);
+                console.log(`    Set isAnchiraActive to: ${isActive}`);
+            }
+            // ▲▲▲ アンチラフラグ ▲▲▲
         
             // 他のパワーアップフラグもここに追加
 
@@ -2327,22 +2415,21 @@ testLogFunction(message) {
             ball.body.onWorldBounds = true;
             console.log("Ball body enabled:", ball.body.enable);
         } else { console.error("Failed to create ball body!"); if(ball) ball.destroy(); return null; }
-         // ▼▼▼ データ設定部分を強化 ▼▼▼
-         ball.setData({
-            // 既存のパワーアップ状態を引き継ぐ
-            activePowers: data?.activePowers ? new Set(data.activePowers) : new Set(),
-            lastActivatedPower: data?.lastActivatedPower ?? null,
-            // 各種フラグを引き継ぐ (なければ false or null)
+        // ▼▼▼ データ設定 (アンチラ対応強化) ▼▼▼
+        ball.setData({
+            activePowers: data?.activePowers ? new Set(data.activePowers) : new Set(), // 他の効果を引き継ぐ
+            lastActivatedPower: data?.lastActivatedPower ?? null, // 直前の効果を引き継ぐ
+            // 各種フラグを引き継ぐ
             isKubiraActive: data?.isKubiraActive ?? false,
             isFast: data?.isFast ?? false,
             isSlow: data?.isSlow ?? false,
             isIndaraActive: data?.isIndaraActive ?? false,
             isBikaraPenetrating: data?.isBikaraPenetrating ?? false,
-            // シンダラ自身やパートナーの情報は新規ボールには不要
-            isSindaraActive: false, // 新規ボールは最初はシンダラではない (後で設定)
+            isSindaraActive: false, // 分裂元がシンダラでも新規ボールはシンダラではない
+            isAnchiraActive: false, // この時点ではまだアンチラではない (後で設定)
         });
-        // ▲▲▲ データ設定部分を強化 ▲▲▲
-        this.updateBallAppearance(ball);
+        // ▲▲▲ データ設定 ▲▲
+     //   this.updateBallAppearance(ball);
         console.log("Ball created successfully.");
         return ball;
     }
@@ -2453,7 +2540,8 @@ testLogFunction(message) {
         console.log("[Shutdown] Clearing Sindara state (just in case)...");
         // deactivateSindara(); // シーン終了時はボールごと消えるので通常は不要
         console.log("[Shutdown] Sindara state cleared.");
-        // ...
+        if (this.anchiraTimer) { this.anchiraTimer.remove(); this.anchiraTimer = null; } // ★ タイマークリア
+        console.log("[Shutdown] Anchira timer cleared.");
         if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; }
         this.safeDestroy(this.familiars, "familiars group", true);
         this.safeDestroy(this.makiraBeams, "makiraBeams group", true);
