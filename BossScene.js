@@ -676,11 +676,11 @@ collectPowerUp(paddle, powerUp) {
             this.setBallPowerUpState(type, true);
             // ※ コピー効果は後で実装
             break;
-        case POWERUP_TYPES.VAJRA:
-            console.log("Power up Vajra collected - Activating Gauge System.");
-            this.activateVajra(); // ★ activateVajra を呼び出す
-            // activateVajra内で状態設定するのでここでは不要
-           break;
+            case POWERUP_TYPES.VAJRA:
+                console.log("Power up Vajra collected - Activating Gauge System.");
+                this.activateVajra(); // ★ activateVajra を呼び出す
+                // activateVajra内で状態設定するのでここでは不要
+               break;
         // --- ▲▲▲ 未実装パワーアップのアイコン＆ボイス対応 ▲▲▲ ---
 
         default:
@@ -1015,9 +1015,48 @@ hitBossWithMakiraBeam(beam, boss) {
     // --- ▲ 速度変更ヘルパー ▲ ---
 
 
-    
+    // ... (他のメソッド: hitBoss, hitOrbiter(削除済), defeatBoss など) ...
 
-        
+    hitAttackBrick(brick, ball) {
+        if (!brick || !brick.active || !ball || !ball.active) return;
+      //  console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
+      //  console.log("Attack brick hit by ball!");
+        const brickX = brick.x; const brickY = brick.y; const brickColor = brick.tintTopLeft;
+        // エフェクト & SE
+        try { /* ...パーティクル... */ } catch (e) { /*...*/ }
+        try { this.sound.add(AUDIO_KEYS.SE_DESTROY).play(); } catch (e) { /*...*/ }
+        brick.destroy(); // 先にブロックを破壊
+
+        // ★★★ ヴァジラゲージ増加処理を追加 ★★★
+        this.increaseVajraGauge(); // 攻撃ブロック破壊でゲージ増加
+
+        // --- ▼ アイテムドロップ判定 (バイシュラヴァ特別判定追加) ▼ ---
+        const dropRate = this.chaosSettings?.rate ?? ATTACK_BRICK_ITEM_DROP_RATE;
+
+        // 1. まずバイシュラヴァが特別にドロップするか判定 (GameSceneと同じ定数を使用)
+        if (Phaser.Math.FloatBetween(0, 1) < BAISRAVA_DROP_RATE) {
+            console.log("[Drop Logic] Baisrava special drop!");
+            this.dropSpecificPowerUp(brickX, brickY, POWERUP_TYPES.BAISRAVA);
+        }
+        // 2. バイシュラヴァが出なかった場合、通常のドロップ判定を行う
+        else if (Phaser.Math.FloatBetween(0, 1) < dropRate) {
+             console.log(`[Drop Logic] Checking drop against rate: ${dropRate.toFixed(2)}`);
+             if (this.bossDropPool && this.bossDropPool.length > 0) {
+                 // ★ バイシュラヴァを除いたプールから選ぶ (任意) ★
+                 //    これにより、特別ドロップ以外ではバイシュラヴァが出なくなる
+                 const poolWithoutBaisrava = this.bossDropPool.filter(type => type !== POWERUP_TYPES.BAISRAVA);
+                 if (poolWithoutBaisrava.length > 0) {
+                     const dropType = Phaser.Utils.Array.GetRandom(poolWithoutBaisrava);
+                     console.log(`[Drop Logic] Dropping item: ${dropType} (From pool excluding Baisrava)`);
+                     this.dropSpecificPowerUp(brickX, brickY, dropType);
+                 } else {
+                      console.log("Drop pool only contained Baisrava, nothing else to drop.");
+                 }
+             } else { console.log("No items in boss drop pool."); }
+        } else {
+             console.log("[Drop Logic] No item drop based on rate.");
+        }
+        // --- ▲ アイテムドロップ判定 (バイシュラヴァ特別判定追加) ▲ ---
 
         // --- ▼ ボール速度を維持/再設定 ▼ ---
         if (ball.body) { // ボディがあるか確認
@@ -1087,27 +1126,33 @@ hitBossWithMakiraBeam(beam, boss) {
         }
     }
 
+    // triggerVajraDestroy メソッド (ダメージ値修正)
     triggerVajraDestroy() {
         if (!this.isVajraSystemActive) return; // 発動状態でなければ何もしない
-        console.log("[BossScene] Triggering Vajra destroy (Boss Damage).");
+        console.log("[BossScene] Triggering Vajra destroy (Boss Damage: 10)."); // ダメージ明記
         this.isVajraSystemActive = false; // 発動したらゲージシステム終了
-        if(this.uiScene?.scene.isActive()) this.uiScene.events.emit('deactivateVajraUI');
-        // ボール状態解除
+
+        // ▼▼▼ UISceneに通知 ▼▼▼
+        if(this.uiScene?.scene.isActive()) {
+            this.events.emit('deactivateVajraUI');
+        }
+        // ▲▲▲ UISceneに通知 ▲▲▲
+
+        // ボール状態解除 (アイコン戻すなど)
         this.setBallPowerUpState(POWERUP_TYPES.VAJRA, false);
         this.updateBallAndPaddleAppearance();
 
         // ボイス・SE再生
         try { this.sound.add(AUDIO_KEYS.VOICE_VAJRA_TRIGGER).play(); } catch (e) { console.error("Error playing VOICE_VAJRA_TRIGGER:", e); }
-        try { this.sound.add(AUDIO_KEYS.SE_VAJRA_TRIGGER).play(); } catch (e) { console.error("Error playing SE_VAJRA_TRIGGER:", e); }
+        // try { this.sound.add(AUDIO_KEYS.SE_VAJRA_TRIGGER).play(); } catch (e) { console.error("Error playing SE_VAJRA_TRIGGER:", e); } // SEは任意
 
-        // ボスに5ダメージ
+        // ボスに10ダメージ
         if (this.boss && this.boss.active) {
-            this.applyBossDamage(this.boss, 5, "Vajra Ougi"); // ★ 5ダメージに変更
+            this.applyBossDamage(this.boss, 10, "Vajra Ougi"); // ★ ダメージを10に変更
         } else {
              console.log("Vajra Ougi triggered, but boss is inactive.");
         }
     }
-    // deactivateVajra は triggerVajraDestroy 内に含まれる形でOK
     // --- ▲ ヴァジラ関連メソッド ▲ ---
 
 
@@ -1894,13 +1939,12 @@ testLogFunction(message) {
         this.safeDestroy(this.balls, "balls group", true);
         this.safeDestroy(this.boss, "boss");
         // this.safeDestroy(this.orbiters, "orbiters group", true); // 削除
-        this.isVajraSystemActive = false; // ★ フラグクリア
-        this.vajraGauge = 0;              // ★ ゲージクリア
-        console.log("[Shutdown] Vajra system state cleared.");
         this.safeDestroy(this.attackBricks, "attackBricks group", true);
         this.safeDestroy(this.gameOverText, "gameOverText");
         console.log("[Shutdown] Finished destroying GameObjects.");
         this.safeDestroy(this.bossAfterImageEmitter, "bossAfterImageEmitter"); // ★ エミッタも破棄
+        this.isVajraSystemActive = false; // ★ フラグクリア
+        this.vajraGauge = 0;              // ★ ゲージクリア
         // ...
         this.safeDestroy(this.powerUps, "powerUps group", true); // ★ powerUps も破棄
         if (this.attackBrickTimer) { this.attackBrickTimer.remove(); this.attackBrickTimer = null; }
