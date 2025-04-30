@@ -222,6 +222,17 @@ export default class UIScene extends Phaser.Scene {
         }
     }
 
+    // ▼▼▼ 深度を強制的に設定 ▼▼▼
+console.log("Setting high depth for UI elements...");
+const highDepth = 1000; // 他のどの要素よりも大きいと思われる値
+if (this.livesText) this.livesText.setDepth(highDepth);
+if (this.scoreText) this.scoreText.setDepth(highDepth); // Scoreなども見えないなら同様に設定
+if (this.stageText) this.stageText.setDepth(highDepth); // Stageなども
+// ▲▲▲ 深度を強制的に設定 ▲▲▲
+
+    // UIScene.js
+
+
     // ドロッププールUI更新
     updateDropPoolDisplay(dropPoolTypes) {
         if (!this.dropPoolIconsGroup) return; // グループがなければ何もしない
@@ -272,15 +283,6 @@ export default class UIScene extends Phaser.Scene {
         });
     }
 
-    // ▼▼▼ 深度を強制的に設定 ▼▼▼
-console.log("Setting high depth for UI elements...");
-const highDepth = 1000; // 他のどの要素よりも大きいと思われる値
-if (this.livesText) this.livesText.setDepth(highDepth);
-if (this.scoreText) this.scoreText.setDepth(highDepth); // Scoreなども見えないなら同様に設定
-if (this.stageText) this.stageText.setDepth(highDepth); // Stageなども
-// ▲▲▲ 深度を強制的に設定 ▲▲▲
-
-    // UIScene.js
-
+    
 
 } // <-- UIScene
