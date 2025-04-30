@@ -58,15 +58,26 @@ export default class UIScene extends Phaser.Scene {
                 fontFamily: 'MyGameFont, sans-serif'
             };
 
-            // --- 1. UI 要素の生成 ---
-            console.log("[UIScene Create] Creating UI elements...");
-            this.livesText = this.add.text(16, 16, 'ライフ: ', textStyle).setOrigin(0, 0);
-            this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ', textStyle).setOrigin(0.5, 0);
-            this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: ', textStyle).setOrigin(1, 0);
-            this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff' })
-                .setOrigin(0, 1).setVisible(false);
-            this.dropPoolIconsGroup = this.add.group();
-            console.log("[UIScene Create] UI elements created.");
+            // --- 1. UI 要素の生成 (ライフだけ確実に生成) ---
+            console.log("[UIScene Create] Creating LivesText...");
+            // 既存のがあれば削除 (念のため)
+            if (this.livesText) this.livesText.destroy();
+            this.livesText = this.add.text(16, 16, 'ライフ: ?', textStyle).setOrigin(0, 0); // 初期テキストは '?' に
+             if (this.livesText) { console.log("LivesText created successfully."); } else { console.error("!!! Failed to create LivesText !!!"); }
+
+            // ▼▼▼ ★★★ 直接参照してライフ表示 ★★★ ▼▼▼
+            /*console.log("[UIScene Create] Attempting to set initial life directly...");
+            if (this.parentScene && typeof this.parentScene.lives !== 'undefined') {
+                const initialLives = this.parentScene.lives;
+                console.log(`  - Reading 'lives' directly from parent: ${initialLives}`);
+                if (this.livesText) {
+                     this.livesText.setText(`ライフ: ${initialLives}`);
+                     console.log(`  - LivesText updated directly. Current text: '${this.livesText.text}'`);
+                } else { console.log("  - LivesText not available to update directly."); }
+            } else {
+                 console.log("  - Could not read 'lives' directly from parent scene.");
+            }
+            // ▲▲▲ ★★★ 直接参照してライフ表示 ★★★ ▲▲▲
 
             // --- 2. イベントリスナー登録 (UI要素生成後に実行) ---
             console.log("[UIScene Create] Registering parent event listeners...");
@@ -83,7 +94,7 @@ export default class UIScene extends Phaser.Scene {
                 if (this.stageText) { console.log(`Stage Text: Pos=(${this.stageText.x.toFixed(0)}, ${this.stageText.y.toFixed(0)}), Visible=${this.stageText.visible}, Alpha=${this.stageText.alpha}, Text='${this.stageText.text}'`); } else { console.log("Stage Text not found after delay."); } //ログ変更
                 if (this.vajraGaugeText) { console.log(`Vajra Text: Pos=(${this.vajraGaugeText.x.toFixed(0)}, ${this.vajraGaugeText.y.toFixed(0)}), Visible=${this.vajraGaugeText.visible}, Alpha=${this.vajraGaugeText.alpha}, Text='${this.vajraGaugeText.text}'`); } else { console.log("Vajra Text not found after delay."); } //ログ変更
                 console.log('--- Status Check End ---');
-            }, [], this);
+            }, [], this);*/
 
             // --- 4. UIScene 終了時処理 ---
             this.events.on('shutdown', () => {
