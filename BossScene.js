@@ -405,11 +405,32 @@ update(time, delta) {
         // 下半分を切り取る (画像の高さの半分でクロップ)
         bossImage.setCrop(0, 0, bossImage.width, bossImage.height / 2);
 
-        // テキスト表示
-        const vsText = this.add.text(this.gameWidth / 2, bossImage.y + bossImage.displayHeight + 10, 'VS アートマンHL', {
-            fontSize: '36px', fill: '#fff', stroke: '#000', strokeThickness: 4,
-            fontFamily: 'MyGameFont, sans-serif' // フォント指定
-        }).setOrigin(0.5, 0).setDepth(902);
+        /// ▼▼▼ テキスト表示の確認・修正 ▼▼▼
+        const textContent = 'VS アートマンHL';
+        const textStyle = {
+            fontSize: '36px',
+            fill: '#ffffff', // ★ 色を白(#ffffff)に明示的に指定
+            stroke: '#000000', // ★ 縁取りを黒(#000000)に明示的に指定
+            strokeThickness: 4,
+            fontFamily: 'MyGameFont, sans-serif', // フォント指定確認
+            align: 'center' // 中央揃え指定（念のため）
+        };
+        console.log(`[Intro] Creating VS Text with style:`, textStyle, `Content: ${textContent}`); // ★ ログ追加
+
+        // ★★★ テキストオブジェクトを this.vsText として保持 ★★★
+        this.vsText = this.add.text(this.gameWidth / 2, bossImage.y + bossImage.displayHeight + 10, textContent, textStyle)
+            .setOrigin(0.5, 0)
+            .setDepth(902); // ★ 他の要素より手前に
+
+        // ★★★ 生成直後の状態をログ出力 ★★★
+        if (this.vsText) {
+             console.log(`[Intro] VS Text created: Visible=${this.vsText.visible}, Alpha=${this.vsText.alpha}, Depth=${this.vsText.depth}, Text='${this.vsText.text}'`);
+             console.log(`  - Position: (${this.vsText.x.toFixed(0)}, ${this.vsText.y.toFixed(0)})`);
+             console.log(`  - Display Size: (${this.vsText.displayWidth.toFixed(0)}, ${this.vsText.displayHeight.toFixed(0)})`);
+        } else {
+             console.error("!!! Failed to create VS Text object !!!");
+        }
+        // ▲▲▲ テキスト表示の確認・修正 ▲▲▲
 
         // SE再生 (try...catch)
         try {
