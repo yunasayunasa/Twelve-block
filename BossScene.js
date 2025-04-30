@@ -853,55 +853,80 @@ keepFurthestBall() {
 }
 
 
-    // アンチラ有効化メソッド (新規追加)
-    activateAnchira() {
-        console.log("[Anchira] Activating!");
-        // 1. 起点ボール決定
-        const sourceBall = this.keepFurthestBall();
-        if (!sourceBall || !sourceBall.active) { console.warn("[Anchira] Activation failed: No source ball."); return; }
-        console.log(`[Anchira] Source ball: ${sourceBall.name || sourceBall.texture.key}`);
+    // BossScene.js
 
-        // 2. 起点ボールの直前の状態を取得 (重要: lastActivatedPower をアンチラ取得前のものにする)
-        let previousData = sourceBall.data.getAll();
-        previousData.activePowers = new Set(previousData.activePowers);
-        // アンチラ自体は除外して lastActivatedPower を探す
-        previousData.activePowers.delete(POWERUP_TYPES.ANCHIRA);
-        const remainingPowers = Array.from(previousData.activePowers);
-        previousData.lastActivatedPower = remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null;
-        console.log(`[Anchira] Previous data for split: LastPower=${previousData.lastActivatedPower}`);
+activateAnchira() {
+    console.log("[Anchira] Activating!");
+    // 1. 起点ボール決定
+    const sourceBall = this.keepFurthestBall();
+    if (!sourceBall || !sourceBall.active) { console.warn("[Anchira] Activation failed: No source ball."); return; }
+    console.log(`[Anchira] Source ball: ${sourceBall.name || sourceBall.texture.key}`);
 
-        // 3. 起点ボールにアンチラ状態設定
-        this.setBallPowerUpState(POWERUP_TYPES.ANCHIRA, true, sourceBall);
+    // 2. 起点ボールの直前の状態を取得
+    let previousData = sourceBall.data.getAll();
+    previousData.activePowers = new Set(previousData.activePowers);
+    previousData.activePowers.delete(POWERUP_TYPES.ANCHIRA); // アンチラ自体は除外
+    const remainingPowers = Array.from(previousData.activePowers);
+    previousData.lastActivatedPower = remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null;
+    console.log(`[Anchira] Previous data for split: LastPower=${previousData.lastActivatedPower}`);
 
-        // 4. 3つのボールを複製 (合計4つ)
-        const ballsToCreate = 3;
-        let createdCount = 0;
-        for (let i = 0; i < ballsToCreate; i++) {
-            const vx = sourceBall.body.velocity.x * Phaser.Math.FloatBetween(0.7, 1.3) + Phaser.Math.Between(-60, 60);
-            const vy = sourceBall.body.velocity.y * Phaser.Math.FloatBetween(0.7, 1.3) + Phaser.Math.Between(-60, 0);
-            const newBall = this.createAndAddBall(
-                sourceBall.x + Phaser.Math.Between(-15, 15),
-                sourceBall.y + Phaser.Math.Between(-15, 15),
-                vx, vy,
-                previousData // ★ アンチラ取得前のデータを引き継ぐ
-            );
-            if (newBall) {
-                // 5. 新しいボールにもアンチラ状態を設定
-                this.setBallPowerUpState(POWERUP_TYPES.ANCHIRA, true, newBall);
-                createdCount++;
-            } else { console.error(`[Anchira] Failed to create split ball ${i + 1}!`); }
+    // 3. 起点ボールにアンチラ状態設定
+    this.setBallPowerUpState(POWERUP_TYPES.ANCHIRA, true, sourceBall);
+
+    // ▼▼▼ ボール生成を delayedCall で分散 ▼▼▼
+    const ballsToCreate = 3; // 作成するボールの数
+    let createdCount = 0;    // 作成したボールのカウンター
+
+    // 再帰的にボールを生成する内部関数
+    const createSplitBallRecursive = (index) => {
+        // --- 終了条件 ---
+        // 指定数作り終えたか、起点ボールが消えてしまったら終了
+        if (index >= ballsToCreate || !sourceBall?.active) {
+            console.log(`[Anchira Split] Finished creating ${createdCount} balls.`);
+            // ★ 全てのボール生成後に見た目更新とタイマー設定を行う ★
+            this.updateBallAndPaddleAppearance();
+             // 効果終了タイマー設定 (既存があれば上書き)
+             if (this.anchiraTimer) this.anchiraTimer.remove();
+             this.anchiraTimer = this.time.delayedCall(ANCHIRA_DURATION, this.deactivateAnchira, [], this);
+             console.log(`[Anchira] Deactivation timer set for ${ANCHIRA_DURATION}ms`);
+            return;
         }
-        console.log(`[Anchira] ${createdCount} balls created (total ${this.balls.countActive(true)}).`);
-         // ★ TODO: 分裂エフェクト ★
 
-        // 6. 効果終了タイマー設定 (既存があれば上書き)
-        if (this.anchiraTimer) this.anchiraTimer.remove();
-        this.anchiraTimer = this.time.delayedCall(ANCHIRA_DURATION, this.deactivateAnchira, [], this);
-        console.log(`[Anchira] Deactivation timer set for ${ANCHIRA_DURATION}ms`);
+        console.log(`[Anchira Split] Attempting to create ball ${index + 1}/${ballsToCreate}`);
 
-        this.updateBallAndPaddleAppearance(); // 全ボールの見た目更新
-    }
+        // --- ボール生成処理 ---
+        // 速度や位置を少しランダムにする
+        const vx = sourceBall.body.velocity.x * Phaser.Math.FloatBetween(0.7, 1.3) + Phaser.Math.Between(-60, 60);
+        const vy = sourceBall.body.velocity.y * Phaser.Math.FloatBetween(0.7, 1.3) + Phaser.Math.Between(-60, 0);
+        const spawnX = sourceBall.x + Phaser.Math.Between(-15, 15);
+        const spawnY = sourceBall.y + Phaser.Math.Between(-15, 15);
 
+        // 新しいボールを生成
+        const newBall = this.createAndAddBall(spawnX, spawnY, vx, vy, previousData);
+
+        if (newBall) {
+            // 新しいボールにもアンチラ状態を設定
+            this.setBallPowerUpState(POWERUP_TYPES.ANCHIRA, true, newBall);
+            createdCount++;
+            console.log(`[Anchira Split] Ball ${index + 1} created successfully.`);
+        } else {
+            console.error(`[Anchira Split] Failed to create ball ${index + 1}!`);
+        }
+
+        // --- 次のフレームで次のボール生成を予約 ---
+        // 1ms の遅延は、ほぼ次のフレームで実行されることを意図
+        this.time.delayedCall(1, () => createSplitBallRecursive(index + 1));
+    };
+
+    // 最初のボール生成を開始 (インデックス 0 から)
+    createSplitBallRecursive(0);
+    // ▲▲▲ ボール生成を delayedCall で分散 ▲▲▲
+
+    // ★ 見た目更新とタイマー設定は再帰関数の最後で行うため、ここでは削除 ★
+    // this.updateBallAndPaddleAppearance();
+    // if (this.anchiraTimer) this.anchiraTimer.remove();
+    // this.anchiraTimer = this.time.delayedCall(...)
+}
     // アンチラ無効化メソッド (新規追加)
     deactivateAnchira() {
         if (!this.anchiraTimer) return; // タイマーがなければ既に解除済み
