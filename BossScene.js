@@ -896,7 +896,7 @@ deactivateSindara(ball = null) { // 引数なしなら全体解除
 
     console.log(`[Sindara] Deactivating for ${ball ? 'specific ball' : 'all active Sindara balls'} (${targetBalls.length} found).`);
     targetBalls.forEach(b => {
-        if (b && ball.active) {
+        if (b && b.active) {
              this.setBallPowerUpState(POWERUP_TYPES.SINDARA, false, b);
              // ★ TODO: 解除エフェクト ★
         }
