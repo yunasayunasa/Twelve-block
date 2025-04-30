@@ -1017,7 +1017,7 @@ hitBossWithMakiraBeam(beam, boss) {
 
     // ... (他のメソッド: hitBoss, hitOrbiter(削除済), defeatBoss など) ...
 
-    /*hitAttackBrick(brick, ball) {
+    hitAttackBrick(brick, ball) {
         if (!brick || !brick.active || !ball || !ball.active) return;
       //  console.log(`[hitAttackBrick] Current chaosSettings.count: ${this.chaosSettings?.count}`);
       //  console.log("Attack brick hit by ball!");
