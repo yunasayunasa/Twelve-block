@@ -31,10 +31,10 @@ const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
 // --- ▲ ボスの動き設定 ▲ ---
 // ★ 攻撃ブロック関連の定数
 const ATTACK_BRICK_VELOCITY_Y = 150; // 落下速度
-const ATTACK_BRICK_SPAWN_DELAY_MIN = 400; // 最短生成間隔 (ms)
-const ATTACK_BRICK_SPAWN_DELAY_MAX = 1200; // 最長生成間隔 (ms)
+const ATTACK_BRICK_SPAWN_DELAY_MIN = 600; // 最短生成間隔 (ms)
+const ATTACK_BRICK_SPAWN_DELAY_MAX = 1400; // 最長生成間隔 (ms)
 const ATTACK_BRICK_SCALE = 0.8; // ブロックの表示スケール (仮)
-const ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE = 0.6; // 上から降ってくる確率 (60%)
+const ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE = 0.5; // 上から降ってくる確率 (60%)
 const ATTACK_BRICK_ITEM_DROP_RATE = 0.4; // 破壊時にアイテムを落とす確率 (40%)
 const FAMILIAR_MOVE_SPEED_X = 180; // ★ 子機の左右移動速度 (追加
 const ANILA_DURATION = POWERUP_DURATION[POWERUP_TYPES.ANILA] || 10000; // アニラ効果時間 (10秒)
