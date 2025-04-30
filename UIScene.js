@@ -66,7 +66,7 @@ export default class UIScene extends Phaser.Scene {
              if (this.livesText) { console.log("LivesText created successfully."); } else { console.error("!!! Failed to create LivesText !!!"); }
 
             // ▼▼▼ ★★★ 直接参照してライフ表示 ★★★ ▼▼▼
-            /*console.log("[UIScene Create] Attempting to set initial life directly...");
+            console.log("[UIScene Create] Attempting to set initial life directly...");
             if (this.parentScene && typeof this.parentScene.lives !== 'undefined') {
                 const initialLives = this.parentScene.lives;
                 console.log(`  - Reading 'lives' directly from parent: ${initialLives}`);
@@ -80,7 +80,7 @@ export default class UIScene extends Phaser.Scene {
             // ▲▲▲ ★★★ 直接参照してライフ表示 ★★★ ▲▲▲
 
             // --- 2. イベントリスナー登録 (UI要素生成後に実行) ---
-            console.log("[UIScene Create] Registering parent event listeners...");
+            /*console.log("[UIScene Create] Registering parent event listeners...");
             this.registerParentEventListeners(this.parentScene); // ★ UI生成後に移動したことを確認
             this.parentResizeListener = this.onGameResize.bind(this);
             this.parentScene.events.on('gameResize', this.parentResizeListener);
