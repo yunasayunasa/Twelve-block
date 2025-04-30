@@ -36,6 +36,10 @@ const ATTACK_BRICK_SCALE = 0.8; // ブロックの表示スケール (仮)
 const ATTACK_BRICK_SPAWN_FROM_TOP_CHANCE = 0.6; // 上から降ってくる確率 (60%)
 const ATTACK_BRICK_ITEM_DROP_RATE = 0.4; // 破壊時にアイテムを落とす確率 (40%)
 const FAMILIAR_MOVE_SPEED_X = 180; // ★ 子機の左右移動速度 (追加
+const ANILA_DURATION = POWERUP_DURATION[POWERUP_TYPES.ANILA] || 10000; // アニラ効果時間 (10秒)
+const PADDLE_NORMAL_TINT = 0xffff00; // 通常のパドルの色 (黄色)
+const PADDLE_ANILA_TINT = 0xffffff; // アニラ効果中のパドルの色 (白)
+const PADDLE_ANILA_ALPHA = 0.9;     // アニラ効果中のパドルの透明度 (少し透明)
 
 
 export default class BossScene extends Phaser.Scene {
@@ -65,6 +69,9 @@ export default class BossScene extends Phaser.Scene {
         this.powerUpTimers = {}; // ★ パワーアップタイマー用プロパティ
         this.isVajraSystemActive = false; // ★ ヴァジラゲージシステムが有効か
         this.vajraGauge = 0;              // ★ ヴァジラゲージの現在値
+        this.isAnilaActive = false; // ★ アニラ効果が有効か
+        this.anilaTimer = null;     // ★ アニラ効果タイマー
+        this.paddleAttackBrickCollider = null; // ★ パドルと攻撃ブロックのコライダー参照
 
         // コライダー参照
         this.ballPaddleCollider = null;
@@ -115,6 +122,9 @@ export default class BossScene extends Phaser.Scene {
         this.currentBgm = null;
         this.isVajraSystemActive = false; // ★ initでも初期化
         this.vajraGauge = 0;              // ★ initでも初期化
+        this.isAnilaActive = false; // ★ initでも初期化
+        if (this.anilaTimer) this.anilaTimer.remove();
+        this.anilaTimer = null;
         if (this.bossMoveTween) {
             this.bossMoveTween.stop();
             this.bossMoveTween = null;
@@ -665,12 +675,10 @@ collectPowerUp(paddle, powerUp) {
             this.setBallPowerUpState(type, true);
             // ※ 解除ロジック（ボスヒット時など）は効果実装時に必要
             break;
-        case POWERUP_TYPES.ANILA:
-            console.log("Power up Anila collected (Icon/Voice Test - Effect TBD: Invincible Paddle for 10s?).");
-            this.setBallPowerUpState(type, true); // ボールアイコンに反映
-            // ※ パドルの無敵効果とタイマーは別途実装必要
-            // this.activateTemporaryEffect(type, 10000, () => {/*パドル無敵化*/}, () => {/*無敵解除*/});
-            break;
+            case POWERUP_TYPES.ANILA:
+                console.log("Power up Anila collected - Activating Invincible Paddle & Bounce.");
+                this.activateAnila(); // ★ アニラ有効化関数呼び出し
+                break;
         case POWERUP_TYPES.MAKORA:
             console.log("Power up Makora collected (Icon/Voice Test - Effect TBD: Copy Boss Ability).");
             this.setBallPowerUpState(type, true);
@@ -752,6 +760,17 @@ updateBallAndPaddleAppearance() {
         console.log("  Balls group not active or does not exist."); // ★ グループがない場合のログ
     }
     console.log("--- updateBallAndPaddleAppearance finished ---");
+    // ▼▼▼ パドルの見た目更新を追加 ▼▼▼
+    if (this.paddle && this.paddle.active) {
+        if (this.isAnilaActive) { // アニラが有効なら
+            this.paddle.setTint(PADDLE_ANILA_TINT);
+            this.paddle.setAlpha(PADDLE_ANILA_ALPHA);
+        } else { // アニラが無効なら通常状態に
+            this.paddle.setTint(PADDLE_NORMAL_TINT);
+            this.paddle.setAlpha(1.0);
+        }
+   }
+   // ▲▲▲ パドルの見た目更新を追加 ▲▲▲
 }
 // --- ▲ updateBallAndPaddleAppearance ▲ ---
 
@@ -837,7 +856,93 @@ try {
 // --- ▲ setBallPowerUpState ▲ ---
     // --- ▲ ボール状態設定ヘルパー ▲ ---
 
+// アニラ有効化メソッド (新規追加)
+activateAnila() {
+    if (this.isAnilaActive) {
+        // 既に有効ならタイマーをリセット
+        console.log("[Anila] Already active, resetting timer.");
+        if (this.anilaTimer) this.anilaTimer.remove();
+    } else {
+        console.log("[Anila] Activating!");
+        this.isAnilaActive = true;
+        // パドルの見た目を変更
+        if (this.paddle) {
+            this.paddle.setTint(PADDLE_ANILA_TINT);
+            this.paddle.setAlpha(PADDLE_ANILA_ALPHA);
+            // ★ TODO: オーラなどのエフェクトを追加 ★
+        }
+        // ボール状態更新 (アイコン表示用)
+        this.setBallPowerUpState(POWERUP_TYPES.ANILA, true);
+        this.updateBallAndPaddleAppearance(); // ボールとパドルの見た目更新
+    }
 
+    // 効果時間タイマー設定
+    this.anilaTimer = this.time.delayedCall(ANILA_DURATION, this.deactivateAnila, [], this);
+    console.log(`[Anila] Timer set for ${ANILA_DURATION}ms`);
+}
+
+// アニラ無効化メソッド (新規追加)
+deactivateAnila() {
+    if (!this.isAnilaActive) return; // 既に無効なら何もしない
+    console.log("[Anila] Deactivating!");
+    this.isAnilaActive = false;
+    if (this.anilaTimer) { // タイマーがまだ存在すればクリア
+        this.anilaTimer.remove();
+        this.anilaTimer = null;
+    }
+    // パドルの見た目を元に戻す
+    if (this.paddle) {
+        this.paddle.setTint(PADDLE_NORMAL_TINT);
+        this.paddle.setAlpha(1.0);
+         // ★ TODO: オーラエフェクト解除 ★
+    }
+    // ボール状態解除
+    this.setBallPowerUpState(POWERUP_TYPES.ANILA, false);
+    this.updateBallAndPaddleAppearance();
+    console.log("[Anila] Deactivated.");
+}
+
+// updateBallFall メソッド (アニラ跳ね返し処理追加)
+updateBallFall() {
+    if (!this.balls || !this.balls.active) return;
+    let activeBallCount = 0;
+    let shouldLoseLife = false; // ライフ減少フラグ
+
+    this.balls.getChildren().forEach(ball => {
+        if (ball.active) {
+            activeBallCount++;
+            // ボールが画面下に落ちた判定
+            if (this.isBallLaunched && ball.y > this.gameHeight + ball.displayHeight) {
+                // ▼▼▼ アニラ効果判定 ▼▼▼
+                if (this.isAnilaActive) {
+                    console.log("[Anila] Ball bounce triggered!");
+                     // ★ TODO: 跳ね返しエフェクト・SE ★
+                    // ボールを画面内に戻し、上向きに速度を与える
+                    ball.y = this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT - BALL_RADIUS; // パドルの少し上に戻す
+                    const bounceVy = BALL_INITIAL_VELOCITY_Y * 0.8; // 少し弱めに跳ね返す
+                    const bounceVx = ball.body.velocity.x * 0.8; // 横速度も少し維持
+                    ball.setVelocity(bounceVx, bounceVy);
+                    // アニラ効果を即時終了
+                    this.deactivateAnila();
+                } else {
+                    // 通常のボール消滅処理
+                    console.log("Ball went out of bounds (Anila inactive).");
+                    ball.setActive(false).setVisible(false);
+                    if (ball.body) ball.body.enable = false;
+                    shouldLoseLife = true; // ライフ減少フラグを立てる
+                }
+                // ▲▲▲ アニラ効果判定 ▲▲▲
+            }
+        }
+    });
+
+    // ループ後にライフ減少判定
+    if (shouldLoseLife && activeBallCount <= 1 && this.isBallLaunched && this.lives > 0 && !this.isGameOver && !this.bossDefeated) {
+        // (activeBallCount <= 1 は、最後のボールが落ちたことを意味する)
+        console.log("No active balls left or last ball dropped, losing life.");
+        this.loseLife();
+    }
+}
 
 // --- ▼ マキラ関連メソッド (GameSceneから移植・調整) ▼ ---
 
@@ -1327,6 +1432,22 @@ update(time, delta) {
         // this.safeDestroy(this.ballOrbiterCollider, "ballOrbiterCollider"); // 削除
         this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider",
         "paddlePowerUpOverlap"); // ★ 追加
+        this.safeDestroy(this.paddleAttackBrickCollider, "paddleAttackBrickCollider"); // 既存参照を破棄
+
+        
+// ▼▼▼ パドル vs 攻撃ブロックの衝突判定を追加 ▼▼▼
+if (this.paddle && this.attackBricks) {
+    this.paddleAttackBrickCollider = this.physics.add.collider(
+        this.paddle,
+        this.attackBricks,
+        this.handlePaddleHitByAttackBrick, // 衝突時のコールバック
+        null, // processCallback は不要
+        this
+    );
+    console.log("[Colliders] Paddle-AttackBrick collider added.");
+} else { console.warn("Cannot set Paddle-AttackBrick collider."); }
+// ▲▲▲ パドル vs 攻撃ブロックの衝突判定を追加 ▲▲▲
+
 
         // ボール vs パドル
         if (this.paddle && this.balls) { this.ballPaddleCollider = this.physics.add.collider(this.paddle, this.balls, this.hitPaddle, null, this); }
@@ -1371,8 +1492,33 @@ update(time, delta) {
 }
 // --- ▲ setColliders メソッド修正 ▲ ---
 
-    
+    // パドルが攻撃ブロックに当たった時の処理 (新規追加)
+    handlePaddleHitByAttackBrick(paddle, attackBrick) {
+        if (!paddle || !attackBrick || !paddle.active || !attackBrick.active) return;
+        console.log("Paddle hit by attack brick!");
 
+        // ★ TODO: 攻撃ブロックヒットエフェクト・SE ★
+        attackBrick.destroy(); // 攻撃ブロックは消える
+
+        // ▼▼▼ アニラ無敵判定 ▼▼▼
+        if (this.isAnilaActive) {
+            console.log("[Anila] Paddle hit blocked by Anila effect!");
+            // 無敵中はライフ減少なし
+             // ★ TODO: 無敵ヒットエフェクト ★
+        } else {
+            // 通常時：ライフ減少処理
+            console.log("Paddle hit, should lose life (but commented out for now).");
+            // --- ▼▼▼ ライフ減少処理 (将来的に有効化) ▼▼▼ ---
+            /*
+            if (!this.isGameOver && !this.bossDefeated) { // ゲームオーバー/クリア前か確認
+                console.log("Losing life due to paddle hit.");
+                this.loseLife();
+            }
+            */
+            // --- ▲▲▲ ライフ減少処理 (将来的に有効化) ▲▲▲ ---
+        }
+        // ▲▲▲ アニラ無敵判定 ▲▲▲
+    }
     // BossScene.js 内
 
     // --- ▼ hitPaddle メソッド (速度計算修正) ▼ ---
@@ -1964,6 +2110,10 @@ testLogFunction(message) {
         this.paddle = null; this.balls = null; this.boss = null; /*this.orbiters = null;*/ this.attackBricks = null; this.gameOverText = null;
         this.uiScene = null; this.ballPaddleCollider = null; this.ballBossCollider = null; /*this.ballOrbiterCollider = null;*/ this.ballAttackBrickCollider = null;
         console.log("BossScene shutdown complete.");
+        this.isAnilaActive = false; // ★ フラグクリア
+        if (this.anilaTimer) { this.anilaTimer.remove(); this.anilaTimer = null; } // ★ タイマークリア
+        this.paddleAttackBrickCollider = null; // ★ コライダー参照クリア
+        console.log("[Shutdown] Anila state cleared.");
     }
 
     safeDestroy(obj, name, destroyChildren = false) {
