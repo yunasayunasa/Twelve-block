@@ -42,7 +42,7 @@ const PADDLE_ANILA_TINT = 0xffffff; // アニラ効果中のパドルの色 (白
 const PADDLE_ANILA_ALPHA = 0.9;     // アニラ効果中のパドルの透明度 (少し透明)
 // --- 定数 (追尾速度調整用) ---
 const INDARA_HOMING_SPEED = NORMAL_BALL_SPEED * 1.2; // 通常より少し速く？
-const BIKARA_DURATION = POWERUP_DURATION[POWERUP_TYPES.BIKARA] || 10000; // ビカラ効果時間 (10秒)
+const BIKARA_DURATION = POWERUP_DURATION[POWERUP_TYPES.BIKARA] || 10000;
 
 
 export default class BossScene extends Phaser.Scene {
@@ -74,7 +74,7 @@ export default class BossScene extends Phaser.Scene {
         this.vajraGauge = 0;              // ★ ヴァジラゲージの現在値
         this.isAnilaActive = false; // ★ アニラ効果が有効か
         this.anilaTimer = null;     // ★ アニラ効果タイマー
-        this.bikaraTimers = {}; // ★ ボールごとのタイマーを管理 { ball.name: timer }
+        this.bikaraTimers = {}; // ボールごとのタイマー管理は維持
         this.paddleAttackBrickCollider = null; // ★ パドルと攻撃ブロックのコライダー参照
 
         // コライダー参照
@@ -364,28 +364,20 @@ updateBallAppearance(ball) {
     let textureKey = 'ball_image'; // デフォルト
     const currentTexture = ball.texture.key;
     const lastPower = ball.getData('lastActivatedPower'); // 最後に有効になったパワーアップタイプを取得
-const bikaraState = ball.getData('bikaraState'); // ★ ビカラ状態取得
 
-         console.log(`[updateBallAppearance] Checking ball ${ball.name || currentTexture}. Kubira: ${isKubiraActive}, Makira: ${isMakiraActiveBall}, Bikara: ${bikaraState}, Last: ${lastPower}, CurrentTex: ${currentTexture}`);
+    console.log(`[updateBallAppearance] Checking ball ${ball.name || currentTexture}. Last Activated Power: ${lastPower}`);
 
-         // ▼▼▼ 条件分岐 (lastPower 最優先 + Bikaraアイコン) ▼▼▼
-         if (lastPower && POWERUP_ICON_KEYS[lastPower]) {
-             if (lastPower === POWERUP_TYPES.BIKARA && bikaraState === 'yang') {
-                 // ビカラで陽状態なら専用アイコン
-                 textureKey = POWERUP_ICON_KEYS.BIKARA_YANG || POWERUP_ICON_KEYS[lastPower]; // 陽アイコンがあればそれ、なければ陰アイコン
-                 console.log(`  Priority: Last power (Bikara Yang). Target texture: ${textureKey}`);
-             } else {
-                 // 通常のlastPower優先
-                 textureKey = POWERUP_ICON_KEYS[lastPower];
-                 console.log(`  Priority: Last power (${lastPower}). Target texture: ${textureKey}`);
-             }
-         } else {
-             // lastPower が null か、対応するアイコンキーがなければデフォルト
-             textureKey = 'ball_image';
-             console.log(`  Priority: Default or no icon for last power. Target texture: ${textureKey}`);
-         }
-         // ▲▲▲ 条件分岐 (lastPower 最優先 + Bikaraアイコン) ▲▲▲
-
+    // ▼▼▼ 条件分岐を lastPower 最優先に変更 ▼▼▼
+    if (lastPower && POWERUP_ICON_KEYS[lastPower]) {
+        // 最後に有効になったパワーアップに対応するアイコンキーがあれば、それを使用
+        textureKey = POWERUP_ICON_KEYS[lastPower];
+        console.log(`  Priority: Last power (${lastPower}). Target texture: ${textureKey}`);
+    } else {
+        // lastPower が null か、対応するアイコンキーがなければデフォルト
+        textureKey = 'ball_image';
+        console.log(`  Priority: Default or no icon for last power. Target texture: ${textureKey}`);
+    }
+    // ▲▲▲ 条件分岐を lastPower 最優先に変更 ▲▲▲
 
 
     // テクスチャが実際に変更されるかチェック
@@ -678,7 +670,7 @@ collectPowerUp(paddle, powerUp) {
             // this.activateTemporaryEffect(type, 5000, () => {/*開始処理*/}, () => {/*終了処理*/});
             break;
             case POWERUP_TYPES.BIKARA:
-                console.log("Power up Bikara collected - Activating Yin/Yang state.");
+                console.log("Power up Bikara collected - Activating Penetration."); // メッセージ変更
                 this.activateBikara(); // ★ ビカラ有効化
                 break;
             case POWERUP_TYPES.INDARA:
@@ -805,62 +797,39 @@ deactivateIndara(ball) {
     // ★ TODO: ホーミング終了エフェクト ★
 }
 
-// ビカラ有効化メソッド (新規追加)
+// ビカラ有効化メソッド (貫通仕様に修正)
 activateBikara() {
-    console.log("[Bikara] Activating!");
+    console.log("[Bikara] Activating Penetration!");
     const targetBalls = this.balls?.getMatching('active', true);
     if (!targetBalls || targetBalls.length === 0) { console.warn("No active balls for Bikara."); return; }
 
     targetBalls.forEach(ball => {
-        // 既存タイマー解除
-        if (this.bikaraTimers[ball.name]) {
-             this.bikaraTimers[ball.name].remove();
-             delete this.bikaraTimers[ball.name];
-             console.log(`[Bikara] Removing existing timer for ball ${ball.name}`);
-        }
+        if (this.bikaraTimers[ball.name]) { /* 既存タイマー解除 */ }
 
-        // 状態設定 (陰からスタート)
+        // 状態設定 (貫通フラグを立てる)
         this.setBallPowerUpState(POWERUP_TYPES.BIKARA, true, ball);
 
-        // 効果時間タイマー設定 (ボールごとに管理)
+        // 効果時間タイマー設定
         const timer = this.time.delayedCall(BIKARA_DURATION, () => {
-            console.log(`[Bikara] Effect expired for ball ${ball.name}`);
+            console.log(`[Bikara] Penetration expired for ball ${ball.name}`);
             this.deactivateBikara(ball); // 時間切れで解除
             this.setColliders(); // 衝突判定を戻す
             this.updateBallAndPaddleAppearance(); // 見た目も戻す
         }, [], this);
-        this.bikaraTimers[ball.name] = timer; // タイマー参照を保存
-        console.log(`[Bikara] Timer set for ball ${ball.name}`);
-         // ★ TODO: ビカラ開始エフェクト ★
+        this.bikaraTimers[ball.name] = timer;
+        console.log(`[Bikara] Penetration Timer set for ball ${ball.name}`);
+        // ★ TODO: ビカラ開始エフェクト ★
     });
 
     this.updateBallAndPaddleAppearance(); // ボールアイコン変更
     this.setColliders(); // 衝突判定変更 (Overlapへ)
 }
 
-// ビカラ無効化メソッド (タイマー切れ・手動解除用)
+// ビカラ無効化メソッド (貫通仕様)
 deactivateBikara(ball) {
-    if (!ball || !ball.active || !ball.getData('bikaraState')) return; // 対象ボールの状態チェック
-    console.log(`[Bikara] Deactivating for ball ${ball.name}`);
-    this.setBallPowerUpState(POWERUP_TYPES.BIKARA, false, ball); // フラグ解除 (タイマーも内部で解除される)
-    // 見た目更新や衝突判定は呼び出し元で行うことが多い
-}
-
-// 陰陽切替メソッド (新規追加)
-switchBikaraState(ball) {
-    if (!ball || !ball.active || !ball.getData('bikaraState')) return; // ビカラ状態かチェック
-    const currentState = ball.getData('bikaraState');
-    const nextState = (currentState === 'yin') ? 'yang' : 'yin';
-    ball.setData('bikaraState', nextState);
-    console.log(`[Bikara] Switched state for ball ${ball.name} from ${currentState} to ${nextState}`);
-
-    // 対応ボイス再生
-    const voiceKey = (nextState === 'yang') ? AUDIO_KEYS.VOICE_BIKARA_YANG : AUDIO_KEYS.VOICE_BIKARA_YIN;
-    try { this.sound.play(voiceKey); } catch (e) { console.error(`Error playing Bikara voice ${voiceKey}:`, e); }
-     // ★ TODO: 状態変化エフェクト ★
-
-    this.updateBallAndPaddleAppearance(); // アイコン更新
-    this.setColliders(); // 衝突判定更新 (陰⇔陽で変わるため)
+    if (!ball || !ball.active || !ball.getData('isBikaraPenetrating')) return; // 貫通状態かチェック
+    console.log(`[Bikara] Deactivating Penetration for ball ${ball.name}`);
+    this.setBallPowerUpState(POWERUP_TYPES.BIKARA, false, ball); // フラグ解除 (タイマーも内部で解除)
 }
 
 
@@ -868,34 +837,29 @@ switchBikaraState(ball) {
 
     // --- ▼ ボール状態設定ヘルパー (lastActivatedPower再設定ロジック省略なし) ▼ ---
     // --- ▼ setBallPowerUpState (ログ強化) ▼ ---
-    setBallPowerUpState(type, isActive, ball) { // ★ 対象のボールも引数に追加
-        // ball が指定されていなければ、アクティブな全ボールを対象とする (互換性のため)
-        const targetBalls = ball ? [ball] : this.balls?.getMatching('active', true) ?? [];
-        if (!targetBalls || targetBalls.length === 0) return; // 対象がなければ終了
-
-    console.log(`[setBallPowerUpState] Called for type: ${type}, isActive: ${isActive}, Target Ball(s): ${targetBalls.length}`);
-
-    targetBalls.forEach(b => {
-        if (b?.active && b.getData) {
-            let activePowers = b.getData('activePowers');
+setBallPowerUpState(type, isActive) {
+    console.log(`[setBallPowerUpState] Called for type: ${type}, isActive: ${isActive}`); // ★ 関数呼び出しログ
+    this.balls?.getChildren().forEach(ball => {
+        if (ball?.active && ball.getData) { // getDataの存在も確認
+            let activePowers = ball.getData('activePowers');
             if (!activePowers) activePowers = new Set();
-            let oldLastPower = b.getData('lastActivatedPower');
+            let oldLastPower = ball.getData('lastActivatedPower'); // ★ 古い lastActivatedPower を記録
 
             if (isActive) {
                 activePowers.add(type);
-                b.setData('lastActivatedPower', type);
-                console.log(`  Ball ${b.name || b.texture.key}: Added ${type}. Last Power: ${type} (was ${oldLastPower})`);
+                ball.setData('lastActivatedPower', type);
+                console.log(`  Ball ${ball.name || ball.texture.key}: Added ${type}. Last Power: ${type} (was ${oldLastPower})`); // ★ ログ追加
             } else {
                 activePowers.delete(type);
-                console.log(`  Ball ${b.name || b.texture.key}: Removed ${type}. Current Powers: [${Array.from(activePowers).join(', ')}]`);
-                if (b.getData('lastActivatedPower') === type) {
+                console.log(`  Ball ${ball.name || ball.texture.key}: Removed ${type}. Current Powers: [${Array.from(activePowers).join(', ')}]`); // ★ 削除ログ
+                if (ball.getData('lastActivatedPower') === type) {
                     const remainingPowers = Array.from(activePowers);
                     const newLastPower = remainingPowers.length > 0 ? remainingPowers[remainingPowers.length - 1] : null;
-                    b.setData('lastActivatedPower', newLastPower);
-                    console.log(`    Last Power was ${type}, reset to: ${newLastPower}`);
+                    ball.setData('lastActivatedPower', newLastPower);
+                    console.log(`    Last Power was ${type}, reset to: ${newLastPower}`); // ★ リセットログ
                 }
             }
-            b.setData('activePowers', activePowers);
+            ball.setData('activePowers', activePowers);
 
             // 各パワーアップに対応するフラグの設定/解除
             if (type === POWERUP_TYPES.KUBIRA) {
@@ -919,26 +883,23 @@ switchBikaraState(ball) {
                 console.log(`    Set isIndaraActive to: ${isActive}`);
             }
             // ▲▲▲ インダラフラグ ▲▲▲
-            // ▼▼▼ ビカラ状態設定 ▼▼▼
+            // ▼▼▼ ビカラ貫通フラグ設定 ▼▼▼
             if (type === POWERUP_TYPES.BIKARA) {
-                if (isActive) {
-                    // 有効化時は陰からスタート
-                    b.setData('bikaraState', 'yin');
-                    console.log(`    Set bikaraState to: 'yin' (Initial)`);
-                } else {
-                    // 無効化時は状態をnullに
-                    b.setData('bikaraState', null);
-                    console.log(`    Set bikaraState to: null`);
-                    // 対応するタイマーも解除
+                b.setData('isBikaraPenetrating', isActive); // ★ 貫通フラグを設定/解除
+                console.log(`    Set isBikaraPenetrating to: ${isActive}`);
+                // bikaraState は削除
+                // タイマー解除は deactivateBikara で行う
+                if (!isActive) { // ★ 無効化時にタイマー解除
                     const timer = this.bikaraTimers[b.name];
                     if (timer) {
-                         console.log(`    Removing Bikara timer for ball ${b.name}`);
-                         timer.remove();
-                         delete this.bikaraTimers[b.name];
+                        console.log(`    Removing Bikara timer for ball ${b.name}`);
+                        timer.remove();
+                        delete this.bikaraTimers[b.name];
                     }
                 }
             }
-            // ▲▲▲ ビカラ状態設定 ▲▲▲
+            // ▲▲▲ ビカラ貫通フラグ設定 ▲▲▲
+        
             // 他のパワーアップフラグもここに追加
 
         }
@@ -1562,8 +1523,7 @@ update(time, delta) {
         this.safeDestroy(this.paddleAttackBrickCollider, "paddleAttackBrickCollider"); // 既存参照を破棄
         this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider");
         this.safeDestroy(this.ballAttackBrickOverlap, "ballAttackBrickOverlap"); // ★ Overlap参照も破棄
-        this.safeDestroy(this.ballAttackBrickCollider, "ballAttackBrickCollider");
-        this.safeDestroy(this.ballAttackBrickOverlap, "ballAttackBrickOverlap");
+        
 
 
         
@@ -1598,39 +1558,38 @@ if (this.paddle && this.attackBricks) {
 
          // ★ (オプション) マキラビーム vs 攻撃ブロック の判定も追加？
 
-         // --- ▼ ボール vs 攻撃ブロック (陰陽、インダラ考慮) ▼ ---
-         let needsCollider = false;
-         let needsOverlapForIndara = false;
-         let needsOverlapForBikaraYin = false;
- 
-         this.balls?.getMatching('active', true).forEach(ball => {
-             const isIndara = ball.getData('isIndaraActive');
-             const isBikaraYin = ball.getData('bikaraState') === 'yin';
- 
-             if (isIndara) { needsOverlapForIndara = true; }
-             if (isBikaraYin) { needsOverlapForBikaraYin = true; }
-             if (!isIndara && !isBikaraYin) { needsCollider = true; } // 通常・ビカラ陽はCollider
-         });
- 
-         if (needsCollider) {
-             this.ballAttackBrickCollider = this.physics.add.collider(
-                 this.attackBricks, this.balls, this.hitAttackBrick,
-                 // インダラでもビカラ陰でもないボールのみ衝突
-                 (brick, ball) => !ball.getData('isIndaraActive') && ball.getData('bikaraState') !== 'yin',
-                 this
-             );
-             console.log("[Colliders] Ball-AttackBrick Collider added.");
-         }
-         if (needsOverlapForIndara || needsOverlapForBikaraYin) {
-             this.ballAttackBrickOverlap = this.physics.add.overlap(
-                 this.attackBricks, this.balls, this.handleBallAttackBrickOverlap,
-                 // インダラまたはビカラ陰のボールを検知
-                 (brick, ball) => ball.getData('isIndaraActive') || ball.getData('bikaraState') === 'yin',
-                 this
-             );
-             console.log("[Colliders] Ball-AttackBrick Overlap added (for Indara/BikaraYin).");
-         }
-         // --- ▲ ボール vs 攻撃ブロック ▲ ---
+        // --- ▼ ボール vs 攻撃ブロック (インダラ状態を考慮) ▼ ---
+        let needsCollider = false;
+        let needsOverlap = false;
+        this.balls?.getMatching('active', true).forEach(ball => {
+            if (ball.getData('isIndaraActive')) {
+                needsOverlap = true; // インダラボールがあればOverlapが必要
+            } else {
+                needsCollider = true; // 通常ボールがあればColliderが必要
+            }
+        });
+
+        if (needsCollider) {
+            this.ballAttackBrickCollider = this.physics.add.collider(
+                this.attackBricks,
+                this.balls,
+                this.hitAttackBrick,
+                (brick, ball) => !ball.getData('isIndaraActive') && !ball.getData('isBikaraPenetrating'),
+                this
+            );
+            console.log("[Colliders] Ball-AttackBrick Collider added (for non-Indara).");
+        }
+        if (needsOverlap) {
+            this.ballAttackBrickOverlap = this.physics.add.overlap(
+                this.attackBricks,
+                this.balls,
+                this.handleBallAttackBrickOverlap, // ★ Overlap用コールバック
+                (brick, ball) => ball.getData('isIndaraActive') || ball.getData('isBikaraPenetrating'), // インダラ状態のボールのみ検知
+                this
+            );
+            console.log("[Colliders] Ball-AttackBrick Overlap added (for Indara).");
+        }
+        // --- ▲ ボール vs 攻撃ブロック ▲ ---
 
     // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
     if (this.paddle && this.powerUps) {
@@ -1650,8 +1609,11 @@ if (this.paddle && this.attackBricks) {
 handleBallAttackBrickOverlap(brick, ball) {
     // この関数は isIndaraActive が true のボールに対してのみ呼ばれるはず
     if (!brick || !brick.active || !ball || !ball.active) return;
-    console.log("[Indara] Ball piercing attack brick!");
-
+       // ★ インダラ または ビカラ貫通 の場合 ★
+       if (ball.getData('isIndaraActive') || ball.getData('isBikaraPenetrating')) {
+        const powerType = ball.getData('isIndaraActive') ? 'Indara' : 'Bikara';
+        console.log(`[${powerType}] Ball piercing attack brick!`);
+    }
     // ★ TODO: 貫通エフェクト・SE ★
     // 攻撃ブロックを破壊する (アイテムドロップはしない)
     this.handleAttackBrickDestruction(brick); // ★ 破壊処理メソッド呼び出し (後で作成or既存利用)
@@ -1705,21 +1667,6 @@ handleBallAttackBrickOverlap(brick, ball) {
         // ▲▲▲ アニラ無敵判定 ▲▲▲
     }
     // BossScene.js 内
-       // handleBallAttackBrickOverlap メソッド (ビカラ陰の処理追加)
-       handleBallAttackBrickOverlap(brick, ball) {
-        if (!brick || !brick.active || !ball || !ball.active) return;
-
-        if (ball.getData('isIndaraActive')) { // インダラが優先
-            console.log("[Indara] Ball piercing attack brick!");
-            this.handleAttackBrickDestruction(brick); // 貫通破壊
-        } else if (ball.getData('bikaraState') === 'yin') {
-            // ビカラ陰の場合は何もしない（すり抜け）
-            console.log("[Bikara Yin] Ball passing through attack brick.");
-            // ★ TODO: すり抜けエフェクト（任意） ★
-        }
-        // それ以外のケースはこのOverlapには来ないはず
-    }
-
 
     // --- ▼ hitPaddle メソッド (速度計算修正) ▼ ---
     hitPaddle(paddle, ball) {
@@ -1762,13 +1709,6 @@ handleBallAttackBrickOverlap(brick, ball) {
         ball.setVelocity(newVelocity.x, newVelocity.y);
         // --- ▲ 速度設定 (パワーアップ考慮) ▲ ---
 
-        // ▼▼▼ ビカラ状態切替 ▼▼▼
-        if (ball.getData('bikaraState')) { // ビカラ状態なら切り替える
-            this.switchBikaraState(ball);
-        }
-        // ▲▲▲ ビカラ状態切替 ▲▲▲
-
-
 
         // --- SE再生 ---
         try { this.sound.add(AUDIO_KEYS.SE_REFLECT).play(); } catch (e) { console.error("Error playing SE_REFLECT (paddle):", e); }
@@ -1793,7 +1733,6 @@ handleBallAttackBrickOverlap(brick, ball) {
         console.log("[hitBoss] Boss hit by ball.");
         // ★★★ 衝突時のボールデータをログ出力 ★★★
         console.log('[hitBoss] Ball data at impact:', ball.data?.getAll());
-        
 
         let damage = 1;
         const lastPower = ball.getData('lastActivatedPower');
@@ -1802,22 +1741,6 @@ handleBallAttackBrickOverlap(brick, ball) {
         const isKubiraActive = ball.getData('isKubiraActive') === true;
         console.log('[hitBoss] Checking isKubiraActive:', isKubiraActive); // ★ isKubiraActive の値確認
         const isIndara = ball.getData('isIndaraActive') === true; // ★ インダラ状態か取得
-         // ▼▼▼ ダメージ計算 (ビカラ考慮) ▼▼▼
-         if (bikaraState === 'yang') { // 陽が最優先？
-            damage = 2;
-            console.log("[hitBoss] Bikara Yang hit! Base Damage: 2");
-        }
-        // クビラとの重複は？ -> とりあえず重複なしで実装
-        else if (ball.getData('isKubiraActive')) {
-             damage += 1; // クビラなら+1
-             console.log("[hitBoss] Kubira hit! Damage: 2");
-           }
-        
-        else {
-            console.log(`[hitBoss] Normal/Bikara Yin hit. Base Damage: ${damage}`);
-        }
-        // ▲▲▲ ダメージ計算 (ビカラ考慮) ▲▲▲
-
 
         // ダメージ適用
         console.log(`[hitBoss] Final calculated damage before applying: ${damage}`);
@@ -2344,13 +2267,10 @@ testLogFunction(message) {
         if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; }
         this.safeDestroy(this.familiars, "familiars group", true);
         this.safeDestroy(this.makiraBeams, "makiraBeams group", true);
-        // ▼▼▼ ビカラタイマー解除 ▼▼▼
         console.log("[Shutdown] Clearing Bikara timers...");
         Object.values(this.bikaraTimers).forEach(timer => timer?.remove());
         this.bikaraTimers = {};
-        // ▲▲▲ ビカラタイマー解除 ▲▲▲
-        console.log("[Shutdown] Bikara state cleared.");
-        // ...
+        console.log("[Shutdown] Bikara state cleared."); // メッセージはそのまま
         this.familiars = null; this.makiraBeams = null; this.makiraAttackTimer = null;
         this.safeDestroy(this.makiraBeamBossOverlap, "makiraBeamBossOverlap"); this.makiraBeamBossOverlap = null;
         this.bossAfterImageEmitter = null; // 参照クリア
