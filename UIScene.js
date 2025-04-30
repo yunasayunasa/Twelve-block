@@ -128,6 +128,9 @@ if (this.stageText) this.stageText.setDepth(highDepth); // Stageなども
          // ▲▲▲ try...catch で create 全体を囲む ▲▲▲
 
         console.log("--- UIScene CREATE End ---");
+
+        console.log("Attempting to bring UIScene to top...");
+    this.scene.bringToTop(); // ★ このシーンを最前面に移動
     } // create メソッドの終わり
 
     // registerParentEventListeners メソッド (ログ追加済み)
