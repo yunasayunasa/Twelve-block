@@ -896,7 +896,7 @@ deactivateSindara(ball = null) { // 引数なしなら全体解除
 
     console.log(`[Sindara] Deactivating for ${ball ? 'specific ball' : 'all active Sindara balls'} (${targetBalls.length} found).`);
     targetBalls.forEach(b => {
-        if (b && b.active) {
+        if (ball && ball.active) {
              this.setBallPowerUpState(POWERUP_TYPES.SINDARA, false, b);
              // ★ TODO: 解除エフェクト ★
         }
@@ -1030,7 +1030,7 @@ setBallPowerUpState(type, isActive) {
             // ▲▲▲ ビカラ貫通フラグ設定 ▲▲▲
               // ▼▼▼ シンダラフラグ ▼▼▼
               if (type === POWERUP_TYPES.SINDARA) {
-                b.setData('isSindaraActive', isActive);
+                ball.setData('isSindaraActive', isActive);
                 console.log(`    Set isSindaraActive to: ${isActive}`);
                 // シンダラにはタイマーはない
             }
