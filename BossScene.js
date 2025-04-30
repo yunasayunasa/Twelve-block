@@ -594,6 +594,14 @@ collectPowerUp(paddle, powerUp) {
     console.log(`[BossScene] Collected power up: ${type}`);
     powerUp.destroy();
 
+     // ▼▼▼ 分裂系取得時の既存効果解除 ▼▼▼
+     if (type === POWERUP_TYPES.SINDARA || type === POWERUP_TYPES.ANCHIRA) {
+        console.log(`[Split Power Check] New split power: ${type}. Deactivating existing splits.`);
+        this.deactivateSindara(); // 既存のシンダラを解除
+        // this.deactivateAnchira(); // アンチラ実装後に追加
+   }
+   // ▲▲▲ 分裂系取得時の既存効果解除 ▲▲▲
+
     // --- ボイス再生 (共通処理) ---
     const voiceKeyBase = `voice_${type}`; const upperCaseKey = voiceKeyBase.toUpperCase();
     // 特殊なキー名を持つボイスの処理
@@ -659,11 +667,9 @@ collectPowerUp(paddle, powerUp) {
 
         // --- ▼▼▼ 未実装パワーアップのアイコン＆ボイス対応 ▼▼▼ ---
         case POWERUP_TYPES.SINDARA:
-            console.log("Power up Sindara collected (Icon/Voice Test - Effect TBD: Split 2).");
-            this.setBallPowerUpState(type, true); // アイコン表示のために状態設定
-            // 効果時間がない/特殊な解除条件なので activateTemporaryEffect は使わない
-            // ※ 解除ロジックは効果実装時に必要
-            break;
+                console.log("Power up Sindara collected - Activating Persistent Split.");
+                this.activateSindara(); // ★ シンダラ有効化
+                break;
         case POWERUP_TYPES.ANCHIRA:
             console.log("Power up Anchira collected (Icon/Voice Test - Effect TBD: Split 4 for 5s?).");
             this.setBallPowerUpState(type, true);
@@ -776,6 +782,128 @@ updateBallAndPaddleAppearance() {
    // ▲▲▲ パドルの見た目更新を追加 ▲▲▲
 }
 // --- ▲ updateBallAndPaddleAppearance ▲ ---
+
+ // collectPowerUp メソッド (シンダラのcase追加、他分裂系取得時の解除処理)
+ collectPowerUp(paddle, powerUp) {
+    // ... (ボイス再生など) ...
+    const type = powerUp.getData('type'); // type をここで取得
+
+    // ▼▼▼ 分裂系取得時の既存効果解除 ▼▼▼
+    if (type === POWERUP_TYPES.SINDARA || type === POWERUP_TYPES.ANCHIRA) {
+         console.log(`[Split Power Check] New split power: ${type}. Deactivating existing splits.`);
+         this.deactivateSindara(); // 既存のシンダラを解除
+         // this.deactivateAnchira(); // アンチラ実装後に追加
+    }
+    // ▲▲▲ 分裂系取得時の既存効果解除 ▲▲▲
+
+    switch (type) {
+        // ... (他のcase) ...
+        case POWERUP_TYPES.SINDARA:
+            console.log("Power up Sindara collected - Activating Persistent Split.");
+            this.activateSindara(); // ★ シンダラ有効化
+            break;
+        // ... (他のcase) ...
+    }
+    // this.updateBallAndPaddleAppearance();
+}
+
+// keepFurthestBall メソッド (GameSceneから移植 or 新規作成)
+keepFurthestBall() {
+    console.log("[Split Prep] Keeping furthest ball.");
+    const activeBalls = this.balls?.getMatching('active', true);
+    if (!activeBalls || activeBalls.length <= 1) {
+        console.log("  - Less than 2 active balls, no need to remove.");
+        return activeBalls ? activeBalls[0] : null; // 存在するボールを返すか null
+    }
+
+    let furthestBall = null;
+    let maxDistSq = -1;
+    const paddlePos = new Phaser.Math.Vector2(this.paddle.x, this.paddle.y);
+
+    activeBalls.forEach(ball => {
+        const distSq = Phaser.Math.Distance.Squared(paddlePos.x, paddlePos.y, ball.x, ball.y);
+        if (distSq > maxDistSq) {
+            maxDistSq = distSq;
+            furthestBall = ball;
+        }
+    });
+
+    if (!furthestBall) { // 念のためチェック
+        console.warn("  - Could not determine furthest ball!");
+        return activeBalls[0]; // とりあえず最初のボールを返す
+    }
+
+    let removedCount = 0;
+    activeBalls.forEach(ball => {
+        if (ball !== furthestBall) {
+            console.log(`  - Removing ball closer to paddle: ${ball.name || ball.texture.key}`);
+            // ★ TODO: 消えるボールのエフェクト ★
+            ball.destroy(); // グループからも削除
+            removedCount++;
+        }
+    });
+    console.log(`[Split Prep] Kept ball: ${furthestBall.name || furthestBall.texture.key}. Removed ${removedCount} balls.`);
+    return furthestBall; // 残したボールを返す
+}
+
+// シンダラ有効化メソッド (新規追加)
+activateSindara() {
+    console.log("[Sindara] Activating!");
+    // 1. 起点となるボールを決定（複数あれば遠い方）
+    const sourceBall = this.keepFurthestBall();
+    if (!sourceBall || !sourceBall.active) {
+        console.warn("[Sindara] Activation failed: No source ball found after keepFurthestBall.");
+        return;
+    }
+     console.log(`[Sindara] Source ball selected: ${sourceBall.name || sourceBall.texture.key}`);
+
+    // 2. 起点ボールのデータを取得 (分裂後のボールに引き継ぐため)
+    const ballData = sourceBall.data.getAll(); // 現在の全データをコピー
+    ballData.activePowers = new Set(ballData.activePowers); // Setもコピー
+
+    // 3. 起点ボールにシンダラ状態を設定
+    this.setBallPowerUpState(POWERUP_TYPES.SINDARA, true, sourceBall);
+
+    // 4. 新しいボールを複製して追加
+    const vx = sourceBall.body.velocity.x * -0.5 + Phaser.Math.Between(-50, 50); // 少し逆向きに分裂
+    const vy = sourceBall.body.velocity.y * 0.8 + Phaser.Math.Between(-50, 0); // Y速度は少し維持
+    const newBall = this.createAndAddBall(
+        sourceBall.x + Phaser.Math.Between(-10, 10), // 少しずらす
+        sourceBall.y + Phaser.Math.Between(-10, 10),
+        vx,
+        vy,
+        ballData // ★ 取得したデータを渡す
+    );
+
+    if (newBall) {
+         // 5. 新しいボールにもシンダラ状態を設定
+         this.setBallPowerUpState(POWERUP_TYPES.SINDARA, true, newBall);
+         console.log(`[Sindara] New ball created: ${newBall.name || newBall.texture.key}`);
+         // ★ TODO: 分裂エフェクト ★
+    } else {
+        console.error("[Sindara] Failed to create the second ball!");
+        // 失敗した場合、元のボールのシンダラ状態も解除した方が良いかも
+        this.deactivateSindara(sourceBall);
+    }
+
+    this.updateBallAndPaddleAppearance(); // 両方のボールのアイコンを更新
+}
+
+// シンダラ無効化メソッド (ボール単位 or 全体)
+deactivateSindara(ball = null) { // 引数なしなら全体解除
+    const targetBalls = ball ? [ball] : this.balls?.getMatching('isSindaraActive', true) ?? [];
+    if (!targetBalls || targetBalls.length === 0) return;
+
+    console.log(`[Sindara] Deactivating for ${ball ? 'specific ball' : 'all active Sindara balls'} (${targetBalls.length} found).`);
+    targetBalls.forEach(b => {
+        if (b && b.active) {
+             this.setBallPowerUpState(POWERUP_TYPES.SINDARA, false, b);
+             // ★ TODO: 解除エフェクト ★
+        }
+    });
+    // this.updateBallAndPaddleAppearance(); // 呼び出し元で更新
+}
+
 
 // インダラ有効化メソッド (新規追加)
 activateIndara() {
@@ -900,6 +1028,13 @@ setBallPowerUpState(type, isActive) {
                 }
             }
             // ▲▲▲ ビカラ貫通フラグ設定 ▲▲▲
+              // ▼▼▼ シンダラフラグ ▼▼▼
+              if (type === POWERUP_TYPES.SINDARA) {
+                b.setData('isSindaraActive', isActive);
+                console.log(`    Set isSindaraActive to: ${isActive}`);
+                // シンダラにはタイマーはない
+            }
+            // ▲▲▲ シンダラフラグ ▲▲▲
         
             // 他のパワーアップフラグもここに追加
 
@@ -986,12 +1121,14 @@ updateBallFall() {
     if (!this.balls || !this.balls.active) return;
     let activeBallCount = 0;
     let shouldLoseLife = false; // ライフ減少フラグ
+    let droppedSindaraBall = null; // 落ちたシンダラボールを追跡
 
     this.balls.getChildren().forEach(ball => {
         if (ball.active) {
             activeBallCount++;
             // ボールが画面下に落ちた判定
             if (this.isBallLaunched && ball.y > this.gameHeight + ball.displayHeight) {
+                const isSindara = ball.getData('isSindaraActive') === true; 
                 // ▼▼▼ アニラ効果判定 ▼▼▼
                 if (this.isAnilaActive) {
                     console.log("[Anila] Ball bounce triggered!");
@@ -1011,17 +1148,48 @@ updateBallFall() {
                     shouldLoseLife = true; // ライフ減少フラグを立てる
                 }
                 // ▲▲▲ アニラ効果判定 ▲▲▲
+                if (isSindara) {
+                    droppedSindaraBall = ball; // 落ちたシンダラボールを記録
+                    // すぐには消さず、ループ後に処理
+               }
+               ball.setActive(false).setVisible(false);
+               if (ball.body) ball.body.enable = false;
+               shouldLoseLife = true; // ライフ減少候補
             }
         }
     });
 
+    // ▼▼▼ シンダラ解除判定 (ループ後) ▼▼▼
+    if (droppedSindaraBall) {
+        // アクティブなシンダラボールを再カウント
+        const remainingSindaraBalls = this.balls.getMatching('isSindaraActive', true);
+        console.log(`[Sindara Check] A Sindara ball dropped. Remaining active Sindara balls: ${remainingSindaraBalls.length}`);
+        if (remainingSindaraBalls.length === 1) {
+            // 残りが1つなら、そのボールのシンダラ状態を解除
+            console.log("[Sindara] Only one left, deactivating Sindara effect.");
+            this.deactivateSindara(remainingSindaraBalls[0]);
+            this.updateBallAndPaddleAppearance(); // 見た目更新
+        }
+        // droppedSindaraBall は既に非アクティブ化されている
+   }
+   // ▲▲▲ シンダラ解除判定 ▲▲▲
+
+     // ライフ減少判定 (アクティブボールが0になったら)
+     const currentActiveBalls = this.balls.countActive(true); // 再度カウント
+     if (shouldLoseLife && currentActiveBalls === 0 && this.isBallLaunched && this.lives > 0 && !this.isGameOver && !this.bossDefeated) {
+         console.log("No active balls left, losing life.");
+         this.loseLife();
+     }
+ }
+
+
     // ループ後にライフ減少判定
-    if (shouldLoseLife && activeBallCount <= 1 && this.isBallLaunched && this.lives > 0 && !this.isGameOver && !this.bossDefeated) {
+    /*if (shouldLoseLife && activeBallCount <= 1 && this.isBallLaunched && this.lives > 0 && !this.isGameOver && !this.bossDefeated) {
         // (activeBallCount <= 1 は、最後のボールが落ちたことを意味する)
         console.log("No active balls left or last ball dropped, losing life.");
         this.loseLife();
     }
-}
+}*/
 
 // --- ▼ マキラ関連メソッド (GameSceneから移植・調整) ▼ ---
 
@@ -1830,7 +1998,7 @@ handleBallAttackBrickOverlap(brick, ball) {
             this.tweens.add({ targets: boss, props: { x: { value: `+=${shakeAmount}`, duration: shakeDuration / 4, yoyo: true, ease: 'Sine.InOut' } }, repeat: 1 });
         } catch (e) { console.error("[applyBossDamage] Error creating shake tween:", e); }
         // try { this.sound.add('seBossHit').play(); } catch(e) {}
-        this.time.delayedCall(150, () => { if (boss.active) { boss.clearTint(); boss.setData('isInvulnerable', false); } });
+        this.time.delayedCall(300, () => { if (boss.active) { boss.clearTint(); boss.setData('isInvulnerable', false); } });
         // 体力ゼロ判定
         if (currentHealth <= 0) { this.defeatBoss(boss); }
     }
@@ -2141,8 +2309,8 @@ testLogFunction(message) {
     }
 
     
-    createAndAddBall(x, y, vx = 0, vy = 0) {
-        console.log(`Creating ball at (${x}, ${y})`);
+    createAndAddBall(x, y, vx = 0, vy = 0, data = null) { // data引数があることを確認
+        console.log(`Creating ball at (${x}, ${y}) with initial data:`, data); // データログ追加
         if (!this.balls) { console.error("Balls group missing!"); return null; }
         const ball = this.balls.create(x, y, 'ball_image')
             .setOrigin(0.5, 0.5)
@@ -2155,7 +2323,21 @@ testLogFunction(message) {
             ball.body.onWorldBounds = true;
             console.log("Ball body enabled:", ball.body.enable);
         } else { console.error("Failed to create ball body!"); if(ball) ball.destroy(); return null; }
-        ball.setData({ lastActivatedPower: null });
+         // ▼▼▼ データ設定部分を強化 ▼▼▼
+         ball.setData({
+            // 既存のパワーアップ状態を引き継ぐ
+            activePowers: data?.activePowers ? new Set(data.activePowers) : new Set(),
+            lastActivatedPower: data?.lastActivatedPower ?? null,
+            // 各種フラグを引き継ぐ (なければ false or null)
+            isKubiraActive: data?.isKubiraActive ?? false,
+            isFast: data?.isFast ?? false,
+            isSlow: data?.isSlow ?? false,
+            isIndaraActive: data?.isIndaraActive ?? false,
+            isBikaraPenetrating: data?.isBikaraPenetrating ?? false,
+            // シンダラ自身やパートナーの情報は新規ボールには不要
+            isSindaraActive: false, // 新規ボールは最初はシンダラではない (後で設定)
+        });
+        // ▲▲▲ データ設定部分を強化 ▲▲▲
         this.updateBallAppearance(ball);
         console.log("Ball created successfully.");
         return ball;
@@ -2264,6 +2446,9 @@ testLogFunction(message) {
         this.safeDestroy(this.ballAttackBrickOverlap, "ballAttackBrickOverlap"); // ★ Overlap参照クリア
         this.ballAttackBrickOverlap = null;
         console.log("[Shutdown] Indara overlap cleared.");
+        console.log("[Shutdown] Clearing Sindara state (just in case)...");
+        // deactivateSindara(); // シーン終了時はボールごと消えるので通常は不要
+        console.log("[Shutdown] Sindara state cleared.");
         // ...
         if (this.makiraAttackTimer) { this.makiraAttackTimer.remove(); this.makiraAttackTimer = null; }
         this.safeDestroy(this.familiars, "familiars group", true);
