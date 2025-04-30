@@ -599,8 +599,9 @@ collectPowerUp(paddle, powerUp) {
     // 特殊なキー名を持つボイスの処理
     let actualAudioKey = AUDIO_KEYS[upperCaseKey];
     if (type === POWERUP_TYPES.VAJRA) actualAudioKey = AUDIO_KEYS.VOICE_VAJRA_GET; // ヴァジラ取得時用
+    
     // ビカラは陰陽でボイスが分かれる可能性があるが、取得時は共通か？ 일단 Bikara Yin 으로?
-    // if (type === POWERUP_TYPES.BIKARA) actualAudioKey = AUDIO_KEYS.VOICE_BIKARA_YIN;
+     if (type === POWERUP_TYPES.BIKARA) actualAudioKey = AUDIO_KEYS.VOICE_BIKARA_YIN;
     // シンダラ合体ボイスは別途
 
     const now = this.time.now; const lastPlayed = this.lastPlayedVoiceTime[upperCaseKey] || 0;
