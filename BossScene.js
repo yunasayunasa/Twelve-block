@@ -573,6 +573,8 @@ scheduleNextAttackBrick() {
                 else { powerUp.clearTint(); }
                 if (powerUp.body) {
                     powerUp.setVelocity(0, POWERUP_SPEED_Y);
+                     // ★★★ ボディの状態をログ出力 ★★★
+                console.log(`[Drop PowerUp] ${type} - Body enabled: ${powerUp.body.enable}, Allow gravity: ${powerUp.body.allowGravity}, CollideWorldBounds: ${powerUp.body.collideWorldBounds}`);
                     powerUp.body.setCollideWorldBounds(false);
                     powerUp.body.setAllowGravity(false);
                 } else { powerUp.destroy(); console.error("No body for powerup!"); }
@@ -1761,18 +1763,18 @@ if (this.paddle && this.attackBricks) {
         // --- ▲ ボール vs 攻撃ブロック ▲ ---
 
       // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
-      this.safeDestroy(this.paddlePowerUpOverlap, "paddlePowerUpOverlap"); // 既存参照を破棄
-      if (this.paddle && this.powerUps) {
-          this.paddlePowerUpOverlap = this.physics.add.overlap(
-              this.paddle,
-              this.powerUps,
-              this.collectPowerUp, // ★ アイテム取得処理のコールバック
-              null, // processCallback は通常不要
-              this // コールバックのコンテキスト
-          );
-          console.log("[Colliders] Paddle-PowerUp overlap added.");
-     } else { console.warn("[Colliders] Cannot set Paddle-PowerUp overlap."); }
-      // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
+    this.safeDestroy(this.paddlePowerUpOverlap, "paddlePowerUpOverlap"); // 既存参照を破棄
+    if (this.paddle && this.powerUps) {
+        this.paddlePowerUpOverlap = this.physics.add.overlap(
+            this.paddle,
+            this.powerUps,
+            this.collectPowerUp, // ★ アイテム取得処理のコールバック
+            null, // processCallback は通常不要
+            this // コールバックのコンテキスト
+        );
+        console.log("[Colliders] Paddle-PowerUp overlap added.");
+   } else { console.warn("[Colliders] Cannot set Paddle-PowerUp overlap."); }
+    // ★★★ パドル vs パワーアップアイテム (Overlap) ★★★
 }
 // --- ▲ setColliders メソッド修正 ▲ ---
 
