@@ -188,10 +188,10 @@ export default class BossScene extends Phaser.Scene {
         this.setupInputAndEvents();
 
         // --- 7. ボスの動きを開始 ---
-        this.startBossMovement();
+        //this.startBossMovement();
 
         // --- ▼ 攻撃ブロック生成タイマーを開始 ▼ ---
-        this.scheduleNextAttackBrick();
+        //this.scheduleNextAttackBrick();
         // --- ▲ 攻撃ブロック生成タイマーを開始 ▲ ---
 
         console.log("BossScene Create End");
@@ -525,6 +525,11 @@ update(time, delta) {
         console.log("[Intro] Enabling player control. Boss fight start!");
         this.playerControlEnabled = true;
         // 必要ならボス移動や攻撃ブロック生成タイマーをここで開始しても良い
+
+         // ▼▼▼ ここでボス移動と攻撃ブロック生成を開始 ▼▼▼
+    this.startBossMovement(); // ボスの動きを開始
+    this.scheduleNextAttackBrick(); // 最初の攻撃ブロック生成を予約
+    // ▲▲▲ ここでボス移動と攻撃ブロック生成を開始 ▲▲▲
         this.startBossMovement(); // ボスの動きを開始
         // this.scheduleNextAttackBrick(); // 攻撃ブロック生成タイマーはcreateで既に開始しているはず
         // ★ TODO: 戦闘中ランダムボイスタイマーを開始 ★
