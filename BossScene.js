@@ -23,7 +23,7 @@ import {
 } from './constants.js';
 
 // --- ボス戦用定数 ---
-const BOSS_MAX_HEALTH = 10;
+const BOSS_MAX_HEALTH = 30;
 const BOSS_SCORE = 1500;
 // ▼ ボスの動き設定 (左右往復) ▼
 const BOSS_MOVE_RANGE_X_RATIO = 0.8; // 画面幅の60%を往復
