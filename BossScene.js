@@ -2039,12 +2039,12 @@ handleBallAttackBrickOverlap(brick, ball) {
             // 通常時：ライフ減少処理
             console.log("Paddle hit, should lose life (but commented out for now).");
             // --- ▼▼▼ ライフ減少処理 (将来的に有効化) ▼▼▼ ---
-            /*
+            
             if (!this.isGameOver && !this.bossDefeated) { // ゲームオーバー/クリア前か確認
                 console.log("Losing life due to paddle hit.");
                 this.loseLife();
             }
-            */
+            
             // --- ▲▲▲ ライフ減少処理 (将来的に有効化) ▲▲▲ ---
         }
         // ▲▲▲ アニラ無敵判定 ▲▲▲
