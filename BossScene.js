@@ -1030,7 +1030,7 @@ setBallPowerUpState(type, isActive) {
             // ▲▲▲ ビカラ貫通フラグ設定 ▲▲▲
               // ▼▼▼ シンダラフラグ ▼▼▼
               if (type === POWERUP_TYPES.SINDARA) {
-                ball.setData('isSindaraActive', isActive);
+                b.setData('isSindaraActive', isActive);
                 console.log(`    Set isSindaraActive to: ${isActive}`);
                 // シンダラにはタイマーはない
             }
