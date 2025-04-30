@@ -32,6 +32,7 @@ export default class UIScene extends Phaser.Scene {
     create(data) { // data引数はあってもなくても良いが、混乱避けるため残す
         console.log("--- UIScene CREATE ---");
         console.log("parentSceneKey available in CREATE:", this.parentSceneKey);
+        
 
         if (!this.parentSceneKey) {
             console.error("UIScene cannot proceed without parentSceneKey! Aborting.");
@@ -85,6 +86,13 @@ export default class UIScene extends Phaser.Scene {
             this.parentResizeListener = this.onGameResize.bind(this);
             this.parentScene.events.on('gameResize', this.parentResizeListener);
             console.log(`[UIScene Create] Registered listeners and listening for resize from ${this.parentSceneKey}`);
+// ▼▼▼ 深度を強制的に設定 ▼▼▼
+console.log("Setting high depth for UI elements...");
+const highDepth = 1000; // 他のどの要素よりも大きいと思われる値
+if (this.livesText) this.livesText.setDepth(highDepth);
+if (this.scoreText) this.scoreText.setDepth(highDepth); // Scoreなども見えないなら同様に設定
+if (this.stageText) this.stageText.setDepth(highDepth); // Stageなども
+// ▲▲▲ 深度を強制的に設定 ▲▲▲
 
             // --- 3. UI要素状態チェック (delayedCall) ---
             this.time.delayedCall(100, () => {
@@ -222,15 +230,7 @@ export default class UIScene extends Phaser.Scene {
         }
     }
 
-    // ▼▼▼ 深度を強制的に設定 ▼▼▼
-console.log("Setting high depth for UI elements...");
-const highDepth = 1000; // 他のどの要素よりも大きいと思われる値
-if (this.livesText) this.livesText.setDepth(highDepth);
-if (this.scoreText) this.scoreText.setDepth(highDepth); // Scoreなども見えないなら同様に設定
-if (this.stageText) this.stageText.setDepth(highDepth); // Stageなども
-// ▲▲▲ 深度を強制的に設定 ▲▲▲
-
-    // UIScene.js
+    
 
 
     // ドロッププールUI更新
