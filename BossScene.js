@@ -41,12 +41,12 @@ const ANILA_DURATION = POWERUP_DURATION[POWERUP_TYPES.ANILA] || 10000; // アニ
 const PADDLE_NORMAL_TINT = 0xffff00; // 通常のパドルの色 (黄色)
 const PADDLE_ANILA_TINT = 0xffffff; // アニラ効果中のパドルの色 (白)
 const PADDLE_ANILA_ALPHA = 0.9;     // アニラ効果中のパドルの透明度 (少し透明)
-const ANCHIRA_DURATION = POWERUP_DURATION[POWERUP_TYPES.ANCHIRA] || 8000; // アンチラ効果時間 (8秒)
+const ANCHIRA_DURATION = POWERUP_DURATION[POWERUP_TYPES.ANCHIRA] || 5000; // アンチラ効果時間 (8秒)
 const MAKORA_COPY_DELAY = 150; // マコラ取得からコピー発動までの時間 (ms)
 
 // --- 定数 (追尾速度調整用) ---
 const INDARA_HOMING_SPEED = NORMAL_BALL_SPEED * 1.2; // 通常より少し速く？
-const BIKARA_DURATION = POWERUP_DURATION[POWERUP_TYPES.BIKARA] || 10000;
+const BIKARA_DURATION = POWERUP_DURATION[POWERUP_TYPES.BIKARA] || 8000;
 
 
 export default class BossScene extends Phaser.Scene {
@@ -1713,7 +1713,7 @@ hitBossWithMakiraBeam(beam, boss) {
 
         // ボスに10ダメージ
         if (this.boss && this.boss.active) {
-            this.applyBossDamage(this.boss, 10, "Vajra Ougi"); // ★ ダメージを10に変更
+            this.applyBossDamage(this.boss, 7, "Vajra Ougi"); // ★ ダメージを10に変更
         } else {
              console.log("Vajra Ougi triggered, but boss is inactive.");
         }
