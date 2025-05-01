@@ -28,10 +28,10 @@ const BOSS_SCORE = 1500;
 // ▼ ボスの動き設定 (左右往復) ▼
 const BOSS_MOVE_RANGE_X_RATIO = 0.8; // 画面幅の60%を往復
 const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
-const DEFEAT_FLASH_INTERVAL = 300; // 点滅間隔 (約2秒 / (3回 * 2状態))
-const DEFEAT_FLASH_COUNT = 3;    // 点滅回数
-const DEFEAT_SHAKE_DURATION = 800; // シェイク時間
-const DEFEAT_FADE_DURATION = 1000; // フェードアウト時間 (シェイクより少し長く)
+const DEFEAT_FLASH_DURATION = 150; // 1回のフラッシュの時間 (ms)
+const DEFEAT_FLASH_INTERVAL = 300; // フラッシュの間隔 (ms)
+const DEFEAT_SHAKE_DURATION = 800;
+const DEFEAT_FADE_DURATION = 1000;
 // --- ▲ ボスの動き設定 ▲ ---
 // ★ 攻撃ブロック関連の定数
 const ATTACK_BRICK_VELOCITY_Y = 150; // 落下速度
@@ -2603,125 +2603,63 @@ handleBallAttackBrickOverlap(brick, ball) {
      * @param {Phaser.Physics.Arcade.Image} boss - 撃破されたボスオブジェクト
      */
     defeatBoss(boss) {
-        // --- 重複呼び出し防止 ---
-        if (this.bossDefeated) {
-            console.log("[defeatBoss] Already defeated, skipping.");
-            return;
-        }
-        console.log("[defeatBoss] Boss defeated! Starting defeat sequence (Image Swap).");
+        if (this.bossDefeated) return;
+        console.log("[defeatBoss] Boss defeated! Starting defeat sequence (Simple Flash)."); // ログ変更
         this.bossDefeated = true;
-        this.playerControlEnabled = false; // 操作不能に
+        this.playerControlEnabled = false;
 
-        // ▼▼▼ ★★★ ボスとの衝突判定を即座に削除 ★★★ ▼▼▼
+        // ▼▼▼ 衝突判定削除 (変更なし) ▼▼▼
         console.log("[defeatBoss] Destroying Ball-Boss collider...");
         this.safeDestroy(this.ballBossCollider, "ballBossCollider");
-        this.ballBossCollider = null; // 参照もクリア
-        // もしビームとのOverlapがあればそれも削除
-        // this.safeDestroy(this.makiraBeamBossOverlap, "makiraBeamBossOverlap");
-        // this.makiraBeamBossOverlap = null;
-        // ▲▲▲ ★★★ ボスとの衝突判定を即座に削除 ★★★ ▲▲▲
+        this.ballBossCollider = null;
+        // ... (必要なら他の衝突判定も) ...
 
         // --- 1. 動きを止める ---
         console.log("[defeatBoss] Stopping movements and timers...");
-        if (this.bossMoveTween) { this.bossMoveTween.stop(); console.log("  - Boss movement stopped."); }
-        if (this.attackBrickTimer) { this.attackBrickTimer.remove(); console.log("  - Attack brick timer removed."); }
-        // ボールを止める (物理演算は止めない方が演出が自然かも？)
+        if (this.bossMoveTween) this.bossMoveTween.stop();
+        if (this.attackBrickTimer) this.attackBrickTimer.remove();
         this.balls?.children.each(ball => ball.body?.stop());
-        console.log("  - Active balls stopped.");
-        // シーン全体のTweenを一時停止 (撃破演出のTweenは除く必要あり -> 影響なければPauseしない方が安全かも)
-        // this.tweens.pauseAll();
-        // console.log("  - All tweens paused (except defeat sequence).");
-
-        // ボス本体の当たり判定は消す
-        if (boss && boss.body) { // bossとbodyの存在確認
-           boss.disableBody(true, false); // ボディだけ無効化 (GameObjectは表示)
+        // this.tweens.pauseAll(); // 必要なら
+        if (boss && boss.body) {
+           boss.disableBody(true, false); // ボディ無効化 (表示は継続)
            console.log("  - Boss physics body disabled.");
-        } else { console.warn("[defeatBoss] Could not disable boss body."); }
-
-
-        // --- 2. 撃破演出開始 ---
-        // SE再生 (try...catch)
-        try {
-            // this.sound.play('your_defeat_start_se_key'); // ★ 撃破開始SE
-            console.log("[defeatBoss] Defeat Start SE should play here.");
-        } catch (e) { console.error("Error playing defeat start SE:", e); }
-
-        // --- 3. ネガ反転点滅タイマー開始 ---
-        let flashCounter = 0;
-        let isNegative = false;
-        const originalTextureKey = 'bossStand';
-        const negativeTextureKey = 'bossNegative'; // ★ ネガ画像のキー名を確認！
-
-        // 以前のタイマーが残っていればクリア (念のため)
-        if (this.flashEvent) this.flashEvent.remove();
-
-        console.log("[defeatBoss] Creating flash event timer...");
-        this.flashEvent = this.time.addEvent({ // シーンプロパティに保持
-            delay: DEFEAT_FLASH_INTERVAL / 2, // 点滅間隔の半分
-            loop: true,
-            callbackScope: this, // コールバックのthisをBossSceneに固定
-            callback: function() { // ★ アロー関数ではなく function を使う (thisのため)
-                console.log(">>> Flash event callback triggered! <<<"); // Step 0
-
-                // this.boss の存在と状態を確認
-                if (!this.boss || !this.boss.active) {
-                    console.warn("!!! Boss object missing in flash callback! Removing timer.");
-                    if (this.flashEvent) this.flashEvent.remove();
-                    return; // Step 0.5 (Exit)
-                }
-                console.log("Step 1: Boss object seems OK.");
-
-                isNegative = !isNegative; // フラグ反転
-                console.log("Step 2: isNegative toggled to", isNegative);
-
-                const nextTexture = isNegative ? negativeTextureKey : originalTextureKey;
-                console.log("Step 3: Attempting to set texture to:", nextTexture);
-
-                try {
-                    this.boss.setTexture(nextTexture); // this.boss を使う
-                    console.log("Step 4: setTexture successful.");
-                    console.log(`   Texture key AFTER setTexture: ${this.boss.texture.key}`);
-                } catch (e) {
-                    console.error(`!!! Error setting texture to ${nextTexture}:`, e.message, e.stack, e);
-                    if (this.flashEvent) this.flashEvent.remove();
-                    return; // Step 4 (Error Exit)
-                }
-
-                console.log("Step 5: Texture set, checking counter.");
-                if (isNegative) {
-                    flashCounter++;
-                    console.log("   Incremented flashCounter to:", flashCounter);
-                    // SE再生 (try...catch) - 点滅ごと
-                    try {
-                         // this.sound.play('your_flash_se_key'); // ★ 点滅SE
-                         console.log("   Flash SE should play here.");
-                    } catch (e) { console.error("Error playing flash SE:", e); }
-                }
-
-                console.log("Step 6: Checking flash count limit.");
-                if (flashCounter >= DEFEAT_FLASH_COUNT) {
-                    console.log("[Defeat Flash] Flashing complete. Conditions met to call startBossShakeAndFade.");
-                    if (this.flashEvent) this.flashEvent.remove(); // ループ停止
-                    // 最後に確実にネガ画像にする
-                    if (this.boss && this.boss.active && this.boss.texture.key !== negativeTextureKey) {
-                         try { this.boss.setTexture(negativeTextureKey); } catch(e){}
-                         console.log("   Ensured final texture is negative.");
-                    }
-                    console.log(">>> Calling startBossShakeAndFade NOW from flash event end. <<<");
-                    this.startBossShakeAndFade(this.boss); // 次の演出へ
-                    console.log("Step 7 (Final): Called shake/fade.");
-                } else {
-                     console.log("Step 7 (Looping): Flash count not reached yet.");
-                }
-                console.log("<<< Flash event callback finished. >>>"); // Step 8 (Normal End)
-            }
-        });
-
-        if (this.flashEvent) {
-             console.log("[defeatBoss] Flash event timer created successfully.");
-        } else {
-             console.error("!!! Failed to create flash event timer! Defeat sequence might not proceed.");
         }
+
+        // --- 2. 即時ネガ画像化 ---
+        const negativeTextureKey = 'bossNegative';
+        console.log("[defeatBoss] Setting texture to negative:", negativeTextureKey);
+        try {
+            if (boss && boss.active) { // 確認
+                 boss.setTexture(negativeTextureKey);
+                 console.log(`   Texture key AFTER setTexture: ${boss.texture.key}`);
+            } else { console.warn("Boss inactive, cannot set texture.");}
+        } catch (e) {
+            console.error(`!!! Error setting negative texture:`, e);
+            // エラーが出ても演出を進めるか、ここで止めるか？ -> とりあえず進める
+        }
+
+        // --- 3. 画面フラッシュ (3回) ---
+        // SE再生 (try...catch) - 最初のフラッシュ時？
+        try {
+            // this.sound.play('your_defeat_flash_se_key'); // ★ フラッシュSE
+        } catch (e) { console.error("Error playing defeat flash SE:", e); }
+
+        // カメラフラッシュを chain または delayedCall で連続実行
+        const flashColor = [255, 255, 255]; // 白
+        this.cameras.main.flash(DEFEAT_FLASH_DURATION, ...flashColor);
+        this.time.delayedCall(DEFEAT_FLASH_INTERVAL, () => {
+            if (!this.scene.isActive()) return; // シーンが停止していたら何もしない
+            this.cameras.main.flash(DEFEAT_FLASH_DURATION, ...flashColor);
+            this.time.delayedCall(DEFEAT_FLASH_INTERVAL, () => {
+                 if (!this.scene.isActive()) return;
+                 this.cameras.main.flash(DEFEAT_FLASH_DURATION, ...flashColor);
+                 // 最後のフラッシュが終わったらシェイク＆フェードへ
+                 console.log("[Defeat Flash] Flashing complete. Starting shake and fade.");
+                 this.startBossShakeAndFade(this.boss); // ★ boss を渡す
+            }, [], this);
+        }, [], this);
+        console.log("[defeatBoss] Flash sequence initiated.");
+
     }
 
     /**
