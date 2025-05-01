@@ -22,7 +22,7 @@ export const MAX_STAGE = 12; // 最大ステージ数
 export const BRICK_COLORS = [ 0xff0000, 0x0000ff, 0x00ff00, 0xffff00, 0xff00ff, 0x00ffff ];
 export const BRICK_MARKED_COLOR = 0x666666; // ビカラ陰用マーク色
 
-export const BAISRAVA_DROP_RATE = 0.02; // バイシュラヴァの直接ドロップ率
+export const BAISRAVA_DROP_RATE = 0.01; // バイシュラヴァの直接ドロップ率
 export const POWERUP_SIZE = 40;5
 export const POWERUP_SPEED_Y = 100;
 export const POWERUP_TYPES = { KUBIRA: 'kubira', SHATORA: 'shatora', HAILA: 'haila', ANCHIRA: 'anchira', SINDARA: 'sindara', BIKARA: 'bikara', INDARA: 'indara', ANILA: 'anila', BAISRAVA: 'baisrava', VAJRA: 'vajra', MAKIRA: 'makira', MAKORA: 'makora' };

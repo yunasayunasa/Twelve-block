@@ -216,7 +216,7 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
      const testButtonStyle = { fontSize: '24px', fill: '#fff', backgroundColor: '#888', padding: { x: 15, y: 8 } };
      const testButtonHoverStyle = { fill: '#ff0', backgroundColor: '#aaa'};
 
-     const testButtonText = this.add.text(w / 2, testButtonY, '[TEST] Boss Battle', testButtonStyle)
+     const testButtonText = this.add.text(w / 2, testButtonY, 'VS:アートマンHL戦', testButtonStyle)
          .setOrigin(0.5)
          .setInteractive({ useHandCursor: true })
          .on('pointerover', () => testButtonText.setStyle(testButtonHoverStyle))
@@ -233,13 +233,18 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
                  score: 0, // テスト時のスコア
                  chaosSettings: { count: this.selectedCount, ratePercent: this.selectedRate } // カオス設定も引き継ぐ
              };
+             
              console.log("Starting BossScene with test data:", testData);
              console.log("Passing settings to BossScene (Test):", testData.chaosSettings); // ★ ログ追加
              this.scene.start('BossScene', testData); // BossSceneへ遷移
              // ★ BossScene 側で UIScene を launch する必要あり ★
              // ここで launch すると BossScene より先に UI が表示されてしまう可能性
              // this.scene.launch('UIScene'); // ← ここでは launch しない
-         });
+         })
+           // ▼▼▼ この行を追加 ▼▼▼
+           .setVisible(false); // ★ ボタンを非表示にする
+           // --- ▲ ボス直行テストボタンを追加 ▲ ---
+         
      // --- ▲ ボス直行テストボタンを追加 ▲ ---
 
 
