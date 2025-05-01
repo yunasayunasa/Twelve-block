@@ -182,7 +182,7 @@ export default class BossScene extends Phaser.Scene {
         this.gameHeight = this.scale.height;
 
         // --- 1. 基本設定とUI ---
-        this.setupBackgroundAndBgm(); // 背景とBGM設定を分離
+        this.setupBackground(); // 背景とBGM設定を分離
         this.setupUI();
         this.setupPhysics();
 
@@ -203,10 +203,11 @@ export default class BossScene extends Phaser.Scene {
         // --- 4. ★ 演出開始 ★ ---
         this.playerControlEnabled = false; // 最初は操作不可
         // ▼▼▼ サウンド停止 ▼▼▼
-        console.log("[Intro] Stopping all sounds and BGM before cutscene.");
-        this.sound.stopAll();
-        this.stopBgm(); // 既存のBGM停止メソッド呼び出し
-        // ▲▲▲ サウンド停止 ▲▲▲
+    console.log("[Intro] Stopping all sounds and previous BGM before cutscene.");
+    this.sound.stopAll();
+    this.stopBgm(); // ★ 前のBGMがあれば止める
+    // this.playBossBgm(); // ← ここでのBGM再生は削除！
+    // ▲▲▲ サウンド停止 ▲▲▲
         this.startIntroCutscene();      // カットイン演出を開始
 
         console.log("BossScene Create End - Waiting for intro");
@@ -306,10 +307,10 @@ update(time, delta) {
         }, [], this);
     }
 
-    setupBackgroundAndBgm() {
+    setupBackground() {
         this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground3')
             .setOrigin(0.5, 0.5).setDisplaySize(this.gameWidth, this.gameHeight).setDepth(-1);
-        this.playBossBgm();
+        //this.playBossBgm();
     }
 
 
@@ -547,6 +548,11 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
         // ▲▲▲ 物理ボディのサイズを一時的に最小化 ▲▲▲
 
         this.boss.setVisible(true); // 表示はする
+
+        // ▼▼▼ ボス戦BGM再生開始 ▼▼▼
+    this.playBossBgm();
+    // ▲▲▲ ボス戦BGM再生開始 ▲▲▲
+
 
         // Tweenでズームイン
         this.tweens.add({
