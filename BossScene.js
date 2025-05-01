@@ -394,16 +394,17 @@ update(time, delta) {
             .setOrigin(0, 0)
             .setDepth(900); // UIより手前、カットイン要素より奥
 
-        // ボス立ち絵 (上半分アップ)
-        const bossImage = this.add.image(this.gameWidth / 2, this.gameHeight * 0.1, 'bossStand') // Y座標を少し上目に
-            .setOrigin(0.5, 0) // 上端中央基準
+        // ▼▼▼ ボス立ち絵 (全身表示に変更) ▼▼▼
+        const bossImage = this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'bossStand') // 画面中央に配置
+            .setOrigin(0.5, 0.5) // 中央基準に変更
             .setDepth(901);
+
         // サイズ調整 (画面幅の70%くらいに？ 要調整)
         const targetImageWidth = this.gameWidth * 0.7;
         bossImage.displayWidth = targetImageWidth;
         bossImage.scaleY = bossImage.scaleX; // アスペクト比維持
         // 下半分を切り取る (画像の高さの半分でクロップ)
-        bossImage.setCrop(0, 0, bossImage.width, bossImage.height / 2);
+        //bossImage.setCrop(0, 0, bossImage.width, bossImage.height / 2);
 
         /// ▼▼▼ テキスト表示の確認・修正 ▼▼▼
         const textContent = 'VS アートマンHL';
@@ -414,13 +415,24 @@ update(time, delta) {
             strokeThickness: 4,
             fontFamily: 'MyGameFont, sans-serif', // フォント指定確認
             align: 'center' // 中央揃え指定（念のため）
+            
         };
         console.log(`[Intro] Creating VS Text with style:`, textStyle, `Content: ${textContent}`); // ★ ログ追加
 
+        // Y座標をボス画像の上部か下部、または固定位置に調整
+        // 例1: ボス画像の上
+        // const textY = bossImage.getBounds().top - 10; // ボックスの上端から少し上
+        // 例2: ボス画像の下
+        const textY = bossImage.getBounds().bottom + 10; // ボックスの下端から少し下
+        // 例3: 画面下部の固定位置
+        // const textY = this.gameHeight * 0.85;
+
+
         // ★★★ テキストオブジェクトを this.vsText として保持 ★★★
-        this.vsText = this.add.text(this.gameWidth / 2, bossImage.y + bossImage.displayHeight + 10, textContent, textStyle)
-            .setOrigin(0.5, 0)
-            .setDepth(902); // ★ 他の要素より手前に
+        this.vsText = this.add.text(this.gameWidth / 2, textY, textContent, textStyle)
+            .setOrigin(0.5, (textY === bossImage.getBounds().top - 10) ? 1 : 0) // 上に置くなら下基準(1)、下に置くなら上基準(0)
+            .setDepth(902);
+        // ▲▲▲ テキスト表示 (位置調整) ▲▲▲
 
         // ★★★ 生成直後の状態をログ出力 ★★★
         if (this.vsText) {
@@ -444,7 +456,13 @@ update(time, delta) {
             // カットイン要素を破棄
             overlay.destroy();
             bossImage.destroy();
-            vsText.destroy();
+            // ▼▼▼ this.vsText を参照して破棄 ▼▼▼
+            if (this.vsText) { // this.vsText が存在するか確認
+                this.vsText.destroy();
+                this.vsText = null; // 参照もクリア
+            }
+            // ▲▲▲ this.vsText を参照して破棄 ▲▲▲
+            // 次の演出を開始
             // 次の演出を開始
             this.startFlashAndZoomIntro();
         }, [], this);
