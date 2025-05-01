@@ -63,8 +63,22 @@ this.load.image('bossNegative', 'assets/bossNegative.png'); // ボス撃墜、�
         this.load.audio(AUDIO_KEYS.VOICE_VAJRA_TRIGGER, 'assets/voice_vajra_trigger.mp3');
         this.load.audio(AUDIO_KEYS.VOICE_MAKIRA, 'assets/voice_makira.mp3');
         this.load.audio(AUDIO_KEYS.VOICE_MAKORA, 'assets/voice_makora.mp3');
-        // ...(ボス関連の音声も後で追加)...
-
+        // --- ▼▼▼ ボス戦用サウンド読み込み ▼▼▼ ---
+        console.log("Loading boss scene sounds...");
+        this.load.audio(AUDIO_KEYS.SE_CUTSCENE_START, 'assets/se_cutscene_start.mp3');
+        this.load.audio(AUDIO_KEYS.SE_IMPACT_FLASH, 'assets/se_impact_flash.mp3');
+        this.load.audio(AUDIO_KEYS.VOICE_BOSS_APPEAR, 'assets/voice_boss_appear.mp3');
+        this.load.audio(AUDIO_KEYS.SE_BOSS_ZOOM, 'assets/se_boss_zoom.mp3');
+        this.load.audio(AUDIO_KEYS.SE_SHRINK, 'assets/se_shrink.mp3');
+        this.load.audio(AUDIO_KEYS.SE_FIGHT_START, 'assets/se_fight_start.mp3');
+        this.load.audio(AUDIO_KEYS.VOICE_BOSS_DAMAGE, 'assets/voice_boss_damage.mp3');
+        this.load.audio(AUDIO_KEYS.VOICE_BOSS_RANDOM_1, 'assets/voice_boss_random_1.mp3');
+        this.load.audio(AUDIO_KEYS.VOICE_BOSS_RANDOM_2, 'assets/voice_boss_random_2.mp3');
+        this.load.audio(AUDIO_KEYS.VOICE_BOSS_RANDOM_3, 'assets/voice_boss_random_3.mp3');
+        this.load.audio(AUDIO_KEYS.VOICE_BOSS_DEFEAT, 'assets/voice_boss_defeat.mp3');
+        this.load.audio(AUDIO_KEYS.SE_DEFEAT_FLASH, 'assets/se_defeat_flash.mp3');
+        // this.load.audio(AUDIO_KEYS.SE_SHAKE_FADE, 'assets/se_shake_fade.mp3'); // 任意
+        // --- ▲▲▲ ボス戦用サウンド読み込み ▲▲▲ ---
         console.log("Finished loading audio files setup.");
     }
 

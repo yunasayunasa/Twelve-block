@@ -28,10 +28,26 @@ const BOSS_SCORE = 1500;
 // ▼ ボスの動き設定 (左右往復) ▼
 const BOSS_MOVE_RANGE_X_RATIO = 0.8; // 画面幅の60%を往復
 const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
-const DEFEAT_FLASH_DURATION = 150; // 1回のフラッシュの時間 (ms)
-const DEFEAT_FLASH_INTERVAL = 300; // フラッシュの間隔 (ms)
-const DEFEAT_SHAKE_DURATION = 800;
-const DEFEAT_FADE_DURATION = 1000;
+
+// --- ▼ 演出・サウンド関連定数 (調整用) ▼ ---
+const CUTSCENE_DURATION = 1500;       // カットイン表示時間
+const CUTSCENE_FLASH_DURATION = 200;  // カットイン開始時フラッシュ時間
+const INTRO_FLASH_DURATION = 200;     // 登場前フラッシュ時間
+const ZOOM_IN_DURATION = 1300;        // ズームイン時間
+const ZOOM_WAIT_DURATION = 200;       // ドアップでの待機時間
+const SHRINK_DURATION = 50;           // 瞬間縮小時間
+const SHRINK_FLASH_DURATION = 150;    // 縮小完了時フラッシュ時間
+const VOICE_START_DELAY = 100;        // ボイス再生開始までの遅延
+const GAMEPLAY_START_DELAY = 600;     // ボイス再生から操作可能になるまでの遅延
+const BOSS_RANDOM_VOICE_MIN_DELAY = 8000;  // 戦闘中ボイス最小間隔
+const BOSS_RANDOM_VOICE_MAX_DELAY = 15000; // 戦闘中ボイス最大間隔
+const BOSS_DAMAGE_VOICE_THROTTLE = 2000; // ダメージボイスのスロットリング時間(ms)
+const DEFEAT_FLASH_DURATION = 150;    // 撃破時フラッシュ時間
+const DEFEAT_FLASH_INTERVAL = 800;    // ★ 撃破時フラッシュ間隔 (少し長く)
+const DEFEAT_FLASH_COUNT = 3;
+const DEFEAT_SHAKE_DURATION = 1200;   // ★ シェイク時間 (少し長く)
+const DEFEAT_FADE_DURATION = 1500;    // ★ フェードアウト時間 (少し長く)
+// --- ▲ 演出・サウンド関連定数 ▲ ---
 // --- ▲ ボスの動き設定 ▲ ---
 // ★ 攻撃ブロック関連の定数
 const ATTACK_BRICK_VELOCITY_Y = 150; // 落下速度
@@ -62,6 +78,12 @@ export default class BossScene extends Phaser.Scene {
         this.balls = null;
         this.boss = null;
         this.attackBricks = null; // 子機は削除
+
+        this.randomVoiceTimer = null;     // ★ 戦闘中ランダムボイスタイマー
+        this.lastDamageVoiceTime = 0;   // ★ ダメージボイスのスロットリング用
+        this.bossVoiceKeys = [ ('VOICE_BOSS_RANDOM_1', 'VOICE_BOSS_RANDOM_2', 'VOICE_BOSS_RANDOM_3')  ];
+        
+
 
         this.lives = 3;
         this.score = 0;
@@ -145,6 +167,9 @@ export default class BossScene extends Phaser.Scene {
             this.bossMoveTween.stop();
             this.bossMoveTween = null;
         }
+        if (this.randomVoiceTimer) this.randomVoiceTimer.remove(); // ★ タイマークリア
+        this.randomVoiceTimer = null;
+        this.lastDamageVoiceTime = 0; // ★ スロットリング初期化
     }
 
     preload() {
@@ -177,6 +202,11 @@ export default class BossScene extends Phaser.Scene {
 
         // --- 4. ★ 演出開始 ★ ---
         this.playerControlEnabled = false; // 最初は操作不可
+        // ▼▼▼ サウンド停止 ▼▼▼
+        console.log("[Intro] Stopping all sounds and BGM before cutscene.");
+        this.sound.stopAll();
+        this.stopBgm(); // 既存のBGM停止メソッド呼び出し
+        // ▲▲▲ サウンド停止 ▲▲▲
         this.startIntroCutscene();      // カットイン演出を開始
 
         console.log("BossScene Create End - Waiting for intro");
@@ -392,6 +422,9 @@ update(time, delta) {
     startIntroCutscene() {
         console.log("[Intro] Starting Cutscene...");
         const cutsceneDuration = 2000; // 3秒
+// ▼▼▼ カットイン開始時フラッシュ ▼▼▼
+this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッシュ
+// ▲▲▲ カットイン開始時フラッシュ ▲▲▲
 
         // 背景暗転用オブジェクト
         const overlay = this.add.rectangle(0, 0, this.gameWidth, this.gameHeight, 0x000000, 0.7)
@@ -448,10 +481,10 @@ update(time, delta) {
         }
         // ▲▲▲ テキスト表示の確認・修正 ▲▲▲
 
-        // SE再生 (try...catch)
+        // SE再生 (シャキーン)
         try {
-            // this.sound.play('your_cutscene_se_key'); // ★ SEキーを指定
-            console.log("[Intro] Cutscene SE should play here.");
+             this.sound.play('SE_CUTSCENE_START'); // ★ SEキーを指定
+            console.log("[Intro] Cutscene Start SE (Shakin!) should play here.");
         } catch (e) { console.error("Error playing cutscene SE:", e); }
 
         // 時間経過でカットイン終了 → フラッシュ＆ズーム演出へ
@@ -476,14 +509,13 @@ update(time, delta) {
     startFlashAndZoomIntro() {
         // フラッシュ設定
         const flashDuration = 200; // 0.2秒
-        // SE再生 (try...catch)
+        // SE再生 (衝撃音)
         try {
-            // this.sound.play('your_flash_se_key'); // ★ SEキーを指定
-            console.log("[Intro] Flash SE should play here.");
+             this.sound.play('SE_IMPACT_FLASH'); // ★ SEキーを指定
+            console.log("[Intro] Impact Flash SE should play here.");
         } catch (e) { console.error("Error playing flash SE:", e); }
-        // カメラフラッシュエフェクト
-        this.cameras.main.flash(flashDuration, 255, 255, 255); // 白でフラッシュ
-
+        // カメラフラッシュ
+        this.cameras.main.flash(INTRO_FLASH_DURATION, 255, 255, 255);
         // フラッシュ後にズームイン開始
         this.time.delayedCall(flashDuration, () => {
             this.startBossZoomIn();
@@ -539,14 +571,14 @@ update(time, delta) {
         console.log("[Intro] Starting Boss Quick Shrink...");
         if (!this.boss || !this.boss.active) { console.error("Boss object missing or inactive for shrink!"); return; }
 
-        const shrinkDuration = 50; // 0.05秒 (一瞬)
+        const shrinkDuration = SHRINK_DURATION; // 0.05秒 (一瞬)
         const targetX = this.gameWidth / 2;
-        const targetY = this.boss.getData('targetY'); // createBossで保存した定位置Y
-        const targetScale = this.boss.getData('targetScale'); // createBossで保存した定スケール
+        const targetY = this.boss.getData('targetY');
+        const targetScale = this.boss.getData('targetScale');
 
-        // 効果音再生 (try...catch)
+        // 効果音再生 (縮小音)
         try {
-            // this.sound.play('your_shrink_se_key'); // ★ SEキーを指定
+             this.sound.play('SE_SHRINK'); // ★ SEキーを指定
             console.log("[Intro] Quick Shrink SE should play here.");
         } catch (e) { console.error("Error playing shrink SE:", e); }
 
@@ -557,30 +589,49 @@ update(time, delta) {
             y: targetY,
             scale: targetScale,
             duration: shrinkDuration,
-            ease: 'Expo.easeOut', // 素早く減速する感じ
-            onComplete: () => {
-                console.log("[Intro] Quick Shrink Complete. Playing voice and starting game.");
-                 // ▼▼▼ 物理ボディのサイズを元に戻す ▼▼▼
-                 if (this.boss.body) {
-                    console.log("[Intro] Restoring boss physics body size.");
-                    this.updateBossSize(); // ★ これで正しいサイズとオフセットが再設定されるはず
-               } else {
-                    console.error("!!! Boss body not found after shrink! Cannot restore size.");
-               }
-               // ▲▲▲ 物理ボディのサイズを元に戻す ▲▲▲
+            ease: 'Expo.easeOut',
+            onCompleteScope: this, // onComplete の this を固定
+            onComplete: function() { // ★ function形式 (またはアロー関数)
+                console.log("[Intro] Quick Shrink Complete.");
 
-                // ボス登場ボイス再生 (少し遅延)
-                this.time.delayedCall(100, () => {
+                // ▼▼▼ 縮小完了時フラッシュ ▼▼▼
+                console.log("[Intro] Initiating shrink completion flash.");
+                this.cameras.main.flash(SHRINK_FLASH_DURATION, 255, 255, 255); // 白フラッシュ
+                // ▲▲▲ 縮小完了時フラッシュ ▲▲▲
+
+                // ▼▼▼ 戦闘開始SE再生 ▼▼▼
+                try {
+                    // this.sound.play('SE_FIGHT_START'); // ★ SEキーを指定
+                    console.log("[Intro] Fight Start SE should play here.");
+                } catch (e) { console.error("Error playing fight start SE:", e); }
+                // ▲▲▲ 戦闘開始SE再生 ▲▲▲
+
+                // ボディ再有効化＆サイズ復元
+                if (this.boss.body) {
+                     console.log("[Intro] Re-enabling boss physics body.");
+                     this.boss.enableBody(true, this.boss.x, this.boss.y, true, true);
+                     this.updateBossSize(); // サイズ再設定
+                } else {
+                     console.error("!!! Boss body not found after shrink! Cannot re-enable physics.");
+                }
+
+                // ▼▼▼ ボイス再生とゲーム開始の delayedCall ▼▼▼
+                // ボイス再生 (少し遅延)
+                console.log(`[Intro] Scheduling boss intro voice in ${VOICE_START_DELAY}ms`);
+                this.time.delayedCall(VOICE_START_DELAY, () => {
+                     if (!this.scene.isActive()) return; // シーン確認
                      try {
-                         // this.sound.play('your_boss_intro_voice_key'); // ★ ボイスキーを指定
-                         console.log("[Intro] Boss intro voice should play here.");
+                         // this.sound.play('VOICE_BOSS_APPEAR'); // ★ 登場ボイスキー (ズームイン開始時と別ならこちら)
+                         console.log("[Intro] Boss intro voice playing NOW.");
                      } catch (e) { console.error("Error playing boss intro voice:", e); }
                  }, [], this);
 
                 // さらに遅れてゲーム開始
-                this.time.delayedCall(600, this.startGameplay, [], this); // ボイス再生から0.5秒後
-            }
-        });
+                console.log(`[Intro] Scheduling gameplay start in ${GAMEPLAY_START_DELAY}ms`);
+                this.time.delayedCall(GAMEPLAY_START_DELAY, this.startGameplay, [], this);
+                // ▲▲▲ ボイス再生とゲーム開始の delayedCall ▲▲▲
+            } // onComplete の終わり
+        }); // tween の終わり
     }
 
     // 5. ゲームプレイ開始処理
@@ -604,6 +655,9 @@ update(time, delta) {
         this.startBossMovement(); // ボスの動きを開始
         // this.scheduleNextAttackBrick(); // 攻撃ブロック生成タイマーはcreateで既に開始しているはず
         // ★ TODO: 戦闘中ランダムボイスタイマーを開始 ★
+        // ▼▼▼ 戦闘中ランダムボイスタイマー開始 ▼▼▼
+        this.startRandomVoiceTimer();
+        // ▲▲▲ 戦闘中ランダムボイスタイマー開始 ▲▲▲
     }
 
     // --- ▲ 演出用メソッド ▲ ---
@@ -653,6 +707,41 @@ updateBallAppearance(ball) {
     console.log(`<<< updateBallAppearance finished (lastPower priority).`); // 出口ログ変更
 }
  // --- ▲ updateBallAppearance ▲ ---
+
+ // --- ▼ 戦闘中・ダメージ・撃破関連メソッド ▼ ---
+
+    // 戦闘中ランダムボイスタイマー開始 (新規追加)
+    startRandomVoiceTimer() {
+        if (this.randomVoiceTimer) this.randomVoiceTimer.remove(); // 既存があれば削除
+        if (this.bossVoiceKeys.length === 0) {
+            console.warn("[Random Voice] No boss voice keys defined.");
+            return;
+        }
+        console.log("[Random Voice] Starting timer...");
+
+        const playRandomVoice = () => {
+            if (this.bossDefeated || this.isGameOver || !this.boss?.active) { // ボス戦闘中か確認
+                if(this.randomVoiceTimer) this.randomVoiceTimer.remove(); // 戦闘終了ならタイマー停止
+                return;
+            }
+            const randomKey = Phaser.Utils.Array.GetRandom(this.bossVoiceKeys);
+            try {
+                console.log(`[Random Voice] Playing: ${randomKey}`);
+                this.sound.play(randomKey);
+            } catch (e) { console.error(`Error playing random voice ${randomKey}:`, e); }
+
+            // 次のタイマーを再設定
+            const nextDelay = Phaser.Math.Between(BOSS_RANDOM_VOICE_MIN_DELAY, BOSS_RANDOM_VOICE_MAX_DELAY);
+            this.randomVoiceTimer = this.time.delayedCall(nextDelay, playRandomVoice, [], this);
+            console.log(`[Random Voice] Next voice scheduled in ${nextDelay}ms`);
+        };
+
+        // 最初の呼び出しを予約
+        const firstDelay = Phaser.Math.Between(BOSS_RANDOM_VOICE_MIN_DELAY, BOSS_RANDOM_VOICE_MAX_DELAY);
+        this.randomVoiceTimer = this.time.delayedCall(firstDelay, playRandomVoice, [], this);
+        console.log(`[Random Voice] First voice scheduled in ${firstDelay}ms`);
+    }
+
 
 
 // ★★★ このメソッド定義を追加 ★★★
@@ -2426,6 +2515,17 @@ handleBallAttackBrickOverlap(brick, ball) {
         let currentHealth = boss.getData('health') - damage;
         boss.setData('health', currentHealth);
         console.log(`[Boss Damage] ${damage} damage dealt by ${source}. Boss health: ${currentHealth}/${boss.getData('maxHealth')}`);
+
+         // ▼▼▼ ダメージボイス再生 (スロットリング付き) ▼▼▼
+         const now = this.time.now;
+         if (now - this.lastDamageVoiceTime > BOSS_DAMAGE_VOICE_THROTTLE) {
+             try {
+                  this.sound.play('VOICE_BOSS_DAMAGE'); // ★ ダメージボイスキーを指定
+                 console.log("[Damage Voice] Playing damage voice.");
+                 this.lastDamageVoiceTime = now; // 最後に再生した時間を記録
+             } catch (e) { console.error("Error playing damage voice:", e); }
+         } else { console.log("[Damage Voice] Throttled."); }
+         // ▲▲▲ ダメージボイス再生 ▲▲▲
         // ダメージリアクション (Tint, 無敵, 揺れ)
         boss.setTint(0xff0000);
         boss.setData('isInvulnerable', true);
@@ -2436,6 +2536,7 @@ handleBallAttackBrickOverlap(brick, ball) {
         } catch (e) { console.error("[applyBossDamage] Error creating shake tween:", e); }
         // try { this.sound.add('seBossHit').play(); } catch(e) {}
         this.time.delayedCall(300, () => { if (boss.active) { boss.clearTint(); boss.setData('isInvulnerable', false); } });
+        
         // 体力ゼロ判定
         if (currentHealth <= 0) { this.defeatBoss(boss); }
     }
@@ -2603,51 +2704,75 @@ handleBallAttackBrickOverlap(brick, ball) {
        } else { console.warn("[defeatBoss] Could not disable boss body."); }
        // ▲▲▲ disableBody の引数を変更 ▲▲▲
 
+       // ▼▼▼ 撃破ボイス＆フラッシュSE (最初の1回) ▼▼▼
+       try {
+         this.sound.play('VOICE_BOSS_DEFEAT'); // ★ 撃破ボイスキー
+        console.log("[Defeat] Defeat Voice should play here.");
+    } catch (e) { console.error("Error playing defeat voice:", e); }
+    try {
+         this.sound.play('SE_DEFEAT_FLASH'); // ★ 撃破フラッシュSEキー (3回分が1つの音源)
+        console.log("[Defeat] Defeat Flash SE should play here (once).");
+    } catch (e) { console.error("Error playing defeat flash SE:", e); }
+    // ▲▲▲ 撃破ボイス＆フラッシュSE ▲▲▲
+
+
+
+       // BossScene.js - defeatBoss メソッド内
 
         // --- 2. 即時ネガ画像化 ---
         const negativeTextureKey = 'bossNegative';
         console.log("[defeatBoss] Setting texture to negative:", negativeTextureKey);
         try {
-            // ★★★ boss.active のチェックをここで行う ★★★
             if (boss && boss.active) {
                  boss.setTexture(negativeTextureKey);
                  console.log(`   Texture key AFTER setTexture: ${boss.texture.key}`);
-            } else {
-                 console.warn("!!! Boss became inactive before setTexture! Skipping texture set.");
-                 // テクスチャ設定に失敗したら、演出を中断すべきか？ -> 今回は続行してみる
-            }
-        } catch (e) {
-            console.error(`!!! Error setting negative texture:`, e);
-            // エラーが出ても演出を進めるか、ここで止めるか？ -> とりあえず進める
-        }
+            } else { console.warn("Boss inactive, cannot set texture.");}
+        } catch (e) { console.error(`!!! Error setting negative texture:`, e); }
 
         // --- 3. 画面フラッシュ (3回) ---
-        // SE再生 (try...catch) - 最初のフラッシュ時？
+        console.log("[defeatBoss] Initiating 3 flashes...");
+        // SE再生 (try...catch) - 最初のフラッシュと撃破ボイスと同時でOK
         try {
-            // this.sound.play('your_defeat_flash_se_key'); // ★ フラッシュSE
+             // this.sound.play('SE_DEFEAT_FLASH'); // ★ フラッシュSEキー (1回だけ再生)
+             console.log("[Defeat] Defeat Flash SE should play here (once).");
         } catch (e) { console.error("Error playing defeat flash SE:", e); }
+         try {
+             // this.sound.play('VOICE_BOSS_DEFEAT'); // ★ 撃破ボイスキー
+             console.log("[Defeat] Defeat Voice should play here.");
+         } catch (e) { console.error("Error playing defeat voice:", e); }
 
-        // カメラフラッシュを chain または delayedCall で連続実行
+
         const flashColor = [255, 255, 255]; // 白
+
+        // 1回目のフラッシュ
         this.cameras.main.flash(DEFEAT_FLASH_DURATION, ...flashColor);
+        console.log("  - Flash 1 initiated.");
+
+        // 2回目のフラッシュを予約
         this.time.delayedCall(DEFEAT_FLASH_INTERVAL, () => {
-            if (!this.scene.isActive()) return; // シーンが停止していたら何もしない
+            if (!this.scene.isActive() || !this.boss || !this.boss.active) return; // シーンやボスが有効かチェック
+            console.log("  - Flash 2 initiated.");
             this.cameras.main.flash(DEFEAT_FLASH_DURATION, ...flashColor);
+
+            // 3回目のフラッシュを予約
             this.time.delayedCall(DEFEAT_FLASH_INTERVAL, () => {
-                 if (!this.scene.isActive()) return;
+                 if (!this.scene.isActive() || !this.boss || !this.boss.active) return;
+                 console.log("  - Flash 3 initiated.");
                  this.cameras.main.flash(DEFEAT_FLASH_DURATION, ...flashColor);
+
                  // 最後のフラッシュが終わったらシェイク＆フェードへ
                  console.log("[Defeat Flash] Flashing complete. Starting shake and fade.");
-                 // ★★★ shake呼び出し前にも boss.active チェック ★★★
+                 // ★★★ startBossShakeAndFade を呼び出す前にボスが存在するか最終確認 ★★★
                  if (this.boss && this.boss.active){
-                     this.startBossShakeAndFade(this.boss);
+                      this.startBossShakeAndFade(this.boss);
                  } else {
-                      console.warn("!!! Boss became inactive before shake/fade! Skipping animation.");
-                      // この場合、直接 gameComplete に飛ぶ？
-                      // this.gameComplete();
+                      console.warn("!!! Boss became inactive during flashing! Skipping shake/fade.");
+                      // この場合、直接 gameComplete に飛ぶか、何もしないか
+                      // this.gameComplete(); // 演出スキップしてクリア
                  }
-            }, [], this);
-        }, [], this);
+            }, [], this); // 3回目の delayedCall
+
+        }, [], this); // 2回目の delayedCall
         console.log("[defeatBoss] Flash sequence initiated.");
     }
 
@@ -2715,14 +2840,17 @@ handleBallAttackBrickOverlap(brick, ball) {
     /**
      * ゲームクリア処理
      */
+    // gameComplete メソッド (テキストとSE変更)
     gameComplete() {
         console.log(">>> Entering gameComplete <<<");
         console.log("[BossScene] Game Complete!");
-        // ステージクリアSE
+        // ▼▼▼ ゲームクリアSE (通常ステージと同じキーを想定) ▼▼▼
         try {
             this.sound.play(AUDIO_KEYS.SE_STAGE_CLEAR);
+            console.log("[Game Complete] Play SE_STAGE_CLEAR.");
         } catch(e) { console.error("Error playing SE_STAGE_CLEAR:", e); }
-        this.stopBgm(); // BGM停止
+        // ▲▲▲ ゲームクリアSE ▲▲▲
+        this.stopBgm();
 
         // スコアUI更新 (defeatBoss内で加算済みのはず)
         if (this.uiScene?.scene.isActive()) {
@@ -2733,7 +2861,7 @@ handleBallAttackBrickOverlap(brick, ball) {
         // ゲームクリア表示 (例)
         this.add.text(this.gameWidth / 2, this.gameHeight / 2 - 50, 'GAME CLEAR!', { fontSize: '60px', fill: '#ff0', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(1100); // 最前面に
         this.add.text(this.gameWidth / 2, this.gameHeight / 2 + 20, `スコア: ${this.score}`, { fontSize: '40px', fill: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(1100);
-        this.add.text(this.gameWidth / 2, this.gameHeight / 2 + 80, 'Tap to Return to Title', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5).setDepth(1100);
+        this.add.text(this.gameWidth / 2, this.gameHeight / 2 + 80, 'タップでタイトルに戻る', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5).setDepth(1100);
 
         // タップでタイトルに戻る
         console.log("[Game Complete] Setting up input listener for returning to title.");
@@ -3065,6 +3193,11 @@ testLogFunction(message) {
         if (this.anilaTimer) { this.anilaTimer.remove(); this.anilaTimer = null; } // ★ タイマークリア
         this.paddleAttackBrickCollider = null; // ★ コライダー参照クリア
         console.log("[Shutdown] Anila state cleared.");
+        if (this.randomVoiceTimer) { // ★ ランダムボイスタイマー解除
+            this.randomVoiceTimer.remove();
+            this.randomVoiceTimer = null;
+            console.log("[Shutdown] Random voice timer removed.");
+       }
     }
 
     safeDestroy(obj, name, destroyChildren = false) {

@@ -73,7 +73,22 @@ export const AUDIO_KEYS = {
     VOICE_ANILA: 'voice_anila', VOICE_BAISRAVA: 'voice_baisrava',
     VOICE_VAJRA_GET: 'voice_vajra', // ヴァジラ取得時
     VOICE_VAJRA_TRIGGER: 'voice_vajra_trigger', // ヴァジラ奥義発動時
-    VOICE_MAKIRA: 'voice_makira', VOICE_MAKORA: 'voice_makora'
+    VOICE_MAKIRA: 'voice_makira', VOICE_MAKORA:'voice_makora',
+    // --- ▼▼▼ ボス戦用に追加 ▼▼▼ ---
+    SE_CUTSCENE_START: 'se_cutscene_start',     // カットイン開始SE (シャキーン)
+    SE_IMPACT_FLASH: 'se_impact_flash',       // 登場前フラッシュSE (衝撃音)
+    VOICE_BOSS_APPEAR: 'voice_boss_appear',     // ボス登場ボイス
+    SE_BOSS_ZOOM: 'se_boss_zoom',            // ボスズームSE
+    SE_SHRINK: 'se_shrink',                 // ボス瞬間縮小SE (パッ)
+    SE_FIGHT_START: 'se_fight_start',          // 戦闘開始SE
+    VOICE_BOSS_DAMAGE: 'voice_boss_damage',     // ボス被ダメージボイス
+    VOICE_BOSS_RANDOM_1: 'voice_boss_random_1', // 戦闘中ランダムボイス1
+    VOICE_BOSS_RANDOM_2: 'voice_boss_random_2', // 戦闘中ランダムボイス2
+    VOICE_BOSS_RANDOM_3: 'voice_boss_random_3', // 戦闘中ランダムボイス3
+    VOICE_BOSS_DEFEAT: 'voice_boss_defeat',     // ボス撃破ボイス
+    SE_DEFEAT_FLASH: 'se_defeat_flash',        // 撃破時フラッシュSE (1回再生)
+    //SE_SHAKE_FADE: 'se_shake_fade'           // シェイク＆フェードSE (任意)
+    // --- ▲▲▲ ボス戦用に追加 ▲▲▲ ---
 };
 
 // 特殊ステージのパターン (文字/記号)
