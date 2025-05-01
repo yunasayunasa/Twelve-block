@@ -81,8 +81,12 @@ export default class BossScene extends Phaser.Scene {
 
         this.randomVoiceTimer = null;     // ★ 戦闘中ランダムボイスタイマー
         this.lastDamageVoiceTime = 0;   // ★ ダメージボイスのスロットリング用
-        this.bossVoiceKeys = [ ('voice_boss_random_1', 'voice_boss_random_2', 'voice_boss_random_3')  ];
-        
+        // 正しい書き方 (直接キー指定の場合)
+this.bossVoiceKeys = [
+    'voice_boss_random_1',
+    'voice_boss_random_2',
+    'voice_boss_random_3'
+];
 
 
         this.lives = 3;
