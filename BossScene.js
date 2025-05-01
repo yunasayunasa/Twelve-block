@@ -2686,6 +2686,24 @@ handleBallAttackBrickOverlap(brick, ball) {
         this.bossDefeated = true;
         this.playerControlEnabled = false;
 
+          // ▼▼▼ ★★★ 撃破の瞬間にサウンド停止 ★★★ ▼▼▼
+          console.log("[defeatBoss] Stopping ongoing sounds (BGM will be stopped later).");
+          // BGM以外の再生中の音（戦闘中ボイス、ボールの音など）を停止
+          this.sound.stopAll();
+          // 戦闘中ランダムボイスタイマーも停止
+          if (this.randomVoiceTimer) {
+              this.randomVoiceTimer.remove();
+              this.randomVoiceTimer = null;
+              console.log("  - Random voice timer stopped.");
+          }
+          // ボスBGMは gameComplete で止めるのでここでは止めない (任意)
+          // this.stopBgm(); // ← もしここでBGMも止めたければコメント解除
+          // ▲▲▲ ★★★ 撃破の瞬間にサウンド停止 ★★★ ▲▲▲
+
+          // defeatBoss 内
+this.score += BOSS_SCORE; // BOSS_SCORE は定数 (例: 1500)
+console.log(`[defeatBoss] Score added. Current score: ${this.score}`); // ★ 加算後のスコアをログ出力
+
         // ▼▼▼ 衝突判定削除 (変更なし) ▼▼▼
         console.log("[defeatBoss] Destroying Ball-Boss collider...");
         this.safeDestroy(this.ballBossCollider, "ballBossCollider");
