@@ -81,7 +81,7 @@ export default class BossScene extends Phaser.Scene {
 
         this.randomVoiceTimer = null;     // ★ 戦闘中ランダムボイスタイマー
         this.lastDamageVoiceTime = 0;   // ★ ダメージボイスのスロットリング用
-        this.bossVoiceKeys = [ ('VOICE_BOSS_RANDOM_1', 'VOICE_BOSS_RANDOM_2', 'VOICE_BOSS_RANDOM_3')  ];
+        this.bossVoiceKeys = [ ('voice_boss_random_1', 'voice_boss_random_2', 'voice_boss_random_3')  ];
         
 
 
@@ -511,7 +511,7 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
         const flashDuration = 200; // 0.2秒
         // SE再生 (衝撃音)
         try {
-             this.sound.play('SE_IMPACT_FLASH'); // ★ SEキーを指定
+             this.sound.play('se_impact_flash'); // ★ SEキーを指定
             console.log("[Intro] Impact Flash SE should play here.");
         } catch (e) { console.error("Error playing flash SE:", e); }
         // カメラフラッシュ
@@ -578,7 +578,7 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
 
         // 効果音再生 (縮小音)
         try {
-             this.sound.play('SE_SHRINK'); // ★ SEキーを指定
+             this.sound.play('se_shrink'); // ★ SEキーを指定
             console.log("[Intro] Quick Shrink SE should play here.");
         } catch (e) { console.error("Error playing shrink SE:", e); }
 
@@ -621,7 +621,7 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
                 this.time.delayedCall(VOICE_START_DELAY, () => {
                      if (!this.scene.isActive()) return; // シーン確認
                      try {
-                         // this.sound.play('VOICE_BOSS_APPEAR'); // ★ 登場ボイスキー (ズームイン開始時と別ならこちら)
+                          this.sound.play('voice_boss_appear'); // ★ 登場ボイスキー (ズームイン開始時と別ならこちら)
                          console.log("[Intro] Boss intro voice playing NOW.");
                      } catch (e) { console.error("Error playing boss intro voice:", e); }
                  }, [], this);
@@ -2520,7 +2520,7 @@ handleBallAttackBrickOverlap(brick, ball) {
          const now = this.time.now;
          if (now - this.lastDamageVoiceTime > BOSS_DAMAGE_VOICE_THROTTLE) {
              try {
-                  this.sound.play('VOICE_BOSS_DAMAGE'); // ★ ダメージボイスキーを指定
+                  this.sound.play('voice_boss_damage'); // ★ ダメージボイスキーを指定
                  console.log("[Damage Voice] Playing damage voice.");
                  this.lastDamageVoiceTime = now; // 最後に再生した時間を記録
              } catch (e) { console.error("Error playing damage voice:", e); }
@@ -2706,11 +2706,11 @@ handleBallAttackBrickOverlap(brick, ball) {
 
        // ▼▼▼ 撃破ボイス＆フラッシュSE (最初の1回) ▼▼▼
        try {
-         this.sound.play('VOICE_BOSS_DEFEAT'); // ★ 撃破ボイスキー
+         this.sound.play('voice_boss_defeat'); // ★ 撃破ボイスキー
         console.log("[Defeat] Defeat Voice should play here.");
     } catch (e) { console.error("Error playing defeat voice:", e); }
     try {
-         this.sound.play('SE_DEFEAT_FLASH'); // ★ 撃破フラッシュSEキー (3回分が1つの音源)
+         this.sound.play('se_defeat_flash'); // ★ 撃破フラッシュSEキー (3回分が1つの音源)
         console.log("[Defeat] Defeat Flash SE should play here (once).");
     } catch (e) { console.error("Error playing defeat flash SE:", e); }
     // ▲▲▲ 撃破ボイス＆フラッシュSE ▲▲▲
