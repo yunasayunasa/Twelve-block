@@ -595,8 +595,8 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
                 console.log("[Intro] Quick Shrink Complete.");
 
                 // ▼▼▼ 縮小完了時フラッシュ ▼▼▼
-                //console.log("[Intro] Initiating shrink completion flash.");
-                //this.cameras.main.flash(SHRINK_FLASH_DURATION, 255, 255, 255); // 白フラッシュ
+                console.log("[Intro] Initiating shrink completion flash.");
+                this.cameras.main.flash(SHRINK_FLASH_DURATION, 255, 255, 255); // 白フラッシュ
                 // ▲▲▲ 縮小完了時フラッシュ ▲▲▲
 
                 // ▼▼▼ 戦闘開始SE再生 ▼▼▼
@@ -609,7 +609,7 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
                 // ボディ再有効化＆サイズ復元
                 if (this.boss.body) {
                      console.log("[Intro] Re-enabling boss physics body.");
-                     this.boss.enableBody(true, this.boss.x, this.boss.y, true, true);
+                    // this.boss.enableBody(true, this.boss.x, this.boss.y, true, true);
                      this.updateBossSize(); // サイズ再設定
                 } else {
                      console.error("!!! Boss body not found after shrink! Cannot re-enable physics.");
