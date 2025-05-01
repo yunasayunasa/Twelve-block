@@ -30,6 +30,8 @@ export default class BootScene extends Phaser.Scene {
         // 以下のファイルはまだ無くてもOK (後で追加)
         // this.load.image('bossDamage', 'assets/boss_damage.png'); // ダメージ絵
          this.load.image('attackBrick', 'assets/attack_brick.PNG'); // 攻撃ブロック
+         // BootScene.js - preload内に追加
+this.load.image('bossNegative', 'assets/bossNegative.png'); // ボス撃墜、キー名とファイル名を合わせる
         // --- ▲ ボス関連アセット読み込み ▲ ---
 
 
