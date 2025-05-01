@@ -675,24 +675,7 @@ scheduleNextAttackBrick() {
 
     // --- ▼ Update ヘルパーメソッド ▼ ---
 
-    updateBallFall() {
-        if (!this.balls || !this.balls.active) return;
-        let activeBallCount = 0;
-        this.balls.getChildren().forEach(ball => {
-            if (ball.active) {
-                activeBallCount++;
-                if (this.isBallLaunched && ball.y > this.gameHeight + ball.displayHeight) {
-                    console.log("Ball went out of bounds.");
-                    ball.setActive(false).setVisible(false);
-                    if (ball.body) ball.body.enable = false;
-                }
-            }
-        });
-        if (activeBallCount === 0 && this.isBallLaunched && this.lives > 0 && !this.isGameOver && !this.bossDefeated) {
-            console.log("No active balls left, losing life.");
-            this.loseLife();
-        }
-    }
+   
 
     updateAttackBricks() {
         if (!this.attackBricks || !this.attackBricks.active) return;
