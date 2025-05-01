@@ -1560,7 +1560,7 @@ deactivateAnila() {
     console.log("[Anila] Deactivated.");
 }
 
-// updateBallFall メソッド (修正版)
+// updateBallFall メソッド (アニラ跳ね返し処理込みの完全版)
 updateBallFall() {
     if (!this.balls || !this.balls.active) return;
     let activeBallCount = 0;
@@ -1577,48 +1577,53 @@ updateBallFall() {
                 // ▼▼▼ アニラ効果判定 ▼▼▼
                 if (this.isAnilaActive) {
                     console.log("[Anila] Ball bounce triggered!");
-                    // ... (跳ね返し処理) ...
+                    // ▼▼▼ ★★★ 跳ね返し処理 (省略されていた箇所) ★★★ ▼▼▼
+                    // アニラ効果を先に解除 (タイミング変更案)
                     this.deactivateAnila();
-                    // ★★★ ここではボールを消さない！ ★★★
+
+                    // Y座標をもっと安全な位置に戻す
+                    ball.y = this.gameHeight * 0.7; // 例: 画面下から70%の位置
+
+                    // 跳ね返し速度を設定 (強めにする案)
+                    const bounceVy = BALL_INITIAL_VELOCITY_Y; // 元の初期Y速度と同じ強さ
+                    const bounceVx = ball.body ? ball.body.velocity.x : 0; // X速度は維持
+
+                    // 速度を設定
+                    ball.setVelocity(bounceVx, bounceVy);
+                    console.log(`[Anila] Ball bounced back! New Velocity: (${bounceVx.toFixed(0)}, ${bounceVy.toFixed(0)})`);
+                    // ▲▲▲ ★★★ 跳ね返し処理 (省略されていた箇所) ★★★ ▲▲▲
 
                 } else { // ★ アニラ無効時のみボール消滅処理 ★
                     console.log("Ball went out of bounds (Anila inactive).");
-                    // ▼▼▼ ボール消滅とライフ減少フラグ設定を else 内に移動 ▼▼▼
                     ball.setActive(false).setVisible(false);
                     if (ball.body) ball.body.enable = false;
-                    shouldLoseLife = true; // ライフ減少フラグを立てる
-                    // ▼▼▼ シンダラボール落下記録もここで行う ▼▼▼
+                    shouldLoseLife = true;
                     if (isSindara) {
-                        droppedSindaraBall = ball; // 落ちたのがシンダラなら記録
+                        droppedSindaraBall = ball;
                     }
-                    // ▲▲▲ シンダラボール落下記録 ▲▲▲
-                    // ▲▲▲ ボール消滅とライフ減少フラグ設定 ▲▲▲
                 }
                 // ▲▲▲ アニラ効果判定 ▲▲▲
-
-                // ▼▼▼ ★★★ 元の問題箇所は削除 ★★★ ▼▼▼
-                // if (isSindara) { droppedSindaraBall = ball; }
-                // ball.setActive(false).setVisible(false); // 削除
-                // if (ball.body) ball.body.enable = false; // 削除
-                // shouldLoseLife = true; // 削除
-                // ▲▲▲ ★★★ 元の問題箇所は削除 ★★★ ▲▲▲
             }
         }
     }); // forEach ループの終わり
 
-    // ▼▼▼ シンダラ解除判定 (変更なし) ▼▼▼
+    // --- シンダラ解除判定 ---
     if (droppedSindaraBall) {
-        // ... (シンダラ解除処理) ...
+        const remainingSindaraBalls = this.balls.getMatching('isSindaraActive', true);
+        console.log(`[Sindara Check] A Sindara ball dropped. Remaining: ${remainingSindaraBalls.length}`);
+        if (remainingSindaraBalls.length === 1) {
+            console.log("[Sindara] Only one left, deactivating effect.");
+            this.deactivateSindara(remainingSindaraBalls[0]);
+            this.updateBallAndPaddleAppearance();
+        }
     }
-    // ▲▲▲ シンダラ解除判定 ▲▲▲
 
-     // ▼▼▼ ライフ減少判定 (変更なし) ▼▼▼
+     // --- ライフ減少判定 ---
      const currentActiveBalls = this.balls.countActive(true);
      if (shouldLoseLife && currentActiveBalls === 0 && this.isBallLaunched && this.lives > 0 && !this.isGameOver && !this.bossDefeated) {
          console.log("No active balls left, losing life.");
          this.loseLife();
      }
-     // ▲▲▲ ライフ減少判定 ▲▲▲
  }
 
 // --- ▼ マキラ関連メソッド (GameSceneから移植・調整) ▼ ---
