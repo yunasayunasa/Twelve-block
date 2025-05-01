@@ -28,7 +28,7 @@ const BOSS_SCORE = 1500;
 // ▼ ボスの動き設定 (左右往復) ▼
 const BOSS_MOVE_RANGE_X_RATIO = 0.8; // 画面幅の60%を往復
 const BOSS_MOVE_DURATION = 4000; // 片道にかかる時間 (ms)
-const DEFEAT_FLASH_INTERVAL = 333; // 点滅間隔 (約2秒 / (3回 * 2状態))
+const DEFEAT_FLASH_INTERVAL = 300; // 点滅間隔 (約2秒 / (3回 * 2状態))
 const DEFEAT_FLASH_COUNT = 3;    // 点滅回数
 const DEFEAT_SHAKE_DURATION = 800; // シェイク時間
 const DEFEAT_FADE_DURATION = 1000; // フェードアウト時間 (シェイクより少し長く)
@@ -2627,6 +2627,9 @@ handleBallAttackBrickOverlap(brick, ball) {
          delay: DEFEAT_FLASH_INTERVAL / 2,
          loop: true,
          callback: () => {
+            // ▼▼▼ コールバック開始ログ ▼▼▼
+        console.log(">>> Flash event callback triggered! <<<");
+        // ▲▲▲ コールバック開始ログ ▲▲▲
              if (!boss.active) { flashEvent.remove(); return; }
 
              // テクスチャを交互に切り替え
