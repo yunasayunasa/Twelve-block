@@ -2594,7 +2594,14 @@ handleBallAttackBrickOverlap(brick, ball) {
     // ★ (オプション) 一時的なパワーアップ有効化メソッド (もし必要なら)
     // activateTemporaryPower(type, duration) { ... }*/
     // --- ▲ アイテム取得メソッド ▲ ---*/
+ 
+    // ▼▼▼ ボス撃破からゲームクリアまでのメソッド群 ▼▼▼
 
+    /**
+     * ボス撃破時のメイン処理
+     * 演出を開始し、各種タイマーや動きを停止する
+     * @param {Phaser.Physics.Arcade.Image} boss - 撃破されたボスオブジェクト
+     */
     defeatBoss(boss) {
         // --- 重複呼び出し防止 ---
         if (this.bossDefeated) {
