@@ -2616,7 +2616,7 @@ handleBallAttackBrickOverlap(brick, ball) {
         if (this.uiScene?.scene.isActive()) { this.uiScene.events.emit('updateScore', this.score); }
         // if (this.orbiters) this.orbiters.clear(true, true); // 削除
         if (this.attackBricks) this.attackBricks.clear(true, true);
-        this.time.delayedCall(1500, () => { this.gameComplete(); });
+       // this.time.delayedCall(1500, () => { this.gameComplete(); });
      // 2. ネガ反転点滅 (画像差し替え + addEvent)
      let flashCounter = 0;
      let isNegative = false; // 現在ネガ画像かどうかのフラグ
