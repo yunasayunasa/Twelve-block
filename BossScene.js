@@ -595,8 +595,8 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
                 console.log("[Intro] Quick Shrink Complete.");
 
                 // ▼▼▼ 縮小完了時フラッシュ ▼▼▼
-                console.log("[Intro] Initiating shrink completion flash.");
-                this.cameras.main.flash(SHRINK_FLASH_DURATION, 255, 255, 255); // 白フラッシュ
+                //console.log("[Intro] Initiating shrink completion flash.");
+                //this.cameras.main.flash(SHRINK_FLASH_DURATION, 255, 255, 255); // 白フラッシュ
                 // ▲▲▲ 縮小完了時フラッシュ ▲▲▲
 
                 // ▼▼▼ 戦闘開始SE再生 ▼▼▼
