@@ -2718,18 +2718,22 @@ handleBallAttackBrickOverlap(brick, ball) {
             duration: DEFEAT_FADE_DURATION,
             ease: 'Linear',
             onCompleteScope: this, // onCompleteのthisをBossSceneに
-            onComplete: function() { // ★ アロー関数ではなく function を使う (thisのため)
+            // ▼▼▼ onComplete をアロー関数に変更 ▼▼▼
+            onComplete: () => { // ★ function() から () => に変更
+                // ★ アロー関数内なら this は BossScene を指す ★
                 console.log(">>> Fade tween complete. Calling gameComplete NOW. <<<");
                 console.log("[Shake&Fade] Fade complete. Destroying boss.");
-                // ボスオブジェクトを破棄
-                if (boss && boss.active) { // 再度確認
+                // ボスオブジェクトを破棄 (boss 変数はコールバックに引き継がれる)
+                if (boss && boss.active) {
                     boss.destroy();
                 }
-                if(this.boss === boss) this.boss = null; // シーンの参照もクリア
+                if(this.boss === boss) this.boss = null;
 
-                // 4. ゲームクリア処理へ
+                // ★ this.gameComplete() を安全に呼び出せる ★
                 this.gameComplete();
             }
+            // ▲▲▲ onComplete をアロー関数に変更 ▲▲▲
+            // onCompleteScope: this, // アロー関数なら Scope 指定は不要
         });
         console.log("[Shake&Fade] Shake and Fade tweens started.");
     }
