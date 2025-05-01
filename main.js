@@ -20,7 +20,7 @@ const config = {
     physics: {
         default: 'arcade', // Arcade Physicsを使用
         arcade: {
-            debug: true, // 物理ボディのデバッグ表示 (trueで見える)
+            debug: false, // 物理ボディのデバッグ表示 (trueで見える)
             gravity: { y: 0 } // 重力は使用しない
         }
     },

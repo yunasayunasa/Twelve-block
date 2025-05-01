@@ -277,24 +277,23 @@ update(time, delta) {
     // --- ▼ Create ヘルパーメソッド ▼ ---
 
     setupUI() {
+         // ▼▼▼ 起動前チェック ▼▼▼
+    console.log("[BossScene setupUI] Checking UIScene status before launch. Active?", this.scene.isActive('UIScene'));
+    // ▲▲▲ 起動前チェック ▲▲▲
         console.log("Launching UIScene for Boss...");
-        if (!this.scene.isActive('UIScene')) {
-            const dataToPass = { parentSceneKey: 'BossScene' }; // ★ 渡すデータを変数に
-        // ★★★ 渡す直前のデータの内容を詳細に出力 ★★★
-        console.log(">>> Preparing to launch UIScene. Data type:", typeof dataToPass, "Content:", JSON.stringify(dataToPass));
+       // ▼▼▼ 既にアクティブなら launch しないようにする（より安全）▼▼▼
+    if (!this.scene.isActive('UIScene')) {
+        const dataToPass = { parentSceneKey: 'BossScene' };
+        console.log(">>> Preparing to launch UIScene. Data:", JSON.stringify(dataToPass));
         try {
-            this.scene.launch('UIScene', dataToPass); // ★ 変数を使ってデータ渡し
+            this.scene.launch('UIScene', dataToPass);
             console.log("<<< UIScene launch command sent.");
-        } catch (e) {
-            console.error("!!! ERROR during UIScene launch:", e);
-        }
-    
-           // console.log(">>> Launching UIScene with SIMPLE STRING data..."); // ログ追加
-         //this.scene.launch('UIScene', "HelloUISceneFromBoss"); // ★ 文字列を渡す
-             // ▼▼▼ UIScene 起動時にデータを渡す ▼▼▼
-            // this.scene.launch('UIScene', { parentSceneKey: 'BossScene' });
-             // ▲▲▲ UIScene 起動時にデータを渡す ▲▲▲
-        }
+        } catch (e) { console.error("!!! ERROR during UIScene launch:", e); }
+   } else {
+       console.warn("[BossScene setupUI] UIScene is already active. Skipping launch, but trying to get reference.");
+       // 既にアクティブでも参照取得は試みる
+   }
+   // ▲▲▲ 既にアクティブなら launch しない ▲▲▲
         this.uiScene = this.scene.get('UIScene');
         // 初期UI更新 (少し遅延させるのは良いプラクティス)
         this.time.delayedCall(50, () => {
