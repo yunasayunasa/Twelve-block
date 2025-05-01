@@ -2596,6 +2596,9 @@ handleBallAttackBrickOverlap(brick, ball) {
     // --- ▲ アイテム取得メソッド ▲ ---*/
 
     defeatBoss(boss) {
+          // ▼▼▼ タイマーテスト ▼▼▼
+    this.time.delayedCall(100, () => { console.log("!!!!!! Simple delayedCall in defeatBoss executed! Timer system OK? !!!!!"); });
+    // ▲▲▲ タイマーテスト ▲▲▲
         if (this.bossDefeated) return;
         console.log("[defeatBoss] Boss defeated! Starting defeat sequence (Image Swap)."); // ログ変更
         this.bossDefeated = true;
