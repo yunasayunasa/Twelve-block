@@ -2631,6 +2631,7 @@ handleBallAttackBrickOverlap(brick, ball) {
 
 
         // --- 2. 即時ネガ画像化 ---
+        const negativeTextureKey = 'bossNegative';
         console.log("[defeatBoss] Setting texture to negative:", negativeTextureKey);
         try {
             // ★★★ boss.active のチェックをここで行う ★★★
