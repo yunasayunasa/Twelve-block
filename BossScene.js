@@ -526,19 +526,7 @@ update(time, delta) {
                 this.time.delayedCall(200, this.startBossQuickShrink, [], this); // 0.2秒待つ
             }
         });
-        // ▼▼▼ 物理ボディを再有効化 ▼▼▼
-        if (this.boss.body) { // body参照が残っているか確認
-            console.log("[Intro] Re-enabling boss physics body.");
-            // enableBody(reset, x, y, enableGameObject, showGameObject)
-            this.boss.enableBody(true, this.boss.x, this.boss.y, true, true);
-            // サイズを再設定（念のため）
-            this.updateBossSize();
-       } else {
-            console.error("!!! Boss body not found after shrink! Cannot re-enable physics.");
-            // ここでエラーになる場合、enableBodyの前に再度 body を作り直す必要があるかも
-            // this.boss.body = this.physics.add.body(...) のような処理
-       }
-       // ▲▲▲ 物理ボディを再有効化 ▲▲▲
+        
 
     }
 
