@@ -1577,7 +1577,7 @@ deactivateAnila() {
     console.log("[Anila] Deactivated.");
 }
 
-// updateBallFall メソッド (アニラ跳ね返し処理追加)
+// updateBallFall メソッド (修正版)
 updateBallFall() {
     if (!this.balls || !this.balls.active) return;
     let activeBallCount = 0;
@@ -1589,68 +1589,54 @@ updateBallFall() {
             activeBallCount++;
             // ボールが画面下に落ちた判定
             if (this.isBallLaunched && ball.y > this.gameHeight + ball.displayHeight) {
-                const isSindara = ball.getData('isSindaraActive') === true; 
+                const isSindara = ball.getData('isSindaraActive') === true;
+
                 // ▼▼▼ アニラ効果判定 ▼▼▼
                 if (this.isAnilaActive) {
                     console.log("[Anila] Ball bounce triggered!");
-                     // ★ TODO: 跳ね返しエフェクト・SE ★
-                    // ボールを画面内に戻し、上向きに速度を与える
-                    ball.y = this.gameHeight - PADDLE_Y_OFFSET - PADDLE_HEIGHT - BALL_RADIUS; // パドルの少し上に戻す
-                    const bounceVy = BALL_INITIAL_VELOCITY_Y * 0.8; // 少し弱めに跳ね返す
-                    const bounceVx = ball.body.velocity.x * 0.8; // 横速度も少し維持
-                    ball.setVelocity(bounceVx, bounceVy);
-                    // アニラ効果を即時終了
+                    // ... (跳ね返し処理) ...
                     this.deactivateAnila();
-                } else {
-                    // 通常のボール消滅処理
+                    // ★★★ ここではボールを消さない！ ★★★
+
+                } else { // ★ アニラ無効時のみボール消滅処理 ★
                     console.log("Ball went out of bounds (Anila inactive).");
+                    // ▼▼▼ ボール消滅とライフ減少フラグ設定を else 内に移動 ▼▼▼
                     ball.setActive(false).setVisible(false);
                     if (ball.body) ball.body.enable = false;
                     shouldLoseLife = true; // ライフ減少フラグを立てる
+                    // ▼▼▼ シンダラボール落下記録もここで行う ▼▼▼
+                    if (isSindara) {
+                        droppedSindaraBall = ball; // 落ちたのがシンダラなら記録
+                    }
+                    // ▲▲▲ シンダラボール落下記録 ▲▲▲
+                    // ▲▲▲ ボール消滅とライフ減少フラグ設定 ▲▲▲
                 }
                 // ▲▲▲ アニラ効果判定 ▲▲▲
-                if (isSindara) {
-                    droppedSindaraBall = ball; // 落ちたシンダラボールを記録
-                    // すぐには消さず、ループ後に処理
-               }
-               ball.setActive(false).setVisible(false);
-               if (ball.body) ball.body.enable = false;
-               shouldLoseLife = true; // ライフ減少候補
+
+                // ▼▼▼ ★★★ 元の問題箇所は削除 ★★★ ▼▼▼
+                // if (isSindara) { droppedSindaraBall = ball; }
+                // ball.setActive(false).setVisible(false); // 削除
+                // if (ball.body) ball.body.enable = false; // 削除
+                // shouldLoseLife = true; // 削除
+                // ▲▲▲ ★★★ 元の問題箇所は削除 ★★★ ▲▲▲
             }
         }
-    });
+    }); // forEach ループの終わり
 
-    // ▼▼▼ シンダラ解除判定 (ループ後) ▼▼▼
+    // ▼▼▼ シンダラ解除判定 (変更なし) ▼▼▼
     if (droppedSindaraBall) {
-        // アクティブなシンダラボールを再カウント
-        const remainingSindaraBalls = this.balls.getMatching('isSindaraActive', true);
-        console.log(`[Sindara Check] A Sindara ball dropped. Remaining active Sindara balls: ${remainingSindaraBalls.length}`);
-        if (remainingSindaraBalls.length === 1) {
-            // 残りが1つなら、そのボールのシンダラ状態を解除
-            console.log("[Sindara] Only one left, deactivating Sindara effect.");
-            this.deactivateSindara(remainingSindaraBalls[0]);
-            this.updateBallAndPaddleAppearance(); // 見た目更新
-        }
-        // droppedSindaraBall は既に非アクティブ化されている
-   }
-   // ▲▲▲ シンダラ解除判定 ▲▲▲
+        // ... (シンダラ解除処理) ...
+    }
+    // ▲▲▲ シンダラ解除判定 ▲▲▲
 
-     // ライフ減少判定 (アクティブボールが0になったら)
-     const currentActiveBalls = this.balls.countActive(true); // 再度カウント
+     // ▼▼▼ ライフ減少判定 (変更なし) ▼▼▼
+     const currentActiveBalls = this.balls.countActive(true);
      if (shouldLoseLife && currentActiveBalls === 0 && this.isBallLaunched && this.lives > 0 && !this.isGameOver && !this.bossDefeated) {
          console.log("No active balls left, losing life.");
          this.loseLife();
      }
+     // ▲▲▲ ライフ減少判定 ▲▲▲
  }
-
-
-    // ループ後にライフ減少判定
-    /*if (shouldLoseLife && activeBallCount <= 1 && this.isBallLaunched && this.lives > 0 && !this.isGameOver && !this.bossDefeated) {
-        // (activeBallCount <= 1 は、最後のボールが落ちたことを意味する)
-        console.log("No active balls left or last ball dropped, losing life.");
-        this.loseLife();
-    }
-}*/
 
 // --- ▼ マキラ関連メソッド (GameSceneから移植・調整) ▼ ---
 
