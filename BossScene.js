@@ -2620,19 +2620,27 @@ handleBallAttackBrickOverlap(brick, ball) {
         if (this.attackBrickTimer) this.attackBrickTimer.remove();
         this.balls?.children.each(ball => ball.body?.stop());
         // this.tweens.pauseAll(); // 必要なら
+        // ▼▼▼ disableBody の引数を変更 ▼▼▼
         if (boss && boss.body) {
-           boss.disableBody(true, false); // ボディ無効化 (表示は継続)
-           console.log("  - Boss physics body disabled.");
-        }
+            // disableBody(disableGameObject, hideGameObject)
+            // disableGameObject を false にして、GameObject自体はアクティブなままにする
+            boss.disableBody(false, false); // ★ 第1引数を false に！
+            console.log("  - Boss physics body disabled (GameObject remains active)."); // ログ変更
+       } else { console.warn("[defeatBoss] Could not disable boss body."); }
+       // ▲▲▲ disableBody の引数を変更 ▲▲▲
+
 
         // --- 2. 即時ネガ画像化 ---
-        const negativeTextureKey = 'bossNegative';
         console.log("[defeatBoss] Setting texture to negative:", negativeTextureKey);
         try {
-            if (boss && boss.active) { // 確認
+            // ★★★ boss.active のチェックをここで行う ★★★
+            if (boss && boss.active) {
                  boss.setTexture(negativeTextureKey);
                  console.log(`   Texture key AFTER setTexture: ${boss.texture.key}`);
-            } else { console.warn("Boss inactive, cannot set texture.");}
+            } else {
+                 console.warn("!!! Boss became inactive before setTexture! Skipping texture set.");
+                 // テクスチャ設定に失敗したら、演出を中断すべきか？ -> 今回は続行してみる
+            }
         } catch (e) {
             console.error(`!!! Error setting negative texture:`, e);
             // エラーが出ても演出を進めるか、ここで止めるか？ -> とりあえず進める
@@ -2655,11 +2663,17 @@ handleBallAttackBrickOverlap(brick, ball) {
                  this.cameras.main.flash(DEFEAT_FLASH_DURATION, ...flashColor);
                  // 最後のフラッシュが終わったらシェイク＆フェードへ
                  console.log("[Defeat Flash] Flashing complete. Starting shake and fade.");
-                 this.startBossShakeAndFade(this.boss); // ★ boss を渡す
+                 // ★★★ shake呼び出し前にも boss.active チェック ★★★
+                 if (this.boss && this.boss.active){
+                     this.startBossShakeAndFade(this.boss);
+                 } else {
+                      console.warn("!!! Boss became inactive before shake/fade! Skipping animation.");
+                      // この場合、直接 gameComplete に飛ぶ？
+                      // this.gameComplete();
+                 }
             }, [], this);
         }, [], this);
         console.log("[defeatBoss] Flash sequence initiated.");
-
     }
 
     /**
@@ -2668,8 +2682,11 @@ handleBallAttackBrickOverlap(brick, ball) {
      */
     startBossShakeAndFade(boss) {
         console.log(">>> Entering startBossShakeAndFade <<<");
+        // ★★★ 関数入口での boss.active チェック強化 ★★★
         if (!boss || !boss.active) {
-             console.warn("!!! startBossShakeAndFade called with invalid boss object!");
+             console.warn("!!! startBossShakeAndFade called but boss is already inactive!");
+             // 既に非アクティブなら、即 gameComplete に進むべきか？
+             // this.gameComplete();
              return;
         }
         console.log("[Shake&Fade] Starting shake and fade animation.");
