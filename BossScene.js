@@ -2802,13 +2802,13 @@ handleBallAttackBrickOverlap(brick, ball) {
         if (this.balls) { this.balls.children.each(ball => { if(ball.active) ball.setVelocity(0,0).setActive(false); }); }
     }
 
-    gameComplete() {
+    /*gameComplete() {
         console.log("[BossScene] Game Complete!");
         try { this.sound.add(AUDIO_KEYS.SE_STAGE_CLEAR).play(); } catch(e) { console.error("Error playing SE_STAGE_CLEAR:", e); }
         this.stopBgm();
         alert(`ゲームクリア！ スコア: ${this.score}`);
         this.returnToTitle();
-    }
+    }*/
 
     returnToTitle() {
          console.log("[BossScene] Attempting to reload page...");
