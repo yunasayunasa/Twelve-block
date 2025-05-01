@@ -312,9 +312,12 @@ update(time, delta) {
 
     setupBackground() {
         this.add.image(this.gameWidth / 2, this.gameHeight / 2, 'gameBackground3')
-            .setOrigin(0.5, 0.5).setDisplaySize(this.gameWidth, this.gameHeight).setDepth(-1);
-        //this.playBossBgm();
+            .setOrigin(0.5, 0.5)
+            .setDisplaySize(this.gameWidth, this.gameHeight)
+            .setDepth(-1) // 背景は一番奥
+            .setAlpha(0.8); // ★ 例: 少し透明にする (80%)
     }
+    
 
 
 
