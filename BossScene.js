@@ -2633,16 +2633,19 @@ handleBallAttackBrickOverlap(brick, ball) {
              if (!boss.active) { flashEvent.remove(); return; }
 
              // テクスチャを交互に切り替え
-             isNegative = !isNegative; // フラグ反転
-             const nextTexture = isNegative ? negativeTextureKey : originalTextureKey;
-             try {
-                 boss.setTexture(nextTexture);
-                 console.log(`[Defeat Flash] ${Math.floor(flashCounter + 0.5)} - State: ${isNegative ? 'Negative' : 'Normal'}`);
-             } catch (e) {
-                 console.error(`!!! Error setting texture to ${nextTexture}:`, e);
-                 flashEvent.remove(); // エラー時は停止
-                 return;
-             }
+             isNegative = !isNegative;
+    const nextTexture = isNegative ? negativeTextureKey : originalTextureKey;
+    console.log(`Attempting to set texture to: ${nextTexture}`); // ★ 目的のキー
+
+    try {
+        boss.setTexture(nextTexture);
+        // ★★★ setTexture 直後のキーを確認 ★★★
+        console.log(`Texture key AFTER setTexture: ${boss.texture.key}`);
+    } catch (e) {
+        console.error(`!!! Error setting texture to ${nextTexture}:`, e);
+        flashEvent.remove();
+        return;
+    }
 
              if (isNegative) { // ネガになった時にカウント & SE
                  flashCounter++;
