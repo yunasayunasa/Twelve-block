@@ -2612,6 +2612,15 @@ handleBallAttackBrickOverlap(brick, ball) {
         this.bossDefeated = true;
         this.playerControlEnabled = false; // 操作不能に
 
+        // ▼▼▼ ★★★ ボスとの衝突判定を即座に削除 ★★★ ▼▼▼
+        console.log("[defeatBoss] Destroying Ball-Boss collider...");
+        this.safeDestroy(this.ballBossCollider, "ballBossCollider");
+        this.ballBossCollider = null; // 参照もクリア
+        // もしビームとのOverlapがあればそれも削除
+        // this.safeDestroy(this.makiraBeamBossOverlap, "makiraBeamBossOverlap");
+        // this.makiraBeamBossOverlap = null;
+        // ▲▲▲ ★★★ ボスとの衝突判定を即座に削除 ★★★ ▲▲▲
+
         // --- 1. 動きを止める ---
         console.log("[defeatBoss] Stopping movements and timers...");
         if (this.bossMoveTween) { this.bossMoveTween.stop(); console.log("  - Boss movement stopped."); }
