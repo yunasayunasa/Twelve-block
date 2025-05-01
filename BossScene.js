@@ -483,7 +483,7 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
 
         // SE再生 (シャキーン)
         try {
-             this.sound.play('SE_CUTSCENE_START'); // ★ SEキーを指定
+             this.sound.play('se_cutscene_start'); // ★ SEキーを指定
             console.log("[Intro] Cutscene Start SE (Shakin!) should play here.");
         } catch (e) { console.error("Error playing cutscene SE:", e); }
 
