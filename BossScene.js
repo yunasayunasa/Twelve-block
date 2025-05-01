@@ -387,7 +387,7 @@ update(time, delta) {
     // 1. カットイン演出
     startIntroCutscene() {
         console.log("[Intro] Starting Cutscene...");
-        const cutsceneDuration = 3000; // 3秒
+        const cutsceneDuration = 2000; // 3秒
 
         // 背景暗転用オブジェクト
         const overlay = this.add.rectangle(0, 0, this.gameWidth, this.gameHeight, 0x000000, 0.7)
@@ -502,12 +502,14 @@ update(time, delta) {
         this.boss.setScale(zoomInStartScale);
         this.boss.setAlpha(0); // 最初は見えない
 
-        // ▼▼▼ 物理ボディを無効化 ▼▼▼
+        // ▼▼▼ 物理ボディのサイズを一時的に最小化 ▼▼▼
         if (this.boss.body) {
-            console.log("[Intro] Disabling boss physics body for zoom.");
-            this.boss.disableBody(true, false); // ボディを無効化 (GameObjectは表示したまま)
+            console.log("[Intro] Temporarily shrinking boss physics body for zoom.");
+            this.boss.body.setSize(1, 1); // 非常に小さいサイズに設定
+            this.boss.body.setOffset(this.boss.displayWidth/2 - 0.5, this.boss.displayHeight/2 - 0.5); // オフセットも中央に
         }
-        // ▲▲▲ 物理ボディを無効化 ▲▲▲
+        // ▲▲▲ 物理ボディのサイズを一時的に最小化 ▲▲▲
+
         this.boss.setVisible(true); // 表示はする
 
         // Tweenでズームイン
@@ -566,6 +568,15 @@ update(time, delta) {
             ease: 'Expo.easeOut', // 素早く減速する感じ
             onComplete: () => {
                 console.log("[Intro] Quick Shrink Complete. Playing voice and starting game.");
+                 // ▼▼▼ 物理ボディのサイズを元に戻す ▼▼▼
+                 if (this.boss.body) {
+                    console.log("[Intro] Restoring boss physics body size.");
+                    this.updateBossSize(); // ★ これで正しいサイズとオフセットが再設定されるはず
+               } else {
+                    console.error("!!! Boss body not found after shrink! Cannot restore size.");
+               }
+               // ▲▲▲ 物理ボディのサイズを元に戻す ▲▲▲
+
                 // ボス登場ボイス再生 (少し遅延)
                 this.time.delayedCall(100, () => {
                      try {
