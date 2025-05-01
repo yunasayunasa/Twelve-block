@@ -582,56 +582,53 @@ this.cameras.main.flash(CUTSCENE_FLASH_DURATION, 255, 255, 255); // 白フラッ
             console.log("[Intro] Quick Shrink SE should play here.");
         } catch (e) { console.error("Error playing shrink SE:", e); }
 
-        // Tweenで瞬間的に移動＆縮小
-        this.tweens.add({
-            targets: this.boss,
-            x: targetX,
-            y: targetY,
-            scale: targetScale,
-            duration: shrinkDuration,
-            ease: 'Expo.easeOut',
-            onCompleteScope: this, // onComplete の this を固定
-            onComplete: function() { // ★ function形式 (またはアロー関数)
-                console.log("[Intro] Quick Shrink Complete.");
-
-                // ▼▼▼ 縮小完了時フラッシュ ▼▼▼
-                console.log("[Intro] Initiating shrink completion flash.");
-                this.cameras.main.flash(SHRINK_FLASH_DURATION, 255, 255, 255); // 白フラッシュ
-                // ▲▲▲ 縮小完了時フラッシュ ▲▲▲
-
-                // ▼▼▼ 戦闘開始SE再生 ▼▼▼
-                try {
-                    // this.sound.play('SE_FIGHT_START'); // ★ SEキーを指定
-                    console.log("[Intro] Fight Start SE should play here.");
-                } catch (e) { console.error("Error playing fight start SE:", e); }
-                // ▲▲▲ 戦闘開始SE再生 ▲▲▲
-
-                // ボディ再有効化＆サイズ復元
-                if (this.boss.body) {
-                     console.log("[Intro] Re-enabling boss physics body.");
-                    // this.boss.enableBody(true, this.boss.x, this.boss.y, true, true);
-                     this.updateBossSize(); // サイズ再設定
-                } else {
-                     console.error("!!! Boss body not found after shrink! Cannot re-enable physics.");
-                }
-
-                // ▼▼▼ ボイス再生とゲーム開始の delayedCall ▼▼▼
-                // ボイス再生 (少し遅延)
-                console.log(`[Intro] Scheduling boss intro voice in ${VOICE_START_DELAY}ms`);
-                this.time.delayedCall(VOICE_START_DELAY, () => {
-                     if (!this.scene.isActive()) return; // シーン確認
-                     try {
-                          this.sound.play('voice_boss_appear'); // ★ 登場ボイスキー (ズームイン開始時と別ならこちら)
-                         console.log("[Intro] Boss intro voice playing NOW.");
-                     } catch (e) { console.error("Error playing boss intro voice:", e); }
-                 }, [], this);
-
-                // さらに遅れてゲーム開始
-                console.log(`[Intro] Scheduling gameplay start in ${GAMEPLAY_START_DELAY}ms`);
-                this.time.delayedCall(GAMEPLAY_START_DELAY, this.startGameplay, [], this);
-                // ▲▲▲ ボイス再生とゲーム開始の delayedCall ▲▲▲
-            } // onComplete の終わり
-        }); // tween の終わり
+                // Tweenで瞬間的に移動＆縮小
+                this.tweens.add({
+                    targets: this.boss,
+                    x: targetX,
+                    y: targetY,
+                    scale: targetScale,
+                    duration: shrinkDuration,
+                    ease: 'Expo.easeOut',
+                    // onCompleteScope: this, // アロー関数を使うので不要
+                    // ▼▼▼ onComplete をアロー関数に変更 ▼▼▼
+                    onComplete: () => { // ★ function() から () => に変更
+                        // ★ アロー関数内なら this は BossScene を指す ★
+                        console.log("[Intro] Quick Shrink Complete.");
+        
+                        // ▼▼▼ 縮小完了時フラッシュ (this が使える) ▼▼▼
+                        console.log("[Intro] Initiating shrink completion flash.");
+                        try { // 念のため try...catch
+                             this.cameras.main.flash(SHRINK_FLASH_DURATION, 255, 255, 255); // this.cameras が使える
+                        } catch(e) { console.error("Error during shrink completion flash:", e);}
+                        // ▲▲▲ 縮小完了時フラッシュ ▲▲▲
+        
+                        // ▼▼▼ 戦闘開始SE再生 (this が使える) ▼▼▼
+                        try {
+                            // this.sound.play('SE_FIGHT_START');
+                            console.log("[Intro] Fight Start SE should play here.");
+                        } catch (e) { console.error("Error playing fight start SE:", e); }
+                        // ▲▲▲ 戦闘開始SE再生 ▲▲▲
+        
+                        // ▼▼▼ ボディサイズ復元 (this が使える) ▼▼▼
+                        console.log(">>> Checking this.boss before restoring body size:", this.boss);
+                        if (this.boss && this.boss.active) {
+                            console.log("[Intro] Restoring boss physics body size via updateBossSize.");
+                            this.updateBossSize(); // this.updateBossSize が使える
+                        } else {
+                            console.error("!!! Cannot restore body size because this.boss is invalid !!!");
+                        }
+                        // ▲▲▲ ボディサイズ復元 ▲▲▲
+        
+                        // ▼▼▼ ボイス再生とゲーム開始 (this が使える) ▼▼▼
+                        console.log(`[Intro] Scheduling boss intro voice in ${VOICE_START_DELAY}ms`);
+                        this.time.delayedCall(VOICE_START_DELAY, () => { /* ... this.sound.play ... */ }, [], this); // delayedCall の this もOK
+                        console.log(`[Intro] Scheduling gameplay start in ${GAMEPLAY_START_DELAY}ms`);
+                        this.time.delayedCall(GAMEPLAY_START_DELAY, this.startGameplay, [], this); // this.startGameplay が使える
+                        // ▲▲▲ ボイス再生とゲーム開始 ▲▲▲
+                    } // onComplete (アロー関数) の終わり
+                    // ▲▲▲ onComplete をアロー関数に変更 ▲▲▲
+                }); // tween の終わり
     }
 
     // 5. ゲームプレイ開始処理
