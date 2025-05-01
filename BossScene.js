@@ -2596,153 +2596,202 @@ handleBallAttackBrickOverlap(brick, ball) {
     // --- ▲ アイテム取得メソッド ▲ ---*/
 
     defeatBoss(boss) {
-          // ▼▼▼ タイマーテスト ▼▼▼
-    this.time.delayedCall(100, () => { console.log("!!!!!! Simple delayedCall in defeatBoss executed! Timer system OK? !!!!!"); });
-    // ▲▲▲ タイマーテスト ▲▲▲
-        if (this.bossDefeated) return;
-        console.log("[defeatBoss] Boss defeated! Starting defeat sequence (Image Swap)."); // ログ変更
+        // --- 重複呼び出し防止 ---
+        if (this.bossDefeated) {
+            console.log("[defeatBoss] Already defeated, skipping.");
+            return;
+        }
+        console.log("[defeatBoss] Boss defeated! Starting defeat sequence (Image Swap).");
         this.bossDefeated = true;
-        if (this.bossMoveTween) { this.bossMoveTween.stop(); }
-        // ★ 撃破演出実装
-        boss.disableBody(true, true);
+        this.playerControlEnabled = false; // 操作不能に
+
+        // --- 1. 動きを止める ---
+        console.log("[defeatBoss] Stopping movements and timers...");
+        if (this.bossMoveTween) { this.bossMoveTween.stop(); console.log("  - Boss movement stopped."); }
+        if (this.attackBrickTimer) { this.attackBrickTimer.remove(); console.log("  - Attack brick timer removed."); }
+        // ボールを止める (物理演算は止めない方が演出が自然かも？)
+        this.balls?.children.each(ball => ball.body?.stop());
+        console.log("  - Active balls stopped.");
+        // シーン全体のTweenを一時停止 (撃破演出のTweenは除く必要あり -> 影響なければPauseしない方が安全かも)
+        // this.tweens.pauseAll();
+        // console.log("  - All tweens paused (except defeat sequence).");
+
+        // ボス本体の当たり判定は消す
+        if (boss && boss.body) { // bossとbodyの存在確認
+           boss.disableBody(true, false); // ボディだけ無効化 (GameObjectは表示)
+           console.log("  - Boss physics body disabled.");
+        } else { console.warn("[defeatBoss] Could not disable boss body."); }
+
+
+        // --- 2. 撃破演出開始 ---
         // SE再生 (try...catch)
         try {
             // this.sound.play('your_defeat_start_se_key'); // ★ 撃破開始SE
+            console.log("[defeatBoss] Defeat Start SE should play here.");
         } catch (e) { console.error("Error playing defeat start SE:", e); }
-        this.score += BOSS_SCORE;
-         // ▼▼▼ UI更新イベントを発行 ▼▼▼
-         this.events.emit('updateScore', this.score);
-         // ▲▲▲ UI更新イベントを発行 ▲▲▲
-        if (this.uiScene?.scene.isActive()) { this.uiScene.events.emit('updateScore', this.score); }
-        // if (this.orbiters) this.orbiters.clear(true, true); // 削除
-        if (this.attackBricks) this.attackBricks.clear(true, true);
-       // this.time.delayedCall(1500, () => { this.gameComplete(); });
-     // 2. ネガ反転点滅 (画像差し替え + addEvent)
-     let flashCounter = 0;
-     let isNegative = false; // 現在ネガ画像かどうかのフラグ
-     const originalTextureKey = 'bossStand'; // 通常のテクスチャキー
-     const negativeTextureKey = 'bossNegative'; // ネガ画像のキー ★要確認★
 
-     const flashEvent = this.time.addEvent({
-         delay: DEFEAT_FLASH_INTERVAL / 2,
-         loop: true,
-         callback: () => {
-            // ▼▼▼ コールバック開始ログ ▼▼▼
-        console.log(">>> Flash event callback triggered! <<<");
-        // ▲▲▲ コールバック開始ログ ▲▲▲
-             if (!boss.active) { flashEvent.remove(); return; }
+        // --- 3. ネガ反転点滅タイマー開始 ---
+        let flashCounter = 0;
+        let isNegative = false;
+        const originalTextureKey = 'bossStand';
+        const negativeTextureKey = 'bossNegative'; // ★ ネガ画像のキー名を確認！
 
-             // テクスチャを交互に切り替え
-             isNegative = !isNegative;
-    const nextTexture = isNegative ? negativeTextureKey : originalTextureKey;
-    console.log(`Attempting to set texture to: ${nextTexture}`); // ★ 目的のキー
+        // 以前のタイマーが残っていればクリア (念のため)
+        if (this.flashEvent) this.flashEvent.remove();
 
-    try {
-        boss.setTexture(nextTexture);
-        // ★★★ setTexture 直後のキーを確認 ★★★
-        console.log(`Texture key AFTER setTexture: ${boss.texture.key}`);
-    } catch (e) {
-        console.error(`!!! Error setting texture to ${nextTexture}:`, e);
-        flashEvent.remove();
-        return;
+        console.log("[defeatBoss] Creating flash event timer...");
+        this.flashEvent = this.time.addEvent({ // シーンプロパティに保持
+            delay: DEFEAT_FLASH_INTERVAL / 2, // 点滅間隔の半分
+            loop: true,
+            callbackScope: this, // コールバックのthisをBossSceneに固定
+            callback: function() { // ★ アロー関数ではなく function を使う (thisのため)
+                console.log(">>> Flash event callback triggered! <<<"); // Step 0
+
+                // this.boss の存在と状態を確認
+                if (!this.boss || !this.boss.active) {
+                    console.warn("!!! Boss object missing in flash callback! Removing timer.");
+                    if (this.flashEvent) this.flashEvent.remove();
+                    return; // Step 0.5 (Exit)
+                }
+                console.log("Step 1: Boss object seems OK.");
+
+                isNegative = !isNegative; // フラグ反転
+                console.log("Step 2: isNegative toggled to", isNegative);
+
+                const nextTexture = isNegative ? negativeTextureKey : originalTextureKey;
+                console.log("Step 3: Attempting to set texture to:", nextTexture);
+
+                try {
+                    this.boss.setTexture(nextTexture); // this.boss を使う
+                    console.log("Step 4: setTexture successful.");
+                    console.log(`   Texture key AFTER setTexture: ${this.boss.texture.key}`);
+                } catch (e) {
+                    console.error(`!!! Error setting texture to ${nextTexture}:`, e.message, e.stack, e);
+                    if (this.flashEvent) this.flashEvent.remove();
+                    return; // Step 4 (Error Exit)
+                }
+
+                console.log("Step 5: Texture set, checking counter.");
+                if (isNegative) {
+                    flashCounter++;
+                    console.log("   Incremented flashCounter to:", flashCounter);
+                    // SE再生 (try...catch) - 点滅ごと
+                    try {
+                         // this.sound.play('your_flash_se_key'); // ★ 点滅SE
+                         console.log("   Flash SE should play here.");
+                    } catch (e) { console.error("Error playing flash SE:", e); }
+                }
+
+                console.log("Step 6: Checking flash count limit.");
+                if (flashCounter >= DEFEAT_FLASH_COUNT) {
+                    console.log("[Defeat Flash] Flashing complete. Conditions met to call startBossShakeAndFade.");
+                    if (this.flashEvent) this.flashEvent.remove(); // ループ停止
+                    // 最後に確実にネガ画像にする
+                    if (this.boss && this.boss.active && this.boss.texture.key !== negativeTextureKey) {
+                         try { this.boss.setTexture(negativeTextureKey); } catch(e){}
+                         console.log("   Ensured final texture is negative.");
+                    }
+                    console.log(">>> Calling startBossShakeAndFade NOW from flash event end. <<<");
+                    this.startBossShakeAndFade(this.boss); // 次の演出へ
+                    console.log("Step 7 (Final): Called shake/fade.");
+                } else {
+                     console.log("Step 7 (Looping): Flash count not reached yet.");
+                }
+                console.log("<<< Flash event callback finished. >>>"); // Step 8 (Normal End)
+            }
+        });
+
+        if (this.flashEvent) {
+             console.log("[defeatBoss] Flash event timer created successfully.");
+        } else {
+             console.error("!!! Failed to create flash event timer! Defeat sequence might not proceed.");
+        }
     }
 
-             if (isNegative) { // ネガになった時にカウント & SE
-                 flashCounter++;
-                  // SE再生 (try...catch) - 点滅ごと
-                 try {
-                      // this.sound.play('your_flash_se_key'); // ★ 点滅SE
-                 } catch (e) { console.error("Error playing flash SE:", e); }
-             }
-
-             // 指定回数ネガになったらイベント停止 → シェイク消滅へ
-             if (flashCounter >= DEFEAT_FLASH_COUNT) {
-                 console.log("[Defeat Flash] Flashing complete. Starting shake and fade.");
-                 flashEvent.remove();
-                 // 最後の状態をネガティブ画像にする
-                 if (!isNegative) { // もし通常状態で終わったらネガに
-                     try { boss.setTexture(negativeTextureKey); } catch(e){}
-                 }
-                 this.startBossShakeAndFade(boss); // 次の演出へ
-             }
-         }
-     });
- }
-
-
-    // 3. シェイク＆フェードアウト (新規追加)
+    /**
+     * ボスのシェイク＆フェードアウト演出
+     * @param {Phaser.Physics.Arcade.Image} boss - 対象のボスオブジェクト
+     */
     startBossShakeAndFade(boss) {
-        if (!boss || !boss.active) return;
+        console.log(">>> Entering startBossShakeAndFade <<<");
+        if (!boss || !boss.active) {
+             console.warn("!!! startBossShakeAndFade called with invalid boss object!");
+             return;
+        }
+        console.log("[Shake&Fade] Starting shake and fade animation.");
 
         // SE再生 (try...catch)
         try {
             // this.sound.play('your_shake_fade_se_key'); // ★ 消滅SE
+            console.log("[Shake&Fade] Shake/Fade SE should play here.");
         } catch (e) { console.error("Error playing shake/fade SE:", e); }
 
-        
-
-        // シェイクTween (位置を細かく振動)
-        const shakeAmount = boss.displayWidth * 0.05; // 揺れ幅
+        // シェイクTween
+        const shakeAmount = boss.displayWidth * 0.05;
         this.tweens.add({
             targets: boss,
             props: {
                  x: { value: `+=${shakeAmount}`, duration: 50, yoyo: true, ease: 'Sine.easeInOut' },
-                 y: { value: `+=${shakeAmount/2}`, duration: 60, yoyo: true, ease: 'Sine.easeInOut' } // Yは少しだけ
+                 y: { value: `+=${shakeAmount/2}`, duration: 60, yoyo: true, ease: 'Sine.easeInOut' }
             },
-            repeat: Math.floor(DEFEAT_SHAKE_DURATION / 60), // 時間に合わせて繰り返し
-            // repeat: -1 // 無限ループにしてフェードで消す
+            // loop: -1, // ループさせてフェードで消す
+             repeat: Math.floor(DEFEAT_SHAKE_DURATION / 60), // 時間指定の場合
+            onComplete: () => { console.log("[Shake&Fade] Shake tween part completed (or looped)."); } // ループ時は完了しない
         });
 
-        // フェードアウトTween (alphaを0に)
+        // フェードアウトTween
         this.tweens.add({
             targets: boss,
             alpha: 0,
             duration: DEFEAT_FADE_DURATION,
-            ease: 'Linear', // 単純に消える
-            onComplete: () => {
-                console.log("[Defeat Fade] Fade complete. Boss destroyed.");
-                 // this.tweens.resumeAll(); // 一時停止したTweenを再開（必要なら）
-                 // this.physics.resume(); // 物理再開（必要なら）
-                boss.destroy(); // ボスオブジェクトを完全に破棄
-                this.boss = null; // 参照もクリア
+            ease: 'Linear',
+            onCompleteScope: this, // onCompleteのthisをBossSceneに
+            onComplete: function() { // ★ アロー関数ではなく function を使う (thisのため)
+                console.log(">>> Fade tween complete. Calling gameComplete NOW. <<<");
+                console.log("[Shake&Fade] Fade complete. Destroying boss.");
+                // ボスオブジェクトを破棄
+                if (boss && boss.active) { // 再度確認
+                    boss.destroy();
+                }
+                if(this.boss === boss) this.boss = null; // シーンの参照もクリア
 
                 // 4. ゲームクリア処理へ
-                this.gameComplete(); // gameCompleteメソッドを呼び出す
+                this.gameComplete();
             }
         });
+        console.log("[Shake&Fade] Shake and Fade tweens started.");
     }
 
-    // gameComplete メソッド (SE再生とスコア表示を確認)
+    /**
+     * ゲームクリア処理
+     */
     gameComplete() {
+        console.log(">>> Entering gameComplete <<<");
         console.log("[BossScene] Game Complete!");
-        // ▼▼▼ ステージクリアSE ▼▼▼
+        // ステージクリアSE
         try {
             this.sound.play(AUDIO_KEYS.SE_STAGE_CLEAR);
         } catch(e) { console.error("Error playing SE_STAGE_CLEAR:", e); }
-        // ▲▲▲ ステージクリアSE ▲▲▲
-        this.stopBgm();
+        this.stopBgm(); // BGM停止
 
-        // ▼▼▼ スコア加算とUI更新 ▼▼▼
-        // defeatBoss内で既に加算されているので、ここでは不要かも？
-        // this.score += BOSS_SCORE; // 重複しないように注意
+        // スコアUI更新 (defeatBoss内で加算済みのはず)
         if (this.uiScene?.scene.isActive()) {
-             this.uiScene.events.emit('updateScore', this.score); // 最新スコアをUIに通知
+             this.uiScene.events.emit('updateScore', this.score);
              console.log("[Game Complete] Final score updated on UI.");
         } else { console.warn("[Game Complete] UIScene not active, cannot update score."); }
-        // ▲▲▲ スコア加算とUI更新 ▲▲▲
 
-        // アラート表示の代わりに、ゲームクリア専用の画面やテキスト表示に置き換えるのが望ましい
-        // alert(`ゲームクリア！ スコア: ${this.score}`);
-        // ★ TODO: ゲームクリア画面への遷移 or テキスト表示 ★
-        this.add.text(this.gameWidth / 2, this.gameHeight / 2 - 50, 'GAME CLEAR!', { fontSize: '60px', fill: '#ff0' }).setOrigin(0.5);
-        this.add.text(this.gameWidth / 2, this.gameHeight / 2 + 20, `スコア: ${this.score}`, { fontSize: '40px', fill: '#fff' }).setOrigin(0.5);
-        // タップでタイトルに戻るようにする？
+        // ゲームクリア表示 (例)
+        this.add.text(this.gameWidth / 2, this.gameHeight / 2 - 50, 'GAME CLEAR!', { fontSize: '60px', fill: '#ff0', stroke: '#000', strokeThickness: 5 }).setOrigin(0.5).setDepth(1100); // 最前面に
+        this.add.text(this.gameWidth / 2, this.gameHeight / 2 + 20, `スコア: ${this.score}`, { fontSize: '40px', fill: '#fff', stroke: '#000', strokeThickness: 3 }).setOrigin(0.5).setDepth(1100);
+        this.add.text(this.gameWidth / 2, this.gameHeight / 2 + 80, 'Tap to Return to Title', { fontSize: '24px', fill: '#fff' }).setOrigin(0.5).setDepth(1100);
+
+        // タップでタイトルに戻る
+        console.log("[Game Complete] Setting up input listener for returning to title.");
         this.input.once('pointerdown', this.returnToTitle, this);
-
-
-        // リロードはアラートの後などに移動した方が良いかも
-        // this.returnToTitle();
     }
+
+    // ▲▲▲ ボス撃破からゲームクリアまでのメソッド群 ▲▲▲
+
 
     // --- ▼ ゲーム進行メソッド (省略なし) ▼ ---
     loseLife() {
