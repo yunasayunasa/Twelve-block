@@ -154,6 +154,8 @@ input[type=range]:active::-moz-range-thumb {
 }
 
 
+
+
 /* --- ローダースタイル --- */
 #loader-container {
     position: absolute;
@@ -178,4 +180,76 @@ input[type=range]:active::-moz-range-thumb {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* ================================================================== */
+/* ▼▼▼ ここから下にメディアクエリを追加 ▼▼▼ */
+/* ================================================================== */
+
+/* --- レスポンシブ対応: 画面幅が小さい場合 (例: 600px以下) --- */
+@media screen and (max-width: 600px) {
+    #chaos-slider-container {
+        width: 90%;       /* 画面が狭い場合はコンテナ幅を広げる */
+        max-width: none;    /* 最大幅制限を解除 */
+        padding: 15px;      /* パディングを少し狭く */
+        font-size: 16px;    /* コンテナ全体のフォントサイズを少し調整 (任意) */
+    }
+
+    #chaos-slider-container label {
+        width: 100px;       /* ラベル幅を狭く */
+        font-size: 14px;    /* フォントを小さく */
+        margin-bottom: 8px;
+    }
+
+    #chaos-slider-container span {
+        min-width: 3em;       /* 数値表示幅を狭く */
+        font-size: 14px;
+        margin-right: 5px;
+        padding: 1px 4px;   /* パディングも少し調整 */
+    }
+
+    #chaos-slider-container input[type=range] {
+        width: calc(100% - 140px); /* スライダー幅を調整 (100px + 3em + 5px ≒ 140px?) */
+        height: 20px; /* スライダー高さを少し小さく */
+    }
+
+    /* 小さい画面用のつまみスタイル (少し小さくする例) */
+    input[type=range]::-webkit-slider-thumb {
+        height: 20px;
+        width: 20px;
+        margin-top: -6px; /* トラック中央に合わせる */
+    }
+    input[type=range]::-moz-range-thumb {
+        height: 16px;
+        width: 16px;
+    }
+}
+
+/* --- さらに小さい画面用 (例: 400px以下) --- */
+@media screen and (max-width: 400px) {
+    #chaos-slider-container {
+        padding: 10px;
+        font-size: 14px;
+    }
+    #chaos-slider-container label {
+        width: 80px; /* さらに狭く */
+        font-size: 12px;
+    }
+    #chaos-slider-container span {
+        min-width: 2.5em;
+        font-size: 12px;
+    }
+    #chaos-slider-container input[type=range] {
+        width: calc(100% - 120px); /* さらに調整 */
+    }
+    /* さらに小さいつまみ */
+    input[type=range]::-webkit-slider-thumb {
+        height: 18px;
+        width: 18px;
+        margin-top: -5px;
+    }
+    input[type=range]::-moz-range-thumb {
+        height: 14px;
+        width: 14px;
+    }
 }
