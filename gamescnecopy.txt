@@ -153,24 +153,12 @@ export default class GameScene extends Phaser.Scene {
         // 物理境界イベントリスナー
         this.physics.world.on('worldbounds', this.handleWorldBounds, this);
 
-        // --- ▼ パドル作成 & Y座標 Clamp ▼ ---
-        console.log("Creating paddle in GameScene (with Y Clamp)...");
-        const targetPaddleX = this.scale.width / 2; // Xは中央
-        const targetPaddleY = this.scale.height - PADDLE_Y_OFFSET; // 目標Y座標
-
-        this.paddle = this.physics.add.image(targetPaddleX, targetPaddleY, 'whitePixel')
-            .setTint(0xffff00)
+        // パドル作成
+        this.paddle = this.physics.add.image(this.scale.width / 2, this.scale.height - PADDLE_Y_OFFSET, 'whitePixel')
+            .setTint(0xffff00) // 黄色
             .setImmovable(true)
-            .setData('originalWidthRatio', PADDLE_WIDTH_RATIO);
-
-        if (this.paddle) {
-            this.updatePaddleSize();     // ★ サイズ初期設定 (X座標Clamp含む)
-            this.clampPaddleYPosition(); // ★ Y座標Clamp処理を呼び出す
-            console.log("Paddle created and position clamped in GameScene.");
-        } else {
-            console.error("!!! Failed to create paddle in GameScene !!!");
-        }
-        // --- ▲ パドル作成 & Y座標 Clamp ▲ ---
+            .setData('originalWidthRatio', PADDLE_WIDTH_RATIO); // サイズ調整用に比率を保持
+        this.updatePaddleSize(); // 初期サイズ設定
 
         // ボールグループ作成
         this.balls = this.physics.add.group({
@@ -178,20 +166,8 @@ export default class GameScene extends Phaser.Scene {
             bounceY: 1,
             collideWorldBounds: true
         });
-        // ▼ ボール初期位置もClamp後のパドルY座標を考慮 ▼
-        if (this.paddle && this.paddle.active) {
-            const ballY = this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS; // Clamp後のYを使う
-            this.createAndAddBall(this.paddle.x, ballY);
-       } else {
-            // パドルがない場合のフォールバックY座標もClampしておくのが安全かも
-            const fallbackTargetY = this.scale.height - PADDLE_Y_OFFSET;
-            const fallbackPaddleHalfHeight = PADDLE_HEIGHT / 2; // 定数から計算
-            const fallbackMinY = this.scale.height - fallbackPaddleHalfHeight;
-            const fallbackMaxY = this.scale.height / 2; // 例
-            const fallbackClampedY = Phaser.Math.Clamp(fallbackTargetY, fallbackMaxY, fallbackMinY);
-            this.createAndAddBall(this.scale.width / 2, fallbackClampedY - PADDLE_HEIGHT / 2 - BALL_RADIUS);
-       }
-       // ▲ ボール初期位置もClamp後のパドルY座標を考慮 ▲
+        // 初期ボール作成 (パドルの上)
+        this.createAndAddBall(this.paddle.x, this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS);
 
         // ブロックグループ作成 (setupStage内で)
         this.bricks = this.physics.add.staticGroup(); // 初回は空で作成
@@ -330,26 +306,6 @@ export default class GameScene extends Phaser.Scene {
         this.paddle.x = Phaser.Math.Clamp(this.paddle.x, halfWidth, this.scale.width - halfWidth);
     }
 
-    // ▼▼▼ Y座標調整メソッド (新規追加) ▼▼▼
-    clampPaddleYPosition() {
-        if (!this.paddle) return;
-        const paddleHalfHeight = this.paddle.displayHeight / 2;
-        // 最低Y座標 (画面下端すれすれ)
-        const minY = this.scale.height - paddleHalfHeight;
-        // 最高Y座標 (画面の上半分には行かないようにするなど - 要調整)
-        const maxY = this.scale.height * 0.8; // 例: 画面高さの80% (ここを調整)
-        // 現在の計算上のY座標
-        const targetY = this.scale.height - PADDLE_Y_OFFSET; // 固定オフセットで計算
-
-        // 計算結果を Clamp する
-        this.paddle.y = Phaser.Math.Clamp(targetY, maxY, minY); // Y座標は下が大きい値
-
-        console.log(`[GameScene] Paddle Y clamped to: ${this.paddle.y.toFixed(0)} (Target: ${targetY.toFixed(0)}, MinY: ${minY.toFixed(0)}, MaxY: ${maxY.toFixed(0)})`);
-        this.paddle.refreshBody(); // 念のためボディも更新
-    }
-    // ▲▲▲ Y座標調整メソッド ▲▲▲
-
-
     // 画面リサイズ時の処理
     handleResize(gameSize, baseSize, displaySize, resolution) {
         console.log("Game resized.");
@@ -357,9 +313,6 @@ export default class GameScene extends Phaser.Scene {
         this.gameHeight = gameSize.height;
         this.updatePaddleSize();
         this.resizeBackground();
-        // ▼▼▼ Y座標調整メソッド呼び出し ▼▼▼
-        this.clampPaddleYPosition();
-        // ▲▲▲ Y座標調整メソッド呼び出し ▲▲▲
         // UISceneにもリサイズを通知
         if (this.scene.isActive('UIScene')) {
             this.events.emit('gameResize');
