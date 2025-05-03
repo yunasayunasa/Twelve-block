@@ -242,7 +242,7 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
              // this.scene.launch('UIScene'); // ← ここでは launch しない
          })
            // ▼▼▼ この行を追加 ▼▼▼
-           .setVisible(false); // ★ ボタンを非表示にする
+           .setVisible(true); // ★ ボタンを非表示にする
            // --- ▲ ボス直行テストボタンを追加 ▲ ---
          
      // --- ▲ ボス直行テストボタンを追加 ▲ ---
