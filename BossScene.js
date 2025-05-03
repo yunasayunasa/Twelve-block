@@ -364,6 +364,8 @@ update(time, delta) {
     createBalls() {
         console.log("Creating balls group and initial ball...");
         // ▼ ボール初期位置もClamp後のパドルY座標を考慮 ▼
+        if (this.balls) { this.balls.destroy(true); this.balls = null; }
+        this.balls = this.physics.add.group({ bounceX: 1, bounceY: 1, collideWorldBounds: true });
         if (this.paddle && this.paddle.active) {
             const ballY = this.paddle.y - PADDLE_HEIGHT / 2 - BALL_RADIUS; // Clamp後のYを使う
             this.createAndAddBall(this.paddle.x, ballY);
