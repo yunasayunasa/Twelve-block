@@ -212,7 +212,7 @@ this.add.text(w / 2, h * 0.15, 'はちゃめちゃ！\n十二神将会議！', {
     // --- ▲ ゲーム開始ボタン (コンテナ使用) ▲ ---
      
      // --- ▼ ボス直行テストボタンを追加 ▼ ---
-     const testButtonY = buttonY + buttonH + 20; // 開始ボタンの下に配置
+     const testButtonY = buttonY + buttonH + 10; // 開始ボタンの下に配置
      const testButtonStyle = { fontSize: '24px', fill: '#fff', backgroundColor: '#888', padding: { x: 15, y: 8 } };
      const testButtonHoverStyle = { fill: '#ff0', backgroundColor: '#aaa'};
 
