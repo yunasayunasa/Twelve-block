@@ -3047,7 +3047,7 @@ testLogFunction(message) {
         if (!this.paddle) return;
         const paddleHalfHeight = this.paddle.displayHeight / 2;
         // 最低Y座標 (画面下端すれすれ)
-        const minY = this.scale.height - paddleHalfHeight - 50; // 例: 30pxのマージン
+        const minY = this.scale.height - paddleHalfHeight - 100; // 例: 30pxのマージン
         // 最高Y座標 (画面の上半分には行かないようにするなど - 要調整)
         const maxY = this.scale.height * 0.7; // 例: 画面高さの80% (GameSceneと合わせる)
         // 現在の計算上のY座標
