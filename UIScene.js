@@ -63,6 +63,11 @@ export default class UIScene extends Phaser.Scene {
                 fill: '#fff',
                 fontFamily: 'MyGameFont, sans-serif' // ★ 元のフォントに戻す
             };
+            // ▼▼▼ 上部マージンを計算 ▼▼▼
+            const topMargin = this.calculateTopMargin(); // ヘルパーメソッド呼び出し
+            console.log(`[UIScene Create] Calculated top margin: ${topMargin}`);
+            // ▲▲▲ 上部マージンを計算 ▲▲▲
+
             console.log(`UIScene dimensions set: ${this.gameWidth}x${this.gameHeight}`);
 
             // --- 3. UI要素の生成 ---
@@ -74,9 +79,9 @@ export default class UIScene extends Phaser.Scene {
             if (this.vajraGaugeText) this.vajraGaugeText.destroy();
             if (this.dropPoolIconsGroup) this.dropPoolIconsGroup.destroy(true); // Groupは子要素も破棄
 
-            this.livesText = this.add.text(16, 16, 'ライフ: ?', textStyle).setOrigin(0, 0);
-            this.scoreText = this.add.text(this.gameWidth - 16, 16, 'スコア: ?', textStyle).setOrigin(1, 0); // 右上
-            this.stageText = this.add.text(this.gameWidth / 2, 16, 'ステージ: ?', textStyle).setOrigin(0.5, 0); // 中央上
+            this.livesText = this.add.text(16, topMargin, 'ライフ: ?', textStyle).setOrigin(0, 0.5); // ★ Y原点を中央(0.5)にすると揃えやすい
+            this.scoreText = this.add.text(this.gameWidth - 16, topMargin, 'スコア: ?', textStyle).setOrigin(1, 0.5); // ★ Y原点を中央(0.5)に
+            this.stageText = this.add.text(this.gameWidth / 2, topMargin, 'ステージ: ?', textStyle).setOrigin(0.5, 0.5); // ★ Y原点を中央(0.5)に
             this.vajraGaugeText = this.add.text(16, this.gameHeight - UI_BOTTOM_OFFSET, '奥義: -/-', { fontSize: '20px', fill: '#fff', fontFamily: 'MyGameFont, sans-serif' })
                 .setOrigin(0, 1).setVisible(false); // 左下、最初は非表示
             this.dropPoolIconsGroup = this.add.group(); // 右下用グループ
@@ -175,6 +180,11 @@ export default class UIScene extends Phaser.Scene {
         console.log("[On Resize] UIScene handling resize...");
         this.gameWidth = this.scale.width;
         this.gameHeight = this.scale.height;
+        // ▼▼▼ 上部マージンを再計算 ▼▼▼
+        const topMargin = this.calculateTopMargin();
+        console.log(`[On Resize] Recalculated top margin: ${topMargin}`);
+        // ▲▲▲ 上部マージンを再計算 ▲▲▲
+
         // 各UI要素の位置を再計算 (存在確認を強化)
         this.livesText?.setPosition(16, 16);
         this.scoreText?.setPosition(this.gameWidth - 16, 16);
@@ -187,12 +197,22 @@ export default class UIScene extends Phaser.Scene {
     // UI要素の深度を設定 (描画順調整用)
     setElementDepths() {
         const uiDepth = 1000; // 他のゲーム要素より大きな値
-        this.livesText?.setDepth(uiDepth);
-        this.scoreText?.setDepth(uiDepth);
-        this.stageText?.setDepth(uiDepth);
+        // 各UI要素の位置を再計算
+        this.livesText?.setPosition(16, topMargin); // ★ Y座標に topMargin を使用
+        this.stageText?.setPosition(this.gameWidth / 2, topMargin); // ★ Y座標に topMargin を使用
+        this.scoreText?.setPosition(this.gameWidth - 16, topMargin); // ★ Y座標に topMargin を使用
         this.vajraGaugeText?.setDepth(uiDepth);
         this.dropPoolIconsGroup?.setDepth(uiDepth); // グループ自体にも設定可能
     }
+
+    // ▼▼▼ 上部マージン計算ヘルパーメソッド (新規追加) ▼▼▼
+    calculateTopMargin() {
+        const minMargin = 16; // 最低でも16pxは確保
+        const ratioMargin = this.scale.height * 0.03; // 画面高さの3%
+        return Math.max(minMargin, ratioMargin); // 大きい方の値を採用
+    }
+    // ▲▲▲ 上部マージン計算ヘルパーメソッド ▲▲▲
+
 
     // --- UI更新メソッド群 ---
     updateLivesDisplay(lives) {

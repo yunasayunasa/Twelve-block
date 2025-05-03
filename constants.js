@@ -47,9 +47,9 @@ export const MAKIRA_BEAM_HEIGHT = 15;
 export const MAKIRA_BEAM_COLOR = 0xff0000;
 export const MAKIRA_FAMILIAR_OFFSET = 40; // パドルからの左右オフセット
 export const MAKIRA_FAMILIAR_SIZE = 10;
-export const DROP_POOL_UI_ICON_SIZE = 18;
+export const DROP_POOL_UI_ICON_SIZE = 20;
 export const DROP_POOL_UI_SPACING = 5;
-export const UI_BOTTOM_OFFSET = 30; // UI要素の下部オフセット
+export const UI_BOTTOM_OFFSET = 50; // UI要素の下部オフセット
 
 // 画像キーとファイル名のマッピング
 export const POWERUP_ICON_KEYS = {
