@@ -63,11 +63,7 @@ export default class UIScene extends Phaser.Scene {
                 fill: '#fff',
                 fontFamily: 'MyGameFont, sans-serif' // ★ 元のフォントに戻す
             };
-            // ▼▼▼ 上部マージンを計算 ▼▼▼
-            const topMargin = this.calculateTopMargin(); // ヘルパーメソッド呼び出し
-            console.log(`[UIScene Create] Calculated top margin: ${topMargin}`);
-            // ▲▲▲ 上部マージンを計算 ▲▲▲
-
+            
             console.log(`UIScene dimensions set: ${this.gameWidth}x${this.gameHeight}`);
 
             // --- 3. UI要素の生成 ---
