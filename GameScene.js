@@ -82,7 +82,7 @@ export default class GameScene extends Phaser.Scene {
         }
 
         // --- ゲーム状態リセット ---
-        this.lives = 3;
+        this.lives = 5;
         this.score = 0;
         this.currentStage = 1;
         this.isBallLaunched = false;

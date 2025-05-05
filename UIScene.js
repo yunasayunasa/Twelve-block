@@ -63,7 +63,6 @@ export default class UIScene extends Phaser.Scene {
                 fill: '#fff',
                 fontFamily: 'MyGameFont, sans-serif' // ★ 元のフォントに戻す
             };
-            
             console.log(`UIScene dimensions set: ${this.gameWidth}x${this.gameHeight}`);
 
             // --- 3. UI要素の生成 ---
